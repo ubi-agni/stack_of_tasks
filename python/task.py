@@ -1,6 +1,4 @@
-from constantly import Names
 import numpy as np
-from sympy import Eq
 from tf import transformations as tf
 
 class TaskDesc:
@@ -13,10 +11,6 @@ class TaskDesc:
     def unpack(self):
         return self. A, self.upper, self.lower
 
-    def unpack_only_upper(self):
-        A = np.r_[-self.A,self.A]
-        b = np.r_[-self.lower, self.upper]
-        return A, b, np.ones(b.size) * -1e20
 
 class EQTaskDesc(TaskDesc):
     def __init__(self, A, bound, name=None) -> None:
@@ -33,13 +27,12 @@ class Task:
                             [-w[1], w[0], 0]])
 
 class CombineTasks(Task):
-
-    def compute(self, tasks):
-        assert len(tasks) > 0
-        names = [tasks[0].name]
-        A, ub, lb = tasks.pop(0).unpack()
+    def compute(self, *args):
+        assert len(args) > 0
+        names = [args[0].name]
+        A, ub, lb = args[0].unpack()
         
-        for t in tasks:
+        for t in args[1:]:
             names.append(t.name)
             ai, ui, li = t.unpack()
             A = np.r_[A, ai]
@@ -50,7 +43,7 @@ class CombineTasks(Task):
 class PositionTask(Task):
     name = 'Pos'
     def __init__(self, scale=1.0) -> None:
-        super().__init__()
+        super().__init__(scale)
 
     def compute(self, J, T_t, T_c):
         A = J[:3]
@@ -79,14 +72,26 @@ class DisstanceTask(Task):
     name = "Dist"
     def compute(self, J, T_t, T_c, dist=0):
         delta = T_c[0:3, 3] - T_t[0:3, 3]
-        A = delta.T.dot(J[:3])
-        b = -self.scale * (np.linalg.norm(delta) - dist)
+        A = np.array([delta.T.dot(J[:3])])
+        b = np.array([-self._scale * (np.linalg.norm(delta) - dist)])
+        return EQTaskDesc(A, b, self.name)
+
+class ConstantSpeed(Task):
+    name = "ConstantSpeed"
+    def compute(self, J, T_tar, T_c, normal, speed):
+        axis = T_c[0:3, 0:3].dot(normal)  
+        A = J[:3]
+        r = T_tar[0:3, 3] - T_c[0:3, 3]
+        b = np.cross(axis, r)
+        b = speed * b/np.linalg.norm(b)
+        
+
         return EQTaskDesc(A, b, self.name)
 
 class ParallelTask(Task):
     name = "Parallel"
-    def __init__(self, tgt_axis, robot_axis) -> None:
-        super().__init__()
+    def __init__(self, tgt_axis, robot_axis, scale=1.0) -> None:
+        super().__init__(scale)
         self.ta = tgt_axis
         self.ra = robot_axis
 
@@ -112,8 +117,8 @@ class PlaneTask(Task):
 
 class ConeTask(Task):
     name = "Cone"
-    def __init__(self, tgt_axis, robot_axis) -> None:
-        super().__init__()
+    def __init__(self, tgt_axis, robot_axis, scale=1.0) -> None:
+        super().__init__(scale)
         self.ta = tgt_axis
         self.ra = robot_axis
 

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import numpy as np
 from tf import transformations as tf
 
@@ -10,7 +11,6 @@ class TaskDesc:
 
     def unpack(self):
         return self. A, self.upper, self.lower
-
 
 class EQTaskDesc(TaskDesc):
     def __init__(self, A, bound, name=None) -> None:
@@ -25,8 +25,10 @@ class Task:
         return np.array([[0, -w[2], w[1]],
                             [w[2], 0, -w[0]],
                             [-w[1], w[0], 0]])
+    
 
 class CombineTasks(Task):
+
     def compute(self, *args):
         assert len(args) > 0
         names = [args[0].name]
@@ -45,7 +47,7 @@ class PositionTask(Task):
     def __init__(self, scale=1.0) -> None:
         super().__init__(scale)
 
-    def compute(self, J, T_t, T_c):
+    def compute(self, J, T_c, T_t):
         A = J[:3]
         b = self._scale *  (T_t[:3,3]-T_c[:3,3])
         return EQTaskDesc(A, b, self.name)
@@ -70,7 +72,7 @@ class OrientationTask(Task):
 class DisstanceTask(Task):
     """Keep distance to target position, not considering (approach) direction"""
     name = "Dist"
-    def compute(self, J, T_t, T_c, dist=0):
+    def compute(self, J, T_c, T_t, dist=0):
         delta = T_c[0:3, 3] - T_t[0:3, 3]
         A = np.array([delta.T.dot(J[:3])])
         b = np.array([-self._scale * (np.linalg.norm(delta) - dist)])
@@ -78,13 +80,13 @@ class DisstanceTask(Task):
 
 class ConstantSpeed(Task):
     name = "ConstantSpeed"
-    def compute(self, J, T_tar, T_c, normal, speed):
+    def compute(self, J, T_c, T_t, normal, speed):
         axis = T_c[0:3, 0:3].dot(normal)  
         A = J[:3]
-        r = T_tar[0:3, 3] - T_c[0:3, 3]
+
+        r = T_t[0:3, 3] - T_c[0:3, 3]
         b = np.cross(axis, r)
-        b = speed * b/np.linalg.norm(b)
-        
+        b =   speed * b/np.linalg.norm(b)
 
         return EQTaskDesc(A, b, self.name)
 
@@ -95,25 +97,46 @@ class ParallelTask(Task):
         self.ta = tgt_axis
         self.ra = robot_axis
 
-    def compute(self, J, T_c,T_t):
+    def compute(self, J, T_c, T_t):
         """Align axis in eef frame to be parallel to reference axis in base frame"""
         axis = T_c[0:3, 0:3].dot(self.ra)  # transform axis from eef frame to base frame
-        ref = T_t[0:3, 0:3].dot(self.ta)
+        ref =  T_t[0:3, 0:3].dot(self.ta)
         A = (self.skew(ref).dot(self.skew(axis))).dot(J[3:])
         b = self._scale * np.cross(ref, axis)
         return EQTaskDesc(A, b, self.name)
 
 class PlaneTask(Task):
     name = "Plane"
-    def compute(self, J, T_t, T_c):
+    def compute(self, J, T_c, T_t):
         """Move eef within plane given by normal vector and distance to origin"""
         normal = T_t[0:3, 2]
         dist = normal.dot(T_t[0:3, 3])
 
         A = np.array([ normal.T.dot(J[:3]) ])
-        b = np.array([ -self._scale * (normal.dot(T_c[0:3, 3]) - dist)])
+        b = np.array([ -self._scale * ( normal.dot( T_c[0:3, 3]) - dist )])
 
         return EQTaskDesc(A, b, self.name)
+
+
+class LineTask(Task):
+    name = "Line"
+
+
+    def compute(self, J, T_c, T_t):
+        normal = T_t[0:3, 2]
+        sw = self.skew(normal)
+
+        d = (T_c[0:3, 3] - T_t[0:3, 3])
+
+        A = sw.dot(J[:3])
+        b = -self._scale * sw.dot(d)
+        print(A)
+        print(b)
+
+
+        return EQTaskDesc(A, b, self.name)
+
+
 
 class ConeTask(Task):
     name = "Cone"
@@ -122,7 +145,7 @@ class ConeTask(Task):
         self.ta = tgt_axis
         self.ra = robot_axis
 
-    def compute(self,J, T_c, T_t, threshold, scale=1.0):
+    def compute(self,J, T_c, T_t, threshold):
         """Align axis in eef frame to lie in cone spanned by reference axis and opening angle acos(threshold)"""
         axis = T_c[0:3, 0:3].dot(self.ra) # transform axis from eef frame to base frame
         reference = T_t[0:3, 0:3].dot(self.ta)
@@ -133,4 +156,15 @@ class ConeTask(Task):
         return TaskDesc(A, b, -10e20, self.name)
     
 
+class JointZeroPos(Task):
+    name = "Joints"
+    def __init__(self, zero_position, scale=1.0) -> None:
+        super().__init__(scale)
+        self.zeros_pos = zero_position
+
+    def compute(self, current_jp):
+        A = np.identity(current_jp.size)
+        b = self._scale * (self.zeros_pos - current_jp)
+
+        return EQTaskDesc(A, b, self.name)
 

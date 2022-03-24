@@ -84,24 +84,32 @@ class Controller(object):
         tasks = []
 
         plane = PlaneTask(1)
-        para = ParallelTask([0,0,1], [0,0,1])
-        dist = DisstanceTask(6)
-        speed = ConstantSpeed(1)
+        
+        line = LineTask(1)
+        pos = PositionTask()
+        para = ParallelTask([0,0,1], [0,1,0])
+        
+        dist = DisstanceTask(.2)
+        speed = ConstantSpeed()
+
+        zeros = np.array( [(m+M)/2 for (m,M) in zip(self.mins, self.maxs)  ] )
+
+        jp = JointZeroPos(zeros, 0.15)
         combine = CombineTasks()
 
-        tasks.append(plane.compute(self.J, T_tar, self.T))
-        tasks.append(para.compute(self.J, self.T, T_tar))
-        tasks.append(combine.compute(
-            speed.compute(self.J,T_tar, self.T, [0,0,1], 0.01),
-            dist.compute(self.J, T_tar, self.T, 0.15)
-        ))
+        tasks.append(line.compute(self.J, self.T,  T_tar))
+        tasks.append(pos.compute(self.J, self.T, T_tar))
+
+        tasks.append(para.compute(self.J, self.T, np.identity(4)))
+        #tasks.append(dist.compute(self.J, self.T, T_tar, 0.15))
+        #tasks.append(speed.compute(self.J,self.T, T_tar, [0,0,1], 0.01))
+        tasks.append(jp.compute( np.array(self.joint_msg.position)))        
 
 
         lb = np.maximum(-0.1, self.mins - self.joint_msg.position)
         ub = np.minimum(0.1, self.maxs - self.joint_msg.position)
 
         s = Solver(self.N, lb, ub, 0.15)
-
         q_delta, tcr = s.solve_sot(tasks, warmstart=self.last_dq)
         self.last_dq = q_delta
 

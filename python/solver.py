@@ -13,64 +13,106 @@ class QpDesc:
         self._P = np.identity(N) * rho
         self._q = np.zeros(self.N)
 
-        self._A = np.zeros((0,N))
+        self._A_opt = np.zeros((0,N))
+        self._lbA_opt = np.zeros(0)
+        self._ubA_opt = np.zeros(0)
 
-        self._lbA = np.zeros(0)
-        self._ubA = np.zeros(0)
-        
-        self._AStatic = np.zeros((0,N))
-        self._lbStatic = np.zeros(0)
-        self._ubStatic = np.zeros(0)
-        
-        self._slacks = np.zeros(0)
+        self._A_nopt = np.zeros((0,N))
+        self._ubA_nopt = np.zeros(0)
+        self._lbA_nopt = np.zeros(0)
+
+    @property
+    def sN(self):
+        return self._lbA_nopt.size
 
     @property
     def H(self):
-        nSlack = self._A.shape[0] - self._slacks.size
-        H = np.identity(self.N + nSlack)
+        H = np.identity(self.N + self.sN)
         H[:self.N, :self.N] = self._P
         return H
 
     @property
     def q(self):
-        nSlack = self._A.shape[0] - self._slacks.size
-        return np.r_[self._q, np.zeros(nSlack)]
+        return np.r_[self._q, np.zeros(self.sN)]
 
     @property
     def A(self):
-        nSlack = self._A.shape[0] - self._slacks.size
+        A = np.r_[
+            self._A_opt, 
+            self._A_nopt,        
+            -self._A_nopt,
+            #np.zeros((self.sN, self.N))
+            ]
 
-        sMat = np.r_[np.zeros( (self._slacks.size + self._lbStatic.size , nSlack) ) , -np.identity(nSlack)]
-        return np.c_[ np.r_[np.identity(self._lbStatic.size), self._A ], sMat] 
+        sMat = np.r_[
+            np.zeros((self._A_opt.shape[0], self.sN)),
+            -np.identity(self.sN), 
+            -np.identity(self.sN),
+            #np.identity(self.sN)
+            ]
+
+
+
+        return np.c_[A,sMat]
 
     @property
     def lb(self):
-        nSlack = self._lbA.size - self._slacks.size
-        return np.r_[self._lbStatic, self._lbA] + np.r_[np.zeros(self._lbStatic.size), self._slacks, np.zeros(nSlack) ]
+        return np.r_[
+            self._lbA_opt, 
+            np.full(2*self.sN, np.NINF),
+            #np.ones(self.sN) * 10e-5
+            ]
 
     @property
     def ub(self):
-        nSlack = self._ubA.size - self._slacks.size
+        return np.r_[
+            self._ubA_opt, 
+            self._ubA_nopt, 
+            -self._lbA_nopt, 
+            #10e20 * np.ones(self.sN)
+            ]
 
-
-        return np.r_[self._ubStatic, self._lbA] + np.r_[ np.zeros(self._ubStatic.size), self._slacks, np.zeros(nSlack) ]
-
-    def addTask(self, desc: TaskDesc):
+    def add_task(self, desc: TaskDesc):
         At, ut, lt = desc.unpack()
 
-        self._A = np.r_[self._A, At]  
-        self._lbA = np.r_[self._lbA, lt]
-        self._ubA = np.r_[self._ubA, ut]
+        self._A_nopt = np.r_[self._A_nopt, At]
+        self._ubA_nopt = np.r_[self._ubA_nopt, ut]
+        self._lbA_nopt = np.r_[self._lbA_nopt, lt]
     
-    def add_slack(self, slack):
-        self._slacks = np.r_[self._slacks, slack]
+    def add_slack(self, slack_vect):
+        assert slack_vect.size == self._lbA_nopt.size == self._ubA_nopt.size
 
-    def add_task_as_static(self, desc):
-        self.add_static_bounds(desc.lower, desc.upper)
+        self._A_opt = np.r_[
+            self._A_opt, 
+            self._A_nopt,
+            -self._A_nopt
+            ]
+        
+        self._ubA_opt = np.r_[
+            self._ubA_opt, 
+            self._ubA_nopt+slack_vect,
+            -self._lbA_nopt+slack_vect
+            ]
+        
+        self._lbA_opt = np.r_[
+            self._lbA_opt, 
+            np.full(2*slack_vect.size, np.NINF)
+            ]
+
+        self._A_nopt = np.zeros((0,self.N))
+        self._ubA_nopt = np.zeros(0)
+        self._lbA_nopt = np.zeros(0)
+
+    def add_task_hard(self, desc):
+        self._ubA_opt = np.r_[self._ubA_opt, desc.upper]
+        self._lbA_opt = np.r_[self._lbA_opt, desc.lower]
+        self._A_opt = np.r_[self._A_opt, desc.A]
 
     def add_static_bounds(self, lb, ub):
-        self._lbStatic = np.r_[self._lbStatic, lb]
-        self._ubStatic = np.r_[self._ubStatic, ub]
+        assert lb.size ==  ub.size == self.N
+        self._A_opt = np.r_[self._A_opt, np.identity(lb.size)]
+        self._ubA_opt = np.r_[self._ubA_opt, ub]
+        self._lbA_opt = np.r_[self._lbA_opt, lb]
 
 
 
@@ -79,27 +121,20 @@ class Solver:
     def __init__(self, N, lb, ub, rho) -> None:
         self.N = N
 
-        self.lb = lb
-        self.ub = ub
-        self.r = rho
-
-        self.qp_desc = None
+        self.qp_desc = QpDesc(self.N, rho)
+        self.qp_desc.add_static_bounds(lb, ub)
 
     def solve_sot(self, task_descs, warmstart=None):
         assert len(task_descs)>0
-
-        self.qp_desc = QpDesc(self.N, self.r)
-        self.qp_desc.add_static_bounds(self.lb, self.ub)
-
 
         task_chain_objectivs = []
         dq = warmstart
 
         for t in task_descs:
-            self.qp_desc.addTask(t)
-            sol =  self._solve_qp(warmstart)
+            self.qp_desc.add_task(t)
+            sol =  self._solve_qp(dq)
 
-            if sol.info.status_val != 1: 
+            if sol.info.status_val < 0 : 
                 print(sol.info.status)
                 return None, None
             else:
@@ -112,19 +147,20 @@ class Solver:
 
     def _solve_qp(self, warmstart=None):
 
-        H = sparse.csc_matrix(self.qp_desc.H)
+        H = self.qp_desc.H
         g = self.qp_desc.q
-        
-        A = sparse.csc_matrix(self.qp_desc.A)
-        ubA = self.qp_desc.ub
-        lbA = self.qp_desc.lb
+        A = self.qp_desc.A
+        ub = self.qp_desc.ub
+        lb = self.qp_desc.lb
 
+        H = sparse.csc_matrix(H)
+        A = sparse.csc_matrix(A)
 
         m = osqp.OSQP()
-        m.setup(P=H, q=g, A=A, l=lbA, u=ubA, verbose=False)
+        m.setup(P=H, q=g, A=A, l=lb, u=ub, verbose=False)
 
         if warmstart is not None:
-            m.warm_start(x=np.r_[warmstart, np.zeros(g.size - warmstart.size)])
+            m.warm_start(x=np.r_[warmstart, np.full(g.size - warmstart.size, 0)])
 
         sol = m.solve()
         return sol

@@ -121,7 +121,6 @@ class PlaneTask(Task):
 class LineTask(Task):
     name = "Line"
 
-
     def compute(self, J, T_c, T_t):
         normal = T_t[0:3, 2]
         sw = self.skew(normal)
@@ -130,10 +129,6 @@ class LineTask(Task):
 
         A = sw.dot(J[:3])
         b = -self._scale * sw.dot(d)
-        print(A)
-        print(b)
-
-
         return EQTaskDesc(A, b, self.name)
 
 

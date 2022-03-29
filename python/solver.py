@@ -10,19 +10,22 @@ class QpDesc:
     def __init__(self, N, rho) -> None:
         self.N = N
         
+
+        # initialized all needed matrices and vectors
         self._P = np.identity(N) * rho
         self._q = np.zeros(self.N)
 
-        self._A_opt = np.zeros((0,N))
-        self._lbA_opt = np.zeros(0)
+        self._A_opt = np.zeros((0,N)) # A matrix aller bereits optimierten tasks
+        self._lbA_opt = np.zeros(0)   # lower und upper    " 
         self._ubA_opt = np.zeros(0)
 
-        self._A_nopt = np.zeros((0,N))
-        self._ubA_nopt = np.zeros(0)
+        self._A_nopt = np.zeros((0,N)) # A matrix aller tasks, die im nächsten schritt optimiert werden müssen
         self._lbA_nopt = np.zeros(0)
+        self._ubA_nopt = np.zeros(0)
 
     @property
     def sN(self):
+        """Number of slack variables"""
         return self._lbA_nopt.size
 
     @property
@@ -37,13 +40,16 @@ class QpDesc:
 
     @property
     def A(self):
+
+        #  Matrix A aller Tasks
         A = np.r_[
-            self._A_opt, 
+            self._A_opt,    
             self._A_nopt,        
             -self._A_nopt,
             #np.zeros((self.sN, self.N))
             ]
 
+        # bestimmt von welche Tasks die slack-variablen abgezogen werden
         sMat = np.r_[
             np.zeros((self._A_opt.shape[0], self.sN)),
             -np.identity(self.sN), 
@@ -51,15 +57,13 @@ class QpDesc:
             #np.identity(self.sN)
             ]
 
-
-
         return np.c_[A,sMat]
 
     @property
     def lb(self):
         return np.r_[
             self._lbA_opt, 
-            np.full(2*self.sN, np.NINF),
+            np.full(2*self.sN, np.NINF),  # lower bound der optimierung ist immer -INF
             #np.ones(self.sN) * 10e-5
             ]
 
@@ -68,7 +72,7 @@ class QpDesc:
         return np.r_[
             self._ubA_opt, 
             self._ubA_nopt, 
-            -self._lbA_nopt, 
+            -self._lbA_nopt, # da es nur upper bounds gibt, wird aus lower upper bound 
             #10e20 * np.ones(self.sN)
             ]
 
@@ -84,20 +88,22 @@ class QpDesc:
 
         self._A_opt = np.r_[
             self._A_opt, 
-            self._A_nopt,
-            -self._A_nopt
+            self._A_nopt
             ]
         
         self._ubA_opt = np.r_[
             self._ubA_opt, 
-            self._ubA_nopt+slack_vect,
-            -self._lbA_nopt+slack_vect
+            self._ubA_nopt+slack_vect
             ]
         
         self._lbA_opt = np.r_[
-            self._lbA_opt, 
-            np.full(2*slack_vect.size, np.NINF)
+            self._lbA_opt,
+            self._lbA_nopt-slack_vect
             ]
+
+        # wird slack negativ, kann l > u werden -> bounds tauschen
+        v = self._lbA_opt > self._ubA_opt 
+        self._ubA_opt[v], self._lbA_opt[v] = self._ubA_opt[v], self._lbA_opt[v]
 
         self._A_nopt = np.zeros((0,self.N))
         self._ubA_nopt = np.zeros(0)
@@ -160,6 +166,7 @@ class Solver:
         m.setup(P=H, q=g, A=A, l=lb, u=ub, verbose=False)
 
         if warmstart is not None:
+            # slackvariablen mit 0 warmstarten, etwas anderes sinnvoller?
             m.warm_start(x=np.r_[warmstart, np.full(g.size - warmstart.size, 0)])
 
         sol = m.solve()

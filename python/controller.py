@@ -21,7 +21,7 @@ from markers import *
 
 class Controller(object):
 
-    def __init__(self, pose=TransformStamped(header=
+    def __init__(self, updaterate, pose=TransformStamped(header=
                                                     Header(frame_id='panda_link8'),
                                                     child_frame_id='target',
                                                     transform=Transform(
@@ -49,6 +49,7 @@ class Controller(object):
         self.prismatic = numpy.array([j.jtype == j.prismatic for j in self.robot.active_joints])
         self.reset()
 
+        self.updaterate = updaterate
         self.last_dq = None
 
 
@@ -69,7 +70,8 @@ class Controller(object):
         self.T, self.J = self.robot.fk(self.target_link, dict(zip(self.joint_msg.name, self.joint_msg.position)))
 
 
-    def actuate(self, q_delta):
+    def actuate(self, q_delta):        
+        q_delta /= self.updaterate
         self.joint_msg.position += q_delta.ravel()
         # clip (prismatic) joints
         self.joint_msg.position[self.prismatic] = numpy.clip(self.joint_msg.position[self.prismatic],
@@ -78,38 +80,42 @@ class Controller(object):
         self.update()
 
 
+    def check_end(self):
+        pass
+
     def hierarchic_control(self, **targets):
-        T_tar = targets['pose']
+        T_tar_plane = targets['plane']
+        T_tar_pose = targets['pose']
 
         tasks = []
 
         plane = PlaneTask(1)
         
-        line = LineTask(1)
-        pos = PositionTask()
-        para = ParallelTask([0,0,1], [0,1,0])
+        line = LineTask(3)
+        pos = PositionTask(1)
+        para = ParallelTask([0,0,1], [0,0,1])
         
-        dist = DisstanceTask(.2)
-        speed = ConstantSpeed()
+        dist = DisstanceTask(1)
 
         zeros = np.array( [(m+M)/2 for (m,M) in zip(self.mins, self.maxs)  ] )
 
-        jp = JointZeroPos(zeros, 0.15)
+        jp = JointZeroPos(zeros,0.3)
+
         combine = CombineTasks()
 
-        tasks.append(line.compute(self.J, self.T,  T_tar))
-        tasks.append(pos.compute(self.J, self.T, T_tar))
+        #tasks.append(line.compute(self.J, self.T,  T_tar))
+        tasks.append(plane.compute(self.J, self.T, T_tar_plane))
+        tasks.append(pos.compute(self.J, self.T, T_tar_pose))
+        tasks.append(para.compute(self.J, self.T,T_tar_pose ))
 
-        tasks.append(para.compute(self.J, self.T, np.identity(4)))
-        #tasks.append(dist.compute(self.J, self.T, T_tar, 0.15))
-        #tasks.append(speed.compute(self.J,self.T, T_tar, [0,0,1], 0.01))
+
         tasks.append(jp.compute( np.array(self.joint_msg.position)))        
 
 
-        lb = np.maximum(-0.1, self.mins - self.joint_msg.position)
-        ub = np.minimum(0.1, self.maxs - self.joint_msg.position)
+        lb = np.maximum(-0.5, (self.mins - self.joint_msg.position) )
+        ub = np.minimum(0.5, (self.maxs - self.joint_msg.position) )
 
-        s = Solver(self.N, lb, ub, 0.15)
+        s = Solver(self.N, lb, ub, 0.01)
         q_delta, tcr = s.solve_sot(tasks, warmstart=self.last_dq)
         self.last_dq = q_delta
 
@@ -128,7 +134,9 @@ class MarkerControl:
         self.ims = InteractiveMarkerServer('controller') 
 
         T = tf.translation_matrix([0.8,0,0.5])
-        addMarker(self.ims, iPoseMarker(T, markers=[sphere(), plane()], name='pose'), processFeedback(self.setTarget))
+        T_2 = tf.translation_matrix([0.5,0,0.5])
+        addMarker(self.ims, iPositionMarker(T, markers=[sphere(), plane()], name='plane', scale=0.5), processFeedback(self.setTarget))
+        addMarker(self.ims, iPoseMarker(T_2, markers=[sphere()], name='pose'), processFeedback(self.setTarget))
 
         self.ims.applyChanges()
 
@@ -160,16 +168,15 @@ if __name__ == '__main__':
     rospy.init_node('ik')
     rate = rospy.Rate(50)
     
-    c = Controller()
+    c = Controller(50)
     mc = MarkerControl()
+
+    c.reset(0)
 
     def loop():
         rval = not c.hierarchic_control(**mc.targets)
         rate.sleep()
         return rval
-#
-    
-
 
     print("Stop with CRTL-D")
     while True:

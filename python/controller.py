@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import threading
+from venv import create
 from solver import Solver
-from  task import *
+from sympy import true
+from task import *
 import numpy
 import rospy
 import random
@@ -17,128 +19,132 @@ from robot_model import RobotModel, Joint
 
 from markers import *
 
-#random.seed(1)
+from threading import Lock
+
+# random.seed(1)
+
 
 class Controller(object):
-
-    def __init__(self, updaterate, pose=TransformStamped(header=
-                                                    Header(frame_id='panda_link8'),
-                                                    child_frame_id='target',
-                                                    transform=Transform(
-                                                                rotation=Quaternion(*tf.quaternion_about_axis(numpy.pi/4, [0, 0, 1])),
-                                                                translation=Vector3(0, 0, 0.105)))
-                ):
+    def __init__(
+        self,
+        pose=TransformStamped(
+            header=Header(frame_id="panda_link8"),
+            child_frame_id="target",
+            transform=Transform(
+                rotation=Quaternion(*tf.quaternion_about_axis(numpy.pi / 4, [0, 0, 1])),
+                translation=Vector3(0, 0, 0.105),
+            ),
+        ),
+        rate = 50
+    ):
 
         self.robot = RobotModel()
         self.robot._add(Joint(pose))  # add a fixed end-effector transform
+        self.rate = rate
+        self.joint_state_callback = []
 
-        self.joint_pub = rospy.Publisher('/target_joint_states', JointState, queue_size=1, latch=True)
-        
+        self.joint_pub = rospy.Publisher(
+            "/target_joint_states", JointState, queue_size=1, latch=True
+        )
+
         self.joint_msg = JointState()
         self.joint_msg.name = [j.name for j in self.robot.active_joints]
 
         self.target_link = pose.child_frame_id
-        self.N = len(self.robot.active_joints) # number of (active) joints
-        
+        self.N = len(self.robot.active_joints)  # number of (active) joints
+
         self.joint_weights = numpy.ones(self.N)
         self.cartesian_weights = numpy.ones(6)
 
         self.mins = numpy.array([j.min for j in self.robot.active_joints])
         self.maxs = numpy.array([j.max for j in self.robot.active_joints])
 
-        self.prismatic = numpy.array([j.jtype == j.prismatic for j in self.robot.active_joints])
+        self.prismatic = numpy.array(
+            [j.jtype == j.prismatic for j in self.robot.active_joints]
+        )
         self.reset()
 
-        self.updaterate = updaterate
+        self.task_hirachy = TaskHirachy()
+
         self.last_dq = None
+        self.joint_state_callback = []
 
-
-    def reset(self, randomness = 0):
-        def _rJoint(m,M):
-            j = (m + M)/2
-            dj = (M - m)/2
+    def reset(self, randomness=0):
+        def _rJoint(m, M):
+            j = (m + M) / 2
+            dj = (M - m) / 2
 
             if randomness > 0:
-                return j + dj*random.uniform(-randomness, randomness)
+                return j + dj * random.uniform(-randomness, randomness)
             return j
 
-        self.joint_msg.position = list(map(lambda x:_rJoint(*x), zip(self.mins, self.maxs)))
+        self.joint_msg.position = list(
+            map(lambda x: _rJoint(*x), zip(self.mins, self.maxs))
+        )
         self.update()
 
     def update(self):
         self.joint_pub.publish(self.joint_msg)
-        self.T, self.J = self.robot.fk(self.target_link, dict(zip(self.joint_msg.name, self.joint_msg.position)))
+        self.T, self.J = self.robot.fk(
+            self.target_link, dict(zip(self.joint_msg.name, self.joint_msg.position))
+        )
 
+        for x in self.joint_state_callback:
+            x(self.joint_msg.position)
 
-    def actuate(self, q_delta):        
-        q_delta /= self.updaterate
+    def actuate(self, q_delta):
         self.joint_msg.position += q_delta.ravel()
         # clip (prismatic) joints
-        self.joint_msg.position[self.prismatic] = numpy.clip(self.joint_msg.position[self.prismatic],
-                                                             self.mins[self.prismatic], self.maxs[self.prismatic])
+        self.joint_msg.position[self.prismatic] = numpy.clip(
+            self.joint_msg.position[self.prismatic],
+            self.mins[self.prismatic],
+            self.maxs[self.prismatic],
+        )
 
         self.update()
-
 
     def check_end(self):
         pass
 
-    def hierarchic_control(self, **targets):
-        T_tar_plane = targets['plane']
-        T_tar_pose = targets['pose']
+    def hierarchic_control(self, targets):
+        lb = np.maximum(-0.01, (self.mins - self.joint_msg.position) / self.rate)
+        ub = np.minimum(0.01, (self.maxs - self.joint_msg.position) / self.rate)
 
-        tasks = []
+        targets["J"] = self.J
+        targets["T_c"] = self.T
+        targets["current_jp"] = np.array(self.joint_msg.position)
 
-        plane = PlaneTask(1)
-        
-        line = LineTask(3)
-        pos = PositionTask(1)
-        para = ParallelTask([0,0,1], [0,0,1])
-        
-        dist = DisstanceTask(1)
+        tasks = self.task_hirachy.compute(targets)
 
-        zeros = np.array( [(m+M)/2 for (m,M) in zip(self.mins, self.maxs)  ] )
+        solver = Solver(self.N, 0.015)
+        q_delta, tcr = solver.solve_sot(tasks, lb, ub, warmstart=self.last_dq)
 
-        jp = JointZeroPos(zeros,0.3)
-
-        combine = CombineTasks()
-
-        #tasks.append(line.compute(self.J, self.T,  T_tar))
-        tasks.append(plane.compute(self.J, self.T, T_tar_plane))
-        tasks.append(pos.compute(self.J, self.T, T_tar_pose))
-        tasks.append(para.compute(self.J, self.T,T_tar_pose ))
-
-
-        tasks.append(jp.compute( np.array(self.joint_msg.position)))        
-
-
-        lb = np.maximum(-0.5, (self.mins - self.joint_msg.position) )
-        ub = np.minimum(0.5, (self.maxs - self.joint_msg.position) )
-
-        s = Solver(self.N, lb, ub, 0.01)
-        q_delta, tcr = s.solve_sot(tasks, warmstart=self.last_dq)
         self.last_dq = q_delta
 
         if q_delta is not None:
             self.actuate(q_delta)
-            #return tcr[0] < 1e-12 or all(i < 1e-8 for i in tcr)
+            # return tcr[0] < 1e-12 or all(i < 1e-8 for i in tcr)
 
         return False
 
-class MarkerControl:
 
+class MarkerControl:
     def __init__(self) -> None:
         self.targets = {}
 
-        self.marker_pub = rospy.Publisher('/marker_array', MarkerArray, queue_size=10)
-        self.ims = InteractiveMarkerServer('controller') 
+        self.ims = InteractiveMarkerServer("controller")
 
-        T = tf.translation_matrix([0.8,0,0.5])
-        T_2 = tf.translation_matrix([0.5,0,0.5])
-        addMarker(self.ims, iPositionMarker(T, markers=[sphere(), plane()], name='plane', scale=0.5), processFeedback(self.setTarget))
-        addMarker(self.ims, iPoseMarker(T_2, markers=[sphere()], name='pose'), processFeedback(self.setTarget))
+        T = tf.translation_matrix([0.8, 0, 0.5])
+        T_2 = tf.translation_matrix([0, 0.5, 0])
 
-        self.ims.applyChanges()
+        m1 = SixDOFMarker(self.ims, T, name="Position", scale=0.1)
+        m1.data_callbacks.append(self.setTarget)
+
+        m2 = ConeMarker(self.ims, T_2, scale=0.2)
+        m2.data_callbacks.append(self.setTarget)
+
+        self.setTarget("Position", T)
+        self.setTarget("Cone_angle", 0.4)
 
     def setTarget(self, name, goal):
         self.targets[name] = goal
@@ -151,42 +157,55 @@ class ControlThread(threading.Thread):
         self.dorun = False
         self.func = func
 
-
     def run(self) -> None:
         self.dorun = True
 
         while self.dorun:
             x = self.func()
             self.dorun = self.dorun & x
-        print("\nControl ended")
 
     def stop(self):
         self.dorun = False
 
 
-if __name__ == '__main__':
-    rospy.init_node('ik')
+if __name__ == "__main__":
+    rospy.init_node("ik")
     rate = rospy.Rate(50)
-    
-    c = Controller(50)
+
+    c = Controller()
     mc = MarkerControl()
 
-    c.reset(0)
+    # setup tasks
+    pos = PositionTask(1)
+    pos.argmap["T_t"] = "Position"
 
-    def loop():
-        rval = not c.hierarchic_control(**mc.targets)
+    cone = ConeTask((0, 0, 1), (0, 0, 1), 0.1)
+    cone.argmap["T_t"] = "Position"
+    cone.argmap["angle"] = "Cone_angle"
+
+    # ori = OrientationTask(3)
+    # ori.argmap['T_t'] = 'Position'
+
+    c.task_hirachy.add_task_lower(pos)
+    c.task_hirachy.add_task_same(cone)
+
+    #
+    def loop_function():
+        # p = cProfile.Profile()
+        # p.enable()
+        rval = not c.hierarchic_control(mc.targets)
+        # p.disable()
+        # p.print_stats()
         rate.sleep()
         return rval
+
+    #
 
     print("Stop with CRTL-D")
     while True:
         input("Start control with [ENTER]")
-        t = ControlThread(loop)
+        t = ControlThread(loop_function)
         t.start()
         input("Stop control with [ENTER]")
         t.stop()
         t.join()
-
-
-
-

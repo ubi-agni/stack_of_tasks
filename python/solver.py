@@ -1,179 +1,199 @@
 #!/usr/bin/env python
 
-from sympy import E
-from task import TaskDesc
+from matplotlib.pyplot import fill
+from task import PlaneTask, TaskDesc
 import numpy as np
 from scipy import sparse
 import osqp
 
-class QpDesc:
-    def __init__(self, N, rho) -> None:
-        self.N = N
-        
 
-        # initialized all needed matrices and vectors
-        self._P = np.identity(N) * rho
-        self._q = np.zeros(self.N)
+def prettyprintMatrix(inmatrix):
+    matrix = []
+    maxL = 0
+    for row in inmatrix:
+        col = []
+        for x in row:
+            s = f"{x:.2e}"
+            maxL = max(len(s), maxL)
+            col.append(s)
+        matrix.append(col)
 
-        self._A_opt = np.zeros((0,N)) # A matrix aller bereits optimierten tasks
-        self._lbA_opt = np.zeros(0)   # lower und upper    " 
-        self._ubA_opt = np.zeros(0)
+    s = ""
+    for r in matrix:
 
-        self._A_nopt = np.zeros((0,N)) # A matrix aller tasks, die im nächsten schritt optimiert werden müssen
-        self._lbA_nopt = np.zeros(0)
-        self._ubA_nopt = np.zeros(0)
-
-    @property
-    def sN(self):
-        """Number of slack variables"""
-        return self._lbA_nopt.size
-
-    @property
-    def H(self):
-        H = np.identity(self.N + self.sN)
-        H[:self.N, :self.N] = self._P
-        return H
-
-    @property
-    def q(self):
-        return np.r_[self._q, np.zeros(self.sN)]
-
-    @property
-    def A(self):
-
-        #  Matrix A aller Tasks
-        A = np.r_[
-            self._A_opt,    
-            self._A_nopt,        
-            -self._A_nopt,
-            #np.zeros((self.sN, self.N))
-            ]
-
-        # bestimmt von welche Tasks die slack-variablen abgezogen werden
-        sMat = np.r_[
-            np.zeros((self._A_opt.shape[0], self.sN)),
-            -np.identity(self.sN), 
-            -np.identity(self.sN),
-            #np.identity(self.sN)
-            ]
-
-        return np.c_[A,sMat]
-
-    @property
-    def lb(self):
-        return np.r_[
-            self._lbA_opt, 
-            np.full(2*self.sN, np.NINF),  # lower bound der optimierung ist immer -INF
-            #np.ones(self.sN) * 10e-5
-            ]
-
-    @property
-    def ub(self):
-        return np.r_[
-            self._ubA_opt, 
-            self._ubA_nopt, 
-            -self._lbA_nopt, # da es nur upper bounds gibt, wird aus lower upper bound 
-            #10e20 * np.ones(self.sN)
-            ]
-
-    def add_task(self, desc: TaskDesc):
-        At, ut, lt = desc.unpack()
-
-        self._A_nopt = np.r_[self._A_nopt, At]
-        self._ubA_nopt = np.r_[self._ubA_nopt, ut]
-        self._lbA_nopt = np.r_[self._lbA_nopt, lt]
-    
-    def add_slack(self, slack_vect):
-        assert slack_vect.size == self._lbA_nopt.size == self._ubA_nopt.size
-
-        self._A_opt = np.r_[
-            self._A_opt, 
-            self._A_nopt
-            ]
-        
-        self._ubA_opt = np.r_[
-            self._ubA_opt, 
-            self._ubA_nopt+slack_vect
-            ]
-        
-        self._lbA_opt = np.r_[
-            self._lbA_opt,
-            self._lbA_nopt-slack_vect
-            ]
-
-        # wird slack negativ, kann l > u werden -> bounds tauschen
-        v = self._lbA_opt > self._ubA_opt 
-        self._ubA_opt[v], self._lbA_opt[v] = self._ubA_opt[v], self._lbA_opt[v]
-
-        self._A_nopt = np.zeros((0,self.N))
-        self._ubA_nopt = np.zeros(0)
-        self._lbA_nopt = np.zeros(0)
-
-    def add_task_hard(self, desc):
-        self._ubA_opt = np.r_[self._ubA_opt, desc.upper]
-        self._lbA_opt = np.r_[self._lbA_opt, desc.lower]
-        self._A_opt = np.r_[self._A_opt, desc.A]
-
-    def add_static_bounds(self, lb, ub):
-        assert lb.size ==  ub.size == self.N
-        self._A_opt = np.r_[self._A_opt, np.identity(lb.size)]
-        self._ubA_opt = np.r_[self._ubA_opt, ub]
-        self._lbA_opt = np.r_[self._lbA_opt, lb]
+        for x in r:
+            s += f" {x :>^{maxL}} "
+        s += "\n"
+    print(s)
 
 
+class QPDescWithFixedSize:
+    @staticmethod
+    def get_matrix_specs(task_stack):
+        max_cols = 0
+        col_sum = 0
+        max_num_slack = 0
+
+        for tasks_same_level in task_stack:
+            level_cols = 0
+            for t in tasks_same_level:
+                level_cols += t.size
+            max_num_slack = max(max_num_slack, level_cols)
+            max_cols = max(max_cols, col_sum + 2 * level_cols)
+            col_sum += level_cols
+
+        return max_cols, max_num_slack
+
+    def __init__(self, N, rho, sot, lower, upper) -> None:
+        super().__init__()
+
+        number_of_columns, self.number_of_slack = self.get_matrix_specs(sot)
+        self.l = sot
+
+        self.N = N  # number of joints
+        self.numVars = self.N + self.number_of_slack
+
+        self.H = np.identity(self.numVars)  # objective matrix
+        self.H[:N, :N] *= rho
+
+        self.q = np.zeros(self.numVars)  # objective vector
+
+        self.A = np.zeros(
+            (self.numVars + number_of_columns, self.numVars)
+        )  # constraint matrix for all tasks
+        self.lb = np.zeros(
+            self.numVars + number_of_columns
+        )  # lower bound vector for all tasks
+        self.ub = np.zeros(self.numVars + number_of_columns)  # upper         "
+
+        self.A[: self.numVars, : self.numVars] = np.identity(
+            self.numVars
+        )  #   joint constraint matrix is identity
+        self.lb[: self.N] = lower  # lower joint bound
+        self.lb[self.N : self.numVars] = 0  # lower slack bound
+
+        self.ub[: self.N] = upper  # upper joint bound
+        self.ub[self.N : self.numVars] = np.PINF  # upper slack bound
+
+    def __iter__(self):  # use solver description as iterator
+        self._index = -1
+        self.start_row = self.numVars
+
+        return self
+
+    def __next__(self):  # use solver description as iterator
+        if self._index == len(self.l) - 1:
+            raise StopIteration
+        self._index += 1
+
+        numRows = 0
+
+        self.A[:, self.N :] = 0  # remove slacking from all tasks before
+
+        for task in self.l[self._index]:  # first iteration for upper bound constraints
+            task_size = task.size
+
+            self.A[
+                self.start_row + numRows : self.start_row + numRows + task_size,
+                : self.N,
+            ] = task.A
+            self.lb[
+                self.start_row + numRows : self.start_row + numRows + task_size
+            ] = np.NINF
+            self.ub[
+                self.start_row + numRows : self.start_row + numRows + task_size
+            ] = task.upper
+
+            numRows += task_size
+        self.A[self.start_row : self.start_row + numRows, self.N :] = -np.eye(
+            numRows, self.number_of_slack
+        )  # set -1 for slacks
+
+        s = self.start_row + numRows
+        numRows = 0
+
+        for task in self.l[
+            self._index
+        ]:  # second iteration for inverted lower bound constraints
+            task_size = task.size
+
+            self.A[s + numRows : s + numRows + task_size, : self.N] = -task.A
+            self.lb[s + numRows : s + numRows + task_size] = np.NINF
+            self.ub[s + numRows : s + numRows + task_size] = -task.lower
+
+            numRows += task_size
+
+        self.A[
+            self.start_row + numRows : self.start_row + 2 * numRows, self.N :
+        ] = -np.eye(
+            numRows, self.number_of_slack
+        )  # set -1 for slacks
+
+        self.H[self.N :, self.N :] = np.zeros(
+            (self.number_of_slack, self.number_of_slack)
+        )  # set H matrix correctly
+        self.H[self.N : self.N + numRows, self.N : self.N + numRows] = np.identity(
+            numRows
+        )
+
+        return (
+            self.H,
+            self.q,
+            self.A[: self.start_row + 2 * numRows, :],
+            self.lb[: self.start_row + 2 * numRows],
+            self.ub[: self.start_row + 2 * numRows],
+        )
+
+    def add_slack(self, slack_vector):
+        # add slack variables to upper part of the constraints and add joint upper and lower bounds in one constraint
+        numRows = 0
+        for task in self.l[self._index]:
+            slackSize = task.size
+
+            self.lb[self.start_row + numRows : self.start_row + numRows + slackSize] = (
+                task.lower - slack_vector[numRows : numRows + slackSize]
+            )
+            self.ub[
+                self.start_row + numRows : self.start_row + numRows + slackSize
+            ] += slack_vector[numRows : numRows + slackSize]
+
+            numRows += slackSize
+
+        self.start_row += numRows  # increase start position for next iteration
 
 
 class Solver:
-    def __init__(self, N, lb, ub, rho) -> None:
+    def __init__(self, N, rho) -> None:
         self.N = N
+        self.rho = rho
 
-        self.qp_desc = QpDesc(self.N, rho)
-        self.qp_desc.add_static_bounds(lb, ub)
-
-    def solve_sot(self, task_descs, warmstart=None):
-        assert len(task_descs)>0
-
+    def solve_sot(self, list_of_tasks, lower, upper, warmstart=None):
         task_chain_objectivs = []
         dq = warmstart
 
-        for t in task_descs:
-            self.qp_desc.add_task(t)
-            sol =  self._solve_qp(dq)
+        desc = QPDescWithFixedSize(self.N, self.rho, list_of_tasks, lower, upper)
 
-            if sol.info.status_val < 0 : 
+        for d in desc:
+            sol = self._solve_qp(*d, dq)
+
+            if sol.info.status_val < 0:
                 print(sol.info.status)
-                return None, None
+                # return None, None      # TODO handling of failed task!
             else:
-                task_chain_objectivs.append(sol.info.obj_val)
-                self.qp_desc.add_slack(sol.x[self.N:])
-                dq = sol.x[:self.N]
+                dq, slack = sol.x[: self.N], sol.x[self.N :]
+
+                desc.add_slack(slack)
 
         return dq, task_chain_objectivs
 
-
-    def _solve_qp(self, warmstart=None):
-
-        H = self.qp_desc.H
-        g = self.qp_desc.q
-        A = self.qp_desc.A
-        ub = self.qp_desc.ub
-        lb = self.qp_desc.lb
-
+    def _solve_qp(self, H, q, A, lb, ub, warmstart=None):
         H = sparse.csc_matrix(H)
         A = sparse.csc_matrix(A)
 
         m = osqp.OSQP()
-        m.setup(P=H, q=g, A=A, l=lb, u=ub, verbose=False)
-
+        m.setup(P=H, q=q, A=A, l=lb, u=ub, verbose=False)
         if warmstart is not None:
-            # slackvariablen mit 0 warmstarten, etwas anderes sinnvoller?
-            m.warm_start(x=np.r_[warmstart, np.full(g.size - warmstart.size, 0)])
+            m.warm_start(x=np.r_[warmstart, np.full(q.size - warmstart.size, 0)])
 
         sol = m.solve()
         return sol
-
-
-
-if __name__ == "__main__":
-    q = QpDesc(5, 3)
-    print(q.A)

@@ -1,11 +1,258 @@
 from __future__ import print_function
 
-from visualization_msgs.msg import Marker, InteractiveMarker, InteractiveMarkerControl
-from interactive_markers.interactive_marker_server import InteractiveMarkerFeedback
-from std_msgs.msg import Header, ColorRGBA
-from geometry_msgs.msg import Pose, Point, Quaternion, Vector3
-from tf import transformations as tf
+from random import random
+from traceback import print_tb
+
 import numpy
+from geometry_msgs.msg import Point, Pose, Quaternion, Vector3
+from interactive_markers.interactive_marker_server import (
+    InteractiveMarkerFeedback, InteractiveMarkerServer, UpdateContext)
+from std_msgs.msg import ColorRGBA, Header
+from tf import transformations as tf
+from tf.transformations import compose_matrix
+from visualization_msgs.msg import (InteractiveMarker,
+                                    InteractiveMarkerControl, Marker)
+
+
+class IAMarker:
+    def __init__(self, server: InteractiveMarkerServer, name: str) -> None:
+        self.server = server
+        self._name = name
+        self.data_callbacks = []
+
+    def _data_callback(self, name, data):
+        for c in self.data_callbacks:
+            c(name, data)
+
+    def _update_marker(self, marker):
+        self.server.insert(marker)
+
+    def _get_marker(self, name) -> InteractiveMarker:
+        return self.server.marker_contexts.get(name).int_marker
+
+    def _create_interactive_marker(
+        self, name, scale=1, pose=tf.translation_matrix([0, 0, 0]), callback=None
+    ):
+        im = InteractiveMarker(name=name)
+        im.header.frame_id = "world"
+        im.pose = createPose(pose)
+        im.scale = scale
+
+        self.server.insert(im, callback)
+        return im
+
+    @staticmethod
+    def _add_display_marker(im, name, marker=None, markers=None):
+        control = InteractiveMarkerControl()
+        control.name = name
+        control.interaction_mode = InteractiveMarkerControl.NONE
+        control.always_visible = True
+
+        if marker:
+            control.markers.append(marker)
+        if markers:
+            control.markers.extend(markers)
+        im.controls.append(control)
+
+    @staticmethod
+    def _add_movement_marker(im, name, mode, marker=None, markers=None):
+        control = InteractiveMarkerControl()
+        control.name = name
+        control.interaction_mode = mode
+        if marker:
+            control.markers.append(marker)
+        if markers:
+            control.markers.extend(markers)
+        im.controls.append(control)
+
+    @staticmethod
+    def _add_movement_control(
+        im, name, mode, directoins="xyz", or_mode=None, marker=None, markers=None
+    ):
+        for d in directoins:
+            control = InteractiveMarkerControl()
+            control.name = f"{name}_{d}"
+            control.interaction_mode = mode
+            if or_mode:
+                control.orientation_mode = or_mode
+            control.orientation.x = 1 if d == "x" else 0
+            control.orientation.z = 1 if d == "y" else 0
+            control.orientation.y = 1 if d == "z" else 0
+            control.orientation.w = 1
+
+            if marker:
+                control.markers.append(marker)
+            if markers:
+                control.markers.extend(markers)
+
+            im.controls.append(control)
+
+
+class PositionMarker(IAMarker):
+    def __init__(
+        self,
+        server: InteractiveMarkerServer,
+        pose,
+        name: str = "Pos",
+        scale: float = 1,
+        additional_marker=None,
+    ) -> None:
+        super().__init__(server, name)
+
+        p = self._create_interactive_marker(
+            name, scale=scale, pose=pose, callback=self._callback
+        )
+
+        if additional_marker:
+            if isinstance(additional_marker, list):
+                for x in additional_marker:
+                    self._add_display_marker(p, "", x)
+            else:
+                self._add_display_marker(p, "", additional_marker)
+
+        self._add_movement_marker(p, "", InteractiveMarkerControl.MOVE_3D, sphere())
+        self._add_movement_control(p, "pos", InteractiveMarkerControl.MOVE_AXIS)
+        self.server.applyChanges()
+
+    def _callback(self, fb: InteractiveMarkerFeedback):
+        self._data_callback(fb.marker_name, poseMsgToTM(fb.pose))
+        self.server.applyChanges()
+
+
+class OrientationMarker(IAMarker):
+    def __init__(
+        self,
+        server: InteractiveMarkerServer,
+        pose,
+        name: str = "Rot",
+        scale: float = 1,
+        additional_marker=None,
+    ) -> None:
+        super().__init__(server, name)
+
+        p = self._create_interactive_marker(
+            name, scale=scale, pose=pose, callback=self._callback
+        )
+
+        if additional_marker:
+            if isinstance(additional_marker, list):
+                for x in additional_marker:
+                    self._add_display_marker(p, "", x)
+            else:
+                self._add_display_marker(p, "", additional_marker)
+
+        self._add_movement_marker(p, "", InteractiveMarkerControl.ROTATE_3D, sphere())
+        self._add_movement_control(p, "", InteractiveMarkerControl.ROTATE_AXIS)
+        self.server.applyChanges()
+
+    def _callback(self, fb: InteractiveMarkerFeedback):
+        self._data_callback(fb.marker_name, poseMsgToTM(fb.pose))
+        self.server.applyChanges()
+
+
+class SixDOFMarker(IAMarker):
+    def __init__(
+        self,
+        server: InteractiveMarkerServer,
+        pose,
+        name: str = "PosRot",
+        scale: float = 1,
+        additional_marker=None,
+    ) -> None:
+        super().__init__(server, name)
+
+        p = self._create_interactive_marker(
+            name, scale=scale, pose=pose, callback=self._callback
+        )
+
+        if additional_marker:
+            if isinstance(additional_marker, list):
+                for x in additional_marker:
+                    self._add_display_marker(p, "", x)
+            else:
+                self._add_display_marker(p, "", additional_marker)
+
+        self._add_movement_marker(
+            p, "", InteractiveMarkerControl.MOVE_ROTATE_3D, sphere()
+        )
+        self._add_movement_control(p, "pos", InteractiveMarkerControl.MOVE_AXIS)
+        self._add_movement_control(p, "rot", InteractiveMarkerControl.ROTATE_AXIS)
+
+        self.server.applyChanges()
+
+    def _callback(self, fb: InteractiveMarkerFeedback):
+        self._data_callback(fb.marker_name, poseMsgToTM(fb.pose))
+        self.server.applyChanges()
+
+
+class ConeMarker(IAMarker):
+    def __init__(
+        self,
+        server: InteractiveMarkerServer,
+        pose,
+        name: str = "Cone",
+        scale: float = 1,
+        angle=0.4,
+        mode=InteractiveMarkerControl.ROTATE_3D,
+    ) -> None:
+        super().__init__(server, name)
+
+        self._angle = angle
+        self._scale = scale
+
+        loc_marker = self._create_interactive_marker(
+            f"{self._name}_Pos", pose=pose, scale=0.1, callback=self._callback_pose
+        )
+        self._add_display_marker(loc_marker, "", cone(self._angle, self._scale))
+        self._add_movement_control(loc_marker, "", InteractiveMarkerControl.MOVE_AXIS)
+        self._add_movement_control(loc_marker, "", InteractiveMarkerControl.ROTATE_AXIS)
+
+        handle_marker = self._create_interactive_marker(
+            f"{self._name}_Handle", callback=self._callback_angel, scale=0.05
+        )
+        self._add_movement_marker(
+            handle_marker, "", InteractiveMarkerControl.MOVE_PLANE, marker=sphere()
+        )
+        self._add_movement_control(
+            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="z"
+        )
+        self._add_movement_control(
+            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="y"
+        )
+        self.server.applyChanges()
+
+        self._callback_pose(
+            InteractiveMarkerFeedback(marker_name=loc_marker.name, pose=loc_marker.pose)
+        )
+
+    def _calc_handle_pose(self, T_root):
+        handle_pose = tf.rotation_matrix(self._angle, [1, 0, 0]).dot(
+            tf.translation_matrix([0, 0, self._scale])
+        )
+        self.server.setPose(f"{self._name}_Handle", createPose(T_root.dot(handle_pose)))
+
+    def _callback_pose(self, feedback):
+        T = poseMsgToTM(feedback.pose)
+        self._calc_handle_pose(T)
+        self._data_callback(f"{self._name}_pose", T)
+        self.server.applyChanges()
+
+    def _callback_angel(self, feedback):
+        T_marker = poseMsgToTM(feedback.pose)
+        coneM = self._get_marker(f"{self._name}_Pos")
+        T_cone = poseMsgToTM(coneM.pose)
+
+        v = T_marker[0:3, 3] - T_cone[0:3, 3]  # vector from cone's origin to marker
+        self._scale = numpy.linalg.norm(v)
+        self._angle = numpy.arccos(
+            numpy.maximum(0, T_cone[0:3, 2].dot(v) / self._scale)
+        )
+
+        self._calc_handle_pose(T_cone)
+        coneM.controls[0].markers[0].points = cone(self._angle, self._scale).points
+        self._update_marker(coneM)
+        self._data_callback(f"{self._name}_angle", self._angle)
+        self.server.applyChanges()
 
 
 def sphere(radius=0.02, color=ColorRGBA(1, 0, 1, 0.5), **kwargs):
@@ -30,31 +277,54 @@ def plane(size=1.0, color=ColorRGBA(1, 1, 1, 0.5), **kwargs):
     return box(size=Vector3(size, size, 1e-3), color=color, **kwargs)
 
 
-def cone(halfOpenAngle, scale=0.1, color=ColorRGBA(1, 0, 1, 0.5), **kwargs):
+def cone(halfOpenAngle, scale=0.1, color=ColorRGBA(1, 0, 1, 1), **kwargs):
     twopi = numpy.pi * 2
     height = scale * numpy.cos(halfOpenAngle)
     radius = scale * numpy.sin(halfOpenAngle)
     points = []
     numTriangles = 50
-    
-    for i in range(numTriangles):
-        points.append(Point(0, 0, 0))
-        theta = twopi * i/numTriangles
-        points.append(Point(radius * numpy.sin(theta), radius * numpy.cos(theta), height))
-        theta = twopi * (i+1)/numTriangles
-        points.append(Point(radius * numpy.sin(theta), radius * numpy.cos(theta), height))
 
-    return Marker(type=Marker.TRIANGLE_LIST, points=points, color=color, scale=Vector3(1, 1, 1), **kwargs)
+    for i in range(numTriangles):
+        # outside
+        points.append(Point(0, 0, 0))
+        theta = twopi * i / numTriangles
+        points.append(
+            Point(radius * numpy.sin(theta), radius * numpy.cos(theta), height)
+        )
+        theta = twopi * (i + 1) / numTriangles
+        points.append(
+            Point(radius * numpy.sin(theta), radius * numpy.cos(theta), height)
+        )
+
+        # inside
+        rinside = radius * 0.95
+        theta = twopi * i / numTriangles
+        points.append(
+            Point(rinside * numpy.sin(theta), rinside * numpy.cos(theta), height)
+        )
+        points.append(Point(0, 0, radius - rinside))
+        theta = twopi * (i + 1) / numTriangles
+        points.append(
+            Point(rinside * numpy.sin(theta), rinside * numpy.cos(theta), height)
+        )
+
+    return Marker(
+        type=Marker.TRIANGLE_LIST,
+        points=points,
+        color=color,
+        scale=Vector3(1, 1, 1),
+        **kwargs,
+    )
 
 
 def arrow(len=0.1, width=None, color=ColorRGBA(1, 0, 0, 1), **kwargs):
     """Create an arrow marker"""
-    width = width or 0.1*len
+    width = width or 0.1 * len
     scale = Vector3(len, width, width)
     return Marker(type=Marker.ARROW, scale=scale, color=color, **kwargs)
 
 
-def frame(T, scale=0.1, radius=None, frame_id='world', ns='frame'):
+def frame(T, scale=0.1, radius=None, frame_id="world", ns="frame"):
     """Create a frame composed from three cylinders"""
     markers = []
     p = T[0:3, 3]
@@ -63,9 +333,9 @@ def frame(T, scale=0.1, radius=None, frame_id='world', ns='frame'):
     if radius is None:
         radius = scale / 10
 
-    xaxis = tf.quaternion_about_axis(numpy.pi / 2., [0, 1, 0])
-    yaxis = tf.quaternion_about_axis(numpy.pi / 2., [-1, 0, 0])
-    offset = numpy.array([0, 0, scale / 2.])
+    xaxis = tf.quaternion_about_axis(numpy.pi / 2.0, [0, 1, 0])
+    yaxis = tf.quaternion_about_axis(numpy.pi / 2.0, [-1, 0, 0])
+    offset = numpy.array([0, 0, scale / 2.0])
 
     m = cylinder(radius, scale, color=ColorRGBA(1, 0, 0, 1), id=0, **defaults)
     q = tf.quaternion_multiply(tf.quaternion_from_matrix(T), xaxis)
@@ -92,28 +362,28 @@ def add3DControls(im, markers, mode=InteractiveMarkerControl.MOVE_ROTATE_3D, **k
     im.controls.append(control)
 
 
-def addArrowControls(im, dirs='xyz'):
+def addArrowControls(im, dirs="xyz"):
     # Create arrow controls to move the marker
     for dir in dirs:
         control = InteractiveMarkerControl()
-        control.name = 'move_' + dir
+        control.name = "move_" + dir
         control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
-        control.orientation.x = 1 if dir == 'x' else 0
-        control.orientation.z = 1 if dir == 'y' else 0
-        control.orientation.y = 1 if dir == 'z' else 0
+        control.orientation.x = 1 if dir == "x" else 0
+        control.orientation.z = 1 if dir == "y" else 0
+        control.orientation.y = 1 if dir == "z" else 0
         control.orientation.w = 1
         im.controls.append(control)
 
 
-def addOrientationControls(im, dirs='xyz'):
+def addOrientationControls(im, dirs="xyz"):
     # Create controls to rotate the marker
     for dir in dirs:
         control = InteractiveMarkerControl()
-        control.name = 'rotate_' + dir
+        control.name = "rotate_" + dir
         control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
-        control.orientation.x = 1 if dir == 'x' else 0
-        control.orientation.z = 1 if dir == 'y' else 0
-        control.orientation.y = 1 if dir == 'z' else 0
+        control.orientation.x = 1 if dir == "x" else 0
+        control.orientation.z = 1 if dir == "y" else 0
+        control.orientation.y = 1 if dir == "z" else 0
         control.orientation.w = 1
         im.controls.append(control)
 
@@ -123,7 +393,10 @@ def createPose(T):
         Tnew = numpy.identity(4)
         Tnew[0:3, 3] = T
         T = Tnew
-    return Pose(position=Point(*T[0:3, 3]), orientation=Quaternion(*tf.quaternion_from_matrix(T)))
+    return Pose(
+        position=Point(*T[0:3, 3]),
+        orientation=Quaternion(*tf.quaternion_from_matrix(T)),
+    )
 
 
 def addMarker(im_server, im, feedback_callback):
@@ -143,78 +416,38 @@ def poseMsgToTM(pose):
 def processFeedback(pose_callback):
     def process_marker_feedback(feedback):
         pose_callback(feedback.marker_name, poseMsgToTM(feedback.pose))
+
     return process_marker_feedback
 
 
-def iMarker(T, markers=[], name='pose', mode=InteractiveMarkerControl.MOVE_ROTATE_3D, **kwargs):
+def iMarker(
+    T, markers=[], name="pose", mode=InteractiveMarkerControl.MOVE_ROTATE_3D, **kwargs
+):
     im = InteractiveMarker(name=name, pose=createPose(T), **kwargs)
-    im.header.frame_id = 'world'
+    im.header.frame_id = "world"
     if markers:
         add3DControls(im, markers, mode=mode)
     return im
 
 
-def iPositionMarker(T, markers=[sphere()], name='pos', **kwargs):
-    im = iMarker(T, markers, name, scale=0.2, description='Pos')
+def iPositionMarker(T, markers=[sphere()], name="pos", **kwargs):
+    im = iMarker(T, markers, name, scale=0.2, description="Pos")
     addArrowControls(im)
     return im
 
 
-def iPoseMarker(T, markers=[sphere()], name='pose'):
-    im = iMarker(T, markers, name, scale=0.2, description='Pose 6D')
+def iPoseMarker(T, markers=[sphere()], name="pose"):
+    im = iMarker(T, markers, name, scale=0.2, description="Pose 6D")
     addArrowControls(im)
     addOrientationControls(im)
     return im
 
 
-def iPlaneMarker(pos, markers, name='plane', **kwargs):
-    im = iMarker(pos, name=name, scale=0.2, description='Plane', **kwargs)
+def iPlaneMarker(pos, markers, name="plane", **kwargs):
+    im = iMarker(pos, name=name, scale=0.2, description="Plane", **kwargs)
     if markers:
         add3DControls(im, markers)
     else:
-        addArrowControls(im, dirs='z')
-        addOrientationControls(im, dirs='xy')
+        addArrowControls(im, dirs="z")
+        addOrientationControls(im, dirs="xy")
     return im
-
-
-class iConeMarker:
-    def __init__(self, ims, T, angle=.4, scale=.2, name='cone',
-                 mode=InteractiveMarkerControl.ROTATE_3D, pose_cb=None, angle_cb=None):
-        self._server = ims
-        self._angle = angle
-        self._scale = scale
-        self._name = name
-        self.cone = iMarker(T, markers=[cone(angle, scale=scale)], name=name + '_pose', mode=mode)
-        self.cone.controls[0].always_visible = True
-        self.handle = iMarker(T, markers=[sphere(color=ColorRGBA(0,1,1,1))], name=name + '_angle',
-                              mode=InteractiveMarkerControl.MOVE_3D)
-
-        self._pose_cb = pose_cb
-        self._angle_cb = angle_cb
-        if self._angle_cb:
-            self._angle_cb(self.handle.name, self._angle)
-
-        ims.insert(self.cone, self.process_pose)
-        ims.insert(self.handle, self.process_angle)
-        self._server.applyChanges()
-        self.process_pose(InteractiveMarkerFeedback(marker_name=self.cone.name, pose=self.cone.pose))
-
-    def process_pose(self, feedback):
-        T = poseMsgToTM(feedback.pose)
-        if self._pose_cb:
-            self._pose_cb(feedback.marker_name, T)
-        handle_pose = tf.rotation_matrix(self._angle, [1, 0, 0]).dot(tf.translation_matrix([0, 0, self._scale]))
-        self._server.setPose(self._name + '_angle', createPose(T.dot(handle_pose)))
-        self._server.applyChanges()
-
-    def process_angle(self, feedback):
-        T_marker = poseMsgToTM(feedback.pose)
-        T_cone = poseMsgToTM(self.cone.pose)
-        v = T_marker[0:3, 3] - T_cone[0:3, 3] # vector from cone's origin to marker
-        self._scale = numpy.linalg.norm(v)
-        self._angle = numpy.arccos(numpy.maximum(0, T_cone[0:3,2].dot(v) / self._scale))
-        if self._angle_cb:
-            self._angle_cb(feedback.marker_name, self._angle)
-        self.cone.controls[0].markers[0].points = cone(self._angle, self._scale).points
-        self._server.insert(self.cone)
-        self._server.applyChanges()

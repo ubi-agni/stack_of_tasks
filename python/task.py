@@ -31,7 +31,7 @@ class Task:
 
     def __init__(self, scale=1.0, hard_task=False) -> None:
         self._scale = scale
-        self._hard = false
+        self._hard = hard_task
 
         self.argmap = {a: a for a in self.args}
 

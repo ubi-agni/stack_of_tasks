@@ -46,39 +46,39 @@ class Task:
         return np.array([[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]])
 
 
-class TaskHirachy:
+class TaskHierarchy:
     def __init__(self) -> None:
 
-        self.hirachy = []
+        self.hierarchy = []
 
     @property
-    def higest_hiracy_level(self):
-        if (d := len(self.hirachy)) == 0:
+    def highest_hierarchy_level(self):
+        if (d := len(self.hierarchy)) == 0:
             return -1
         else:
             return d - 1
 
     def clear(self):
-        self.hirachy = []
+        self.hierarchy = []
 
     def add_task_at(self, task: Task, prio: int):
         assert prio > -1
-        assert prio <= self.higest_hiracy_level
-        self.hirachy[prio].append(task)
+        assert prio <= self.highest_hierarchy_level
+        self.hierarchy[prio].append(task)
 
     def add_task_lower(self, task: Task):
-        self.hirachy.append([task])
+        self.hierarchy.append([task])
 
     def add_task_same(self, task: Task):
-        if (l := self.higest_hiracy_level) < 0:
+        if (l := self.highest_hierarchy_level) < 0:
             self.add_task_lower(task)
         else:
-            self.hirachy[l].append(task)
+            self.hierarchy[l].append(task)
 
     def compute(self, data):
         r = []
 
-        for h in self.hirachy:
+        for h in self.hierarchy:
             r.append(list(map(lambda x: x.compute(data), h)))
         return r
 
@@ -113,7 +113,7 @@ class OrientationTask(Task):
         return EQTaskDesc(A, b, self.name)
 
 
-class DisstanceTask(Task):
+class DistanceTask(Task):
     """Keep distance to target position, not considering (approach) direction"""
 
     name = "Dist"

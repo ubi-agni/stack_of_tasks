@@ -64,7 +64,7 @@ class Controller(object):
         )
         self.reset()
 
-        self.task_hirachy = TaskHirachy()
+        self.task_hierarchy = TaskHierarchy()
 
         self.last_dq = None
         self.joint_state_callback = []
@@ -114,7 +114,7 @@ class Controller(object):
         targets["T_c"] = self.T
         targets["current_jp"] = np.array(self.joint_msg.position)
 
-        tasks = self.task_hirachy.compute(targets)
+        tasks = self.task_hierarchy.compute(targets)
 
         solver = Solver(self.N, 0.015)
         q_delta, tcr = solver.solve_sot(tasks, lb, ub, warmstart=self.last_dq)
@@ -186,8 +186,8 @@ if __name__ == "__main__":
     # ori = OrientationTask(3)
     # ori.argmap['T_t'] = 'Position'
 
-    c.task_hirachy.add_task_lower(pos)
-    c.task_hirachy.add_task_same(cone)
+    c.task_hierarchy.add_task_lower(pos)
+    c.task_hierarchy.add_task_same(cone)
 
     #
     def loop_function():

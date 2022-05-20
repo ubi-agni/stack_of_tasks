@@ -1,24 +1,55 @@
 from __future__ import print_function
 
-from random import random
-from traceback import print_tb
+from abc import ABC, abstractmethod
 
 import numpy
 from geometry_msgs.msg import Point, Pose, Quaternion, Vector3
 from interactive_markers.interactive_marker_server import (
-    InteractiveMarkerFeedback, InteractiveMarkerServer, UpdateContext)
+    InteractiveMarkerFeedback, InteractiveMarkerServer)
 from std_msgs.msg import ColorRGBA, Header
 from tf import transformations as tf
-from tf.transformations import compose_matrix
 from visualization_msgs.msg import (InteractiveMarker,
                                     InteractiveMarkerControl, Marker)
 
 
-class IAMarker:
-    def __init__(self, server: InteractiveMarkerServer, name: str) -> None:
+class IAMarker(ABC):
+    def __init__(self, server: InteractiveMarkerServer=None, name: str="Marker", pose=None, scale:int=1, callback=None, **kwargs) -> None:
         self.server = server
         self._name = name
-        self.data_callbacks = []
+        
+        if callback:
+            self.data_callbacks = [callback]
+        else:
+            self.data_callbacks = []
+
+        if self.server:
+            self._setup_marker(name, pose, scale, **kwargs)
+            self.server.applyChanges()
+        else:
+            ## hold back creation
+            self._setup_later = lambda: self._setup_marker(name, pose, scale, **kwargs)
+
+
+    def init_server(self, server: InteractiveMarkerServer):
+        if self.server is None:
+            self.server = server
+            self._setup_later()
+            del self._setup_later
+            self.server.applyChanges()
+        else:
+            pass #Warning, server already set
+
+    @abstractmethod
+    def _setup_marker(self, name, pose, scale, **kwargs):
+        pass
+
+    @abstractmethod
+    def provided_targets():
+        pass
+    
+    @abstractmethod
+    def delete(self):
+        pass
 
     def _data_callback(self, name, data):
         for c in self.data_callbacks:
@@ -87,103 +118,57 @@ class IAMarker:
 
             im.controls.append(control)
 
+class SingelControlMarker(IAMarker, ABC):
+    def __init__(self, server: InteractiveMarkerServer = None, name: str = "Marker", pose=None, scale: int = 1, callback=None, additional_marker=None) -> None:
+        super().__init__(server, name, pose, scale, callback, additional_marker=additional_marker)
 
-class PositionMarker(IAMarker):
-    def __init__(
-        self,
-        server: InteractiveMarkerServer,
-        pose,
-        name: str = "Pos",
-        scale: float = 1,
-        additional_marker=None,
-    ) -> None:
-        super().__init__(server, name)
-
-        p = self._create_interactive_marker(
+    @abstractmethod
+    def _setup_marker(self, name, pose, scale, additional_marker=None):
+        self.marker = self._create_interactive_marker(
             name, scale=scale, pose=pose, callback=self._callback
         )
 
         if additional_marker:
             if isinstance(additional_marker, list):
                 for x in additional_marker:
-                    self._add_display_marker(p, "", x)
+                    self._add_display_marker(self.marker, "", x)
             else:
-                self._add_display_marker(p, "", additional_marker)
+                self._add_display_marker(self.marker, "", additional_marker)
+        
+        self._data_callback(self._name, pose)
 
-        self._add_movement_marker(p, "", InteractiveMarkerControl.MOVE_3D, sphere())
-        self._add_movement_control(p, "pos", InteractiveMarkerControl.MOVE_AXIS)
+
+    def delete(self):
+        self.server.erase(self._name)
         self.server.applyChanges()
+
+    def provided_targets(self):
+        return [self._name]
 
     def _callback(self, fb: InteractiveMarkerFeedback):
         self._data_callback(fb.marker_name, poseMsgToTM(fb.pose))
         self.server.applyChanges()
 
+class PositionMarker(SingelControlMarker):
+    def _setup_marker(self, name, pose, scale, additional_marker=None):
+        super()._setup_marker(name, pose, scale, additional_marker=additional_marker)
+        self._add_movement_marker(self.marker, "", InteractiveMarkerControl.MOVE_3D, sphere())
+        self._add_movement_control(self.marker, "", InteractiveMarkerControl.MOVE_AXIS)
 
-class OrientationMarker(IAMarker):
-    def __init__(
-        self,
-        server: InteractiveMarkerServer,
-        pose,
-        name: str = "Rot",
-        scale: float = 1,
-        additional_marker=None,
-    ) -> None:
-        super().__init__(server, name)
+class OrientationMarker(SingelControlMarker):
 
-        p = self._create_interactive_marker(
-            name, scale=scale, pose=pose, callback=self._callback
-        )
-
-        if additional_marker:
-            if isinstance(additional_marker, list):
-                for x in additional_marker:
-                    self._add_display_marker(p, "", x)
-            else:
-                self._add_display_marker(p, "", additional_marker)
-
-        self._add_movement_marker(p, "", InteractiveMarkerControl.ROTATE_3D, sphere())
-        self._add_movement_control(p, "", InteractiveMarkerControl.ROTATE_AXIS)
-        self.server.applyChanges()
-
-    def _callback(self, fb: InteractiveMarkerFeedback):
-        self._data_callback(fb.marker_name, poseMsgToTM(fb.pose))
-        self.server.applyChanges()
+    def _setup_marker(self, name, pose, scale, additional_marker=None):
+        super()._setup_marker(name, pose, scale, additional_marker=additional_marker)
+        self._add_movement_marker(self.marker, "", InteractiveMarkerControl.ROTATE_3D, sphere())
+        self._add_movement_control(self.marker, "", InteractiveMarkerControl.ROTATE_AXIS)
 
 
-class SixDOFMarker(IAMarker):
-    def __init__(
-        self,
-        server: InteractiveMarkerServer,
-        pose,
-        name: str = "PosRot",
-        scale: float = 1,
-        additional_marker=None,
-    ) -> None:
-        super().__init__(server, name)
-
-        p = self._create_interactive_marker(
-            name, scale=scale, pose=pose, callback=self._callback
-        )
-
-        if additional_marker:
-            if isinstance(additional_marker, list):
-                for x in additional_marker:
-                    self._add_display_marker(p, "", x)
-            else:
-                self._add_display_marker(p, "", additional_marker)
-
-        self._add_movement_marker(
-            p, "", InteractiveMarkerControl.MOVE_ROTATE_3D, sphere()
-        )
-        self._add_movement_control(p, "pos", InteractiveMarkerControl.MOVE_AXIS)
-        self._add_movement_control(p, "rot", InteractiveMarkerControl.ROTATE_AXIS)
-
-        self.server.applyChanges()
-
-    def _callback(self, fb: InteractiveMarkerFeedback):
-        self._data_callback(fb.marker_name, poseMsgToTM(fb.pose))
-        self.server.applyChanges()
-
+class SixDOFMarker(SingelControlMarker):
+    def _setup_marker(self, name, pose, scale, additional_marker=None):
+        super()._setup_marker(name, pose, scale, additional_marker=additional_marker)
+        self._add_movement_marker(self.marker, "", InteractiveMarkerControl.MOVE_ROTATE_3D, sphere())
+        self._add_movement_control(self.marker, "", InteractiveMarkerControl.MOVE_AXIS)
+        self._add_movement_control(self.marker, "", InteractiveMarkerControl.ROTATE_AXIS)
 
 class ConeMarker(IAMarker):
     def __init__(
@@ -195,8 +180,9 @@ class ConeMarker(IAMarker):
         angle=0.4,
         mode=InteractiveMarkerControl.ROTATE_3D,
     ) -> None:
-        super().__init__(server, name)
+        super().__init__(server, pose=pose, name=name, scale=scale, angle=angle, mode=mode)
 
+    def _setup_marker(self, name, pose, scale, angle, mode):
         self._angle = angle
         self._scale = scale
 
@@ -219,11 +205,17 @@ class ConeMarker(IAMarker):
         self._add_movement_control(
             handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="y"
         )
-        self.server.applyChanges()
 
-        self._callback_pose(
-            InteractiveMarkerFeedback(marker_name=loc_marker.name, pose=loc_marker.pose)
-        )
+        self._data_callback(f"{self._name}_angle", self._angle)
+        self._data_callback(f"{self._name}_pose", pose)
+
+    def provided_targets(self):
+        return ["{self._name}_Pos","{self._name}_Handle"]
+
+    def delete(self):
+        self.server.erase(f"{self._name}_Pos")
+        self.server.erase(f"{self._name}_Handle")
+        self.server.applyChanges()
 
     def _calc_handle_pose(self, T_root):
         handle_pose = tf.rotation_matrix(self._angle, [1, 0, 0]).dot(

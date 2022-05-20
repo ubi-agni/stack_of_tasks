@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
-from matplotlib.pyplot import fill
-from task import PlaneTask, TaskDesc
 import numpy as np
-from scipy import sparse
 import osqp
+from scipy import sparse
 
 
 def prettyprintMatrix(inmatrix):
@@ -156,6 +154,9 @@ class QPDescWithFixedSize:
             self.ub[
                 self.start_row + numRows : self.start_row + numRows + slackSize
             ] += slack_vector[numRows : numRows + slackSize]
+
+            violations = self.ub < self.lb  # lower bound is larger than upper, happens very close to equality
+            self.ub[violations], self.lb[violations] = self.lb[violations], self.ub[violations]
 
             numRows += slackSize
 

@@ -1,25 +1,21 @@
 #!/usr/bin/env python
 
+import random
 import threading
-from venv import create
-from solver import Solver
-from sympy import true
-from task import *
+
 import numpy
 import rospy
-import random
-from std_msgs.msg import Header
+from geometry_msgs.msg import Quaternion, Transform, TransformStamped, Vector3
+from interactive_markers.interactive_marker_server import \
+    InteractiveMarkerServer
 from sensor_msgs.msg import JointState
-from geometry_msgs.msg import TransformStamped, Transform, Quaternion, Vector3
-
-from visualization_msgs.msg import MarkerArray
+from std_msgs.msg import Header
 from tf import transformations as tf
-from interactive_markers.interactive_marker_server import InteractiveMarkerServer
-from robot_model import RobotModel, Joint
 
 from markers import *
-
-from threading import Lock
+from robot_model import Joint, RobotModel
+from solver import Solver
+from task import *
 
 # random.seed(1)
 
@@ -49,7 +45,6 @@ class Controller(object):
 
         self.joint_msg = JointState()
         self.joint_msg.name = [j.name for j in self.robot.active_joints]
-
         self.target_link = pose.child_frame_id
         self.N = len(self.robot.active_joints)  # number of (active) joints
 
@@ -107,8 +102,8 @@ class Controller(object):
         pass
 
     def hierarchic_control(self, targets):
-        lb = np.maximum(-0.01, (self.mins - self.joint_msg.position) / self.rate)
-        ub = np.minimum(0.01, (self.maxs - self.joint_msg.position) / self.rate)
+        lb = np.maximum(-0.01, (self.mins*.95 - self.joint_msg.position) / self.rate)
+        ub = np.minimum(0.01, (self.maxs*.95 - self.joint_msg.position) / self.rate)
 
         targets["J"] = self.J
         targets["T_c"] = self.T
@@ -130,24 +125,30 @@ class Controller(object):
 
 class MarkerControl:
     def __init__(self) -> None:
+        
         self.targets = {}
-
         self.ims = InteractiveMarkerServer("controller")
+        self.marker={}
 
-        T = tf.translation_matrix([0.8, 0, 0.5])
-        T_2 = tf.translation_matrix([0, 0.5, 0])
+        self.set_data_callback = []
 
-        m1 = SixDOFMarker(self.ims, T, name="Position", scale=0.1)
-        m1.data_callbacks.append(self.setTarget)
+    def add_marker(self, marker:IAMarker, name):
+        self.marker[name] = marker
+        marker.data_callbacks.append(self.setTarget)
+        marker.init_server(self.ims)
 
-        m2 = ConeMarker(self.ims, T_2, scale=0.2)
-        m2.data_callbacks.append(self.setTarget)
-
-        self.setTarget("Position", T)
-        self.setTarget("Cone_angle", 0.4)
+    def delete_marker(self, name):
+        self.marker[name].delete()
+        t = self.marker[name].provided_targets()
+        for x in t:
+            print(x)
+            del self.targets[x]
+        del self.marker[name]
 
     def setTarget(self, name, goal):
         self.targets[name] = goal
+        for callback in self.set_data_callback:
+            callback(name, goal)
 
 
 class ControlThread(threading.Thread):

@@ -1,7 +1,6 @@
-from concurrent.futures import thread
 import typing
+
 import numpy as np
-from sympy import false
 from tf import transformations as tf
 
 
@@ -31,7 +30,7 @@ class Task:
 
     def __init__(self, scale=1.0, hard_task=False) -> None:
         self._scale = scale
-        self._hard = false
+        self._hard = hard_task
 
         self.argmap = {a: a for a in self.args}
 
@@ -74,6 +73,12 @@ class TaskHirachy:
             self.add_task_lower(task)
         else:
             self.hirachy[l].append(task)
+    
+    def remove_level(self, level):
+        pass
+
+    def remove_task(self, task):
+        pass
 
     def compute(self, data):
         r = []
@@ -207,6 +212,7 @@ class ConeTask(Task):
     def compute(self, data):
         """Align axis in eef frame to lie in cone spanned by reference axis and opening angle acos(threshold)"""
         J, T_c, T_t, threshold = self._map_args(data)
+
         threshold = np.cos(threshold)
         axis = T_c[0:3, 0:3].dot(self.ra)  # transform axis from eef frame to base frame
         reference = T_t[0:3, 0:3].dot(self.ta)
@@ -229,9 +235,25 @@ class JointPos(Task):
         (current_jp,) = self._map_args(data)
 
         A = np.identity(current_jp.size)
-        b = self._scale * (self.desired_joint_pose - current_jp)
+        b = -self._scale * (self.desired_joint_pose - current_jp)
+        print(b)
+        return EQTaskDesc(A, b, self.name)
+
+class PreventJointBounds(Task):
+    name = "JointsBound"
+    args = ["current_jp"]
+
+    def __init__(self, mins, maxs, scale=1, hard_task=False) -> None:
+        super().__init__(scale, hard_task)
+        self.mins = mins
+        self.maxs = maxs
+
+    def compute(self, data):
+        (current_jp,) = self._map_args(data)
+
+        A = np.identity(current_jp.size)
+        b = -self._scale * (np.log( current_jp - self.mins )/(self.maxs - current_jp) - np.log(np.max(self.maxs - current_jp, 0)) / (current_jp - self.mins))
 
         return EQTaskDesc(A, b, self.name)
 
-
-__available_task_classes__ = [PlaneTask, PositionTask, OrientationTask, JointPos]
+__available_task_classes__ = [PlaneTask, PositionTask, OrientationTask, JointPos, PreventJointBounds]

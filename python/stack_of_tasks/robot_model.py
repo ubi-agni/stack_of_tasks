@@ -99,7 +99,7 @@ class Joint():
 
 
 class RobotModel():
-    def __init__(self, param='robot_description'):
+    def __init__(self, param='robot_description', skip_last=0):
         self.links = {}  # map link to its parent joint
         self.joints = {}  # map joint name to joint instance
         self.active_joints = []  # active joints

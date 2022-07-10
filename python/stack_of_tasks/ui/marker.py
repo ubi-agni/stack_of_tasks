@@ -1,6 +1,8 @@
+from PyQt5 import QtCore, QtGui, QtWidgets
 
-from PyQt5 import QtWidgets, QtCore, QtGui
+from .DataWidgets.MatrixInput import MatrixInput
 from .generated.Marker import Ui_Marker
+
 
 class PopupView(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -12,34 +14,40 @@ class PopupView(QtWidgets.QWidget):
 
 class Marker(QtWidgets.QWidget, Ui_Marker):
 
-    new_marker = QtCore.pyqtSignal(object,str, tuple, tuple, float)
+    new_marker_signal = QtCore.pyqtSignal(str, dict)
 
     def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)
-        self.available_marker_classes = []
+
         self.verticalLayout.setAlignment(QtCore.Qt.AlignTop)
-        self.add.clicked.connect(self._add)
+        self.add.clicked.connect(self._create_marker_slot)
 
-    def _add(self):
-        markerClass = self.available_marker_classes[self.availableMarker.currentIndex()]
-        name = self.name_input.text()
-        scale = self.scale.value()
-        xl = float(self.tranformInput.x_loc_in.text())
-        yl = float(self.tranformInput.y_loc_in.text())
-        zl = float(self.tranformInput.z_loc_in.text())
-        xr = float(self.tranformInput.x_rot_in.text())
-        yr = float(self.tranformInput.y_rot_in.text())
-        zr = float(self.tranformInput.z_rot_in.text())
+        self.translation = MatrixInput(rowNames=["x", "y", "z"])
+        self.rotation = MatrixInput(rowNames=["xr", "yr", "zr"])
 
-        self.existingMarker.addItem(self.availableMarker.currentText())
-        self.new_marker.emit(markerClass, name, (xl,yl,zl), (xr,yr,zr), scale)
-    
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.translation)
+        layout.addWidget(self.rotation)
+        self.formLayout.addRow("Transform", layout)
+
+    def _create_marker_slot(self):
+        markerClass = self.availableMarker.currentText()
+        data = {
+            "name": self.name_input.text(),
+            "scale": self.scale.value(),
+            "pos": self.translation.toNumpy(),
+            "rot": self.rotation.toNumpy(),
+        }
+
+        self.new_marker_signal.emit(markerClass, data)
+
+    def add_marker(self, name):
+        self.existingMarker.addItem(name)
+
     def _delete(self, name):
         pass
 
-    def set_available_marker_classes(self, classes):
+    def set_available_marker_classes(self, marker):
         self.availableMarker.clear()
-        for x in classes:
-            self.available_marker_classes.append(x)
-            self.availableMarker.addItem(x.__name__)
+        self.availableMarker.addItems(marker)

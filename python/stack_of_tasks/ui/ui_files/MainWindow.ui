@@ -19,7 +19,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>Task Hirachy Editor</string>
+   <string>Task hierarchy Editor</string>
   </property>
   <property name="tabShape">
    <enum>QTabWidget::Rounded</enum>
@@ -38,11 +38,16 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
-      <widget class="TaskHirachy" name="hirachy">
+      <widget class="TaskHierarchy" name="hierarchy">
        <attribute name="title">
-        <string>Hirachy</string>
+        <string>hierarchy</string>
+       </attribute>
+      </widget>
+      <widget class="Target" name="targets">
+       <attribute name="title">
+        <string>Targets</string>
        </attribute>
       </widget>
       <widget class="Marker" name="marker">
@@ -98,9 +103,15 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>TaskHirachy</class>
+   <class>TaskHierarchy</class>
    <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.taskhirachy</header>
+   <header>stack_of_tasks.ui.task_hierarchy.task_hierarchy</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>Target</class>
+   <extends>QWidget</extends>
+   <header>stack_of_tasks.ui.target</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

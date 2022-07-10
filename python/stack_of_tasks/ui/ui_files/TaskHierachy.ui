@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>TaskHirachy</class>
- <widget class="QWidget" name="TaskHirachy">
+ <class>TaskHierarchy</class>
+ <widget class="QWidget" name="TaskHierarchy">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -15,16 +15,22 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="QScrollArea" name="hirachy_scroll">
+    <widget class="QScrollArea" name="hierarchy_scroll">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
-     <widget class="QWidget" name="hirachy">
+     <widget class="QWidget" name="hierarchy">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>409</width>
+        <width>563</width>
         <height>485</height>
        </rect>
       </property>
@@ -34,6 +40,12 @@
    </item>
    <item>
     <widget class="QListWidget" name="tasks">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="dragEnabled">
       <bool>true</bool>
      </property>

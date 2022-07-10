@@ -2,20 +2,22 @@
 
 import random
 import threading
+from ast import Call
 
-import numpy
+import numpy as np
 import rospy
 from geometry_msgs.msg import Quaternion, Transform, TransformStamped, Vector3
-from interactive_markers.interactive_marker_server import \
-    InteractiveMarkerServer
+from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from tf import transformations as tf
+from tf2_ros import StaticTransformBroadcaster
 
-from markers import *
+from marker.interactive_marker import IAMarker
 from robot_model import Joint, RobotModel
-from solver import Solver
-from task import *
+from solver.solver import Solver
+from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
+from stack_of_tasks.utils import Callback
 
 # random.seed(1)
 
@@ -27,42 +29,79 @@ class Controller(object):
             header=Header(frame_id="panda_link8"),
             child_frame_id="target",
             transform=Transform(
-                rotation=Quaternion(*tf.quaternion_about_axis(numpy.pi / 4, [0, 0, 1])),
+                rotation=Quaternion(*tf.quaternion_about_axis(np.pi / 4, [0, 0, 1])),
                 translation=Vector3(0, 0, 0.105),
             ),
         ),
-        rate = 50
+        rate=50,
     ):
+        self.joint_state_callback = Callback()
+        self.T_callback = Callback()
+        self.J_callback = Callback()
 
         self.robot = RobotModel()
         self.robot._add(Joint(pose))  # add a fixed end-effector transform
+
         self.rate = rate
-        self.joint_state_callback = []
 
         self.joint_pub = rospy.Publisher(
             "/target_joint_states", JointState, queue_size=1, latch=True
         )
 
+        # self.static_broadcaster = StaticTransformBroadcaster()
+        # self.static_broadcaster.sendTransform(
+        #    pose
+        # )
+
         self.joint_msg = JointState()
         self.joint_msg.name = [j.name for j in self.robot.active_joints]
         self.target_link = pose.child_frame_id
+
         self.N = len(self.robot.active_joints)  # number of (active) joints
 
-        self.joint_weights = numpy.ones(self.N)
-        self.cartesian_weights = numpy.ones(6)
+        self._T = np.zeros((4, 4))
+        self._J = np.zeros(())
+        self._joint_position = np.zeros(())
 
-        self.mins = numpy.array([j.min for j in self.robot.active_joints])
-        self.maxs = numpy.array([j.max for j in self.robot.active_joints])
+        self.joint_weights = np.ones(self.N)
+        self.cartesian_weights = np.ones(6)
 
-        self.prismatic = numpy.array(
-            [j.jtype == j.prismatic for j in self.robot.active_joints]
-        )
+        self.mins = np.array([j.min for j in self.robot.active_joints])
+        self.maxs = np.array([j.max for j in self.robot.active_joints])
+
+        self.prismatic = np.array([j.jtype == j.prismatic for j in self.robot.active_joints])
         self.reset()
 
-        self.task_hirachy = TaskHirachy()
+        self.task_hierarchy = TaskHierarchy()
 
         self.last_dq = None
-        self.joint_state_callback = []
+
+    @property
+    def T(self):
+        return self._T
+
+    @T.setter
+    def T(self, val):
+        self._T = val
+        self.T_callback(self._T)
+
+    @property
+    def J(self):
+        return self._J
+
+    @J.setter
+    def J(self, val):
+        self._J = val
+        self.J_callback(self._J)
+
+    @property
+    def joint_position(self):
+        return self._joint_position
+
+    @joint_position.setter
+    def joint_position(self, val):
+        self._joint_position = val
+        self.joint_state_callback(self._joint_position)
 
     def reset(self, randomness=0):
         def _rJoint(m, M):
@@ -73,9 +112,7 @@ class Controller(object):
                 return j + dj * random.uniform(-randomness, randomness)
             return j
 
-        self.joint_msg.position = list(
-            map(lambda x: _rJoint(*x), zip(self.mins, self.maxs))
-        )
+        self.joint_msg.position = list(map(lambda x: _rJoint(*x), zip(self.mins, self.maxs)))
         self.update()
 
     def update(self):
@@ -83,14 +120,12 @@ class Controller(object):
         self.T, self.J = self.robot.fk(
             self.target_link, dict(zip(self.joint_msg.name, self.joint_msg.position))
         )
-
-        for x in self.joint_state_callback:
-            x(self.joint_msg.position)
+        self.joint_position = np.atleast_2d(self.joint_msg.position).T
 
     def actuate(self, q_delta):
         self.joint_msg.position += q_delta.ravel()
         # clip (prismatic) joints
-        self.joint_msg.position[self.prismatic] = numpy.clip(
+        self.joint_msg.position[self.prismatic] = np.clip(
             self.joint_msg.position[self.prismatic],
             self.mins[self.prismatic],
             self.maxs[self.prismatic],
@@ -102,14 +137,11 @@ class Controller(object):
         pass
 
     def hierarchic_control(self, targets):
-        lb = np.maximum(-0.01, (self.mins*.95 - self.joint_msg.position) / self.rate)
-        ub = np.minimum(0.01, (self.maxs*.95 - self.joint_msg.position) / self.rate)
 
-        targets["J"] = self.J
-        targets["T_c"] = self.T
-        targets["current_jp"] = np.array(self.joint_msg.position)
+        lb = np.maximum(-0.01, (self.mins * 0.95 - self.joint_msg.position) / self.rate)
+        ub = np.minimum(0.01, (self.maxs * 0.95 - self.joint_msg.position) / self.rate)
 
-        tasks = self.task_hirachy.compute(targets)
+        tasks = self.task_hierarchy.compute(targets)
 
         solver = Solver(self.N, 0.015)
         q_delta, tcr = solver.solve_sot(tasks, lb, ub, warmstart=self.last_dq)
@@ -125,30 +157,23 @@ class Controller(object):
 
 class MarkerControl:
     def __init__(self) -> None:
-        
-        self.targets = {}
         self.ims = InteractiveMarkerServer("controller")
-        self.marker={}
+        self.marker = {}
 
-        self.set_data_callback = []
+        self.marker_data_callback = Callback()
 
-    def add_marker(self, marker:IAMarker, name):
+    def add_marker(self, marker: IAMarker, name):
         self.marker[name] = marker
-        marker.data_callbacks.append(self.setTarget)
+        marker.data_callbacks.append(lambda name, data: self.marker_data_callback(name, data))
         marker.init_server(self.ims)
 
     def delete_marker(self, name):
         self.marker[name].delete()
-        t = self.marker[name].provided_targets()
-        for x in t:
-            print(x)
-            del self.targets[x]
+        # t = self.marker[name].provided_targets()
+        # for x in t:
+        #    print(x)
+        #    del self.targets[x]
         del self.marker[name]
-
-    def setTarget(self, name, goal):
-        self.targets[name] = goal
-        for callback in self.set_data_callback:
-            callback(name, goal)
 
 
 class ControlThread(threading.Thread):
@@ -170,6 +195,8 @@ class ControlThread(threading.Thread):
 
 
 if __name__ == "__main__":
+    from tasks.Tasks import ConeTask, PositionTask
+
     rospy.init_node("ik")
     rate = rospy.Rate(50)
 
@@ -187,8 +214,8 @@ if __name__ == "__main__":
     # ori = OrientationTask(3)
     # ori.argmap['T_t'] = 'Position'
 
-    c.task_hirachy.add_task_lower(pos)
-    c.task_hirachy.add_task_same(cone)
+    c.task_hierarchy.add_task_lower(pos)
+    c.task_hierarchy.add_task_same(cone)
 
     #
     def loop_function():

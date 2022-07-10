@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import numpy
 import rospy
-import xml.dom.minidom
 from tf import transformations as tf
 
 
@@ -14,13 +13,11 @@ def get_value(xml, child=None, attribute=None):
 
 
 def parse_vector(s):
-    return numpy.array([float(v) for v in s.split(' ')])
+    return numpy.array([float(v) for v in s.split(" ")])
 
 
 def hat(p):
-    return numpy.array([[0, -p[2], p[1]],
-                        [p[2], 0, -p[0]],
-                        [-p[1], p[0], 0]])
+    return numpy.array([[0, -p[2], p[1]], [p[2], 0, -p[0]], [-p[1], p[0], 0]])
 
 
 def adjoint(T, inverse=False):
@@ -39,20 +36,20 @@ def adjoint(T, inverse=False):
         return numpy.block([[R.T, R.T.dot(hat(-p))], [numpy.zeros((3, 3)), R.T]])
 
 
-class Mimic():
+class Mimic:
     def __init__(self, tag):
-        self.joint = tag.getAttribute('joint')
-        if tag.hasAttribute('multiplier'):
-            self.multiplier = float(tag.getAttribute('multiplier'))
+        self.joint = tag.getAttribute("joint")
+        if tag.hasAttribute("multiplier"):
+            self.multiplier = float(tag.getAttribute("multiplier"))
         else:
             self.multiplier = 1.0
-        if tag.hasAttribute('offset'):
-            self.offset = float(tag.getAttribute('offset'))
+        if tag.hasAttribute("offset"):
+            self.offset = float(tag.getAttribute("offset"))
         else:
             self.offset = 0.0
 
 
-class Joint():
+class Joint:
     fixed = 0
     revolute = 1
     continuous = 1
@@ -66,23 +63,23 @@ class Joint():
             self._init_from_pose(arg)
 
     def _init_from_xml(self, tag):
-        self.jtype = getattr(Joint, tag.getAttribute('type'))
+        self.jtype = getattr(Joint, tag.getAttribute("type"))
         self.active = self.jtype in [Joint.revolute, Joint.prismatic]
-        self.name = tag.getAttribute('name')
-        self.parent = get_value(tag, 'parent', 'link')
-        self.child = get_value(tag, 'child', 'link')
-        self.T = tf.euler_matrix(*parse_vector(get_value(tag, 'origin', 'rpy')), axes='sxyz')
-        self.T[0:3, 3] = parse_vector(get_value(tag, 'origin', 'xyz'))
+        self.name = tag.getAttribute("name")
+        self.parent = get_value(tag, "parent", "link")
+        self.child = get_value(tag, "child", "link")
+        self.T = tf.euler_matrix(*parse_vector(get_value(tag, "origin", "rpy")), axes="sxyz")
+        self.T[0:3, 3] = parse_vector(get_value(tag, "origin", "xyz"))
         self.mimic = None
         if self.active:
-            self.axis = parse_vector(get_value(tag, 'axis', 'xyz'))
+            self.axis = parse_vector(get_value(tag, "axis", "xyz"))
             try:
-                self.min = float(get_value(tag, 'limit', 'lower'))
-                self.max = float(get_value(tag, 'limit', 'upper'))
+                self.min = float(get_value(tag, "limit", "lower"))
+                self.max = float(get_value(tag, "limit", "upper"))
             except IndexError:
                 raise Exception("Joint %s has not limits" % self.name)
 
-            mimic = tag.getElementsByTagName('mimic')
+            mimic = tag.getElementsByTagName("mimic")
             self.mimic = Mimic(mimic[0]) if mimic else None
 
     def _init_from_pose(self, transform):
@@ -98,16 +95,16 @@ class Joint():
         self.mimic = None
 
 
-class RobotModel():
-    def __init__(self, param='robot_description', skip_last=0):
+class RobotModel:
+    def __init__(self, param="robot_description", skip_last=0):
         self.links = {}  # map link to its parent joint
         self.joints = {}  # map joint name to joint instance
         self.active_joints = []  # active joints
 
         description = rospy.get_param(param)
         doc = xml.dom.minidom.parseString(description)
-        robot = doc.getElementsByTagName('robot')[0]
-        for tag in robot.getElementsByTagName('joint'):
+        robot = doc.getElementsByTagName("robot")[0]
+        for tag in robot.getElementsByTagName("joint"):
             self._add(Joint(tag))
 
     def _add(self, joint):
@@ -143,7 +140,9 @@ class RobotModel():
             if joint.jtype == Joint.revolute:
                 # transform twist from current joint frame (joint.axis) into eef frame (via T^-1)
                 twist = adjoint(T, inverse=True).dot(numpy.block([numpy.zeros(3), joint.axis]))
-                T_motion = tf.quaternion_matrix(tf.quaternion_about_axis(angle=value(joint), axis=joint.axis))
+                T_motion = tf.quaternion_matrix(
+                    tf.quaternion_about_axis(angle=value(joint), axis=joint.axis)
+                )
                 T_offset = T_offset.dot(T_motion)
             elif joint.jtype == Joint.prismatic:
                 twist = adjoint(T, inverse=True).dot(numpy.block([joint.axis, numpy.zeros(3)]))
@@ -159,7 +158,9 @@ class RobotModel():
             # update the Jacobian
             idx, scale = index(joint)  # find active joint index for given joint
             if idx is not None:  # ignore fixed joints
-                J[:, idx] += scale * twist  # add twist contribution, optionally scaled by mimic joint's multiplier
+                J[:, idx] += (
+                    scale * twist
+                )  # add twist contribution, optionally scaled by mimic joint's multiplier
 
             # climb upwards to parent joint
             joint = self.links[joint.parent]
@@ -175,19 +176,20 @@ class RobotModel():
 # code executed when directly running this script
 if __name__ == "__main__":
     import random
-    from markers import frame, MarkerArray
+
+    from markers import MarkerArray, frame
     from sensor_msgs.msg import JointState
 
-    rospy.init_node('test_node')
-    pub = rospy.Publisher('/target_joint_states', JointState, queue_size=10)
-    marker_pub = rospy.Publisher('/marker_array', MarkerArray, queue_size=10)
+    rospy.init_node("test_node")
+    pub = rospy.Publisher("/target_joint_states", JointState, queue_size=10)
+    marker_pub = rospy.Publisher("/marker_array", MarkerArray, queue_size=10)
 
     robot = RobotModel()
     while not rospy.is_shutdown():
         joints = {j.name: random.uniform(j.min, j.max) for j in robot.active_joints}
         pub.publish(JointState(name=joints.keys(), position=joints.values()))
 
-        T, J = robot.fk('panda_link8', joints)
+        T, J = robot.fk("panda_link8", joints)
         marker_pub.publish(frame(T))
 
         rospy.rostime.wallsleep(1)

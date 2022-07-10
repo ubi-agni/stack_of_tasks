@@ -9,6 +9,6 @@ echo "Generating from $IN to $OUT...."
 for f in $IN/*.ui ; do  
     FNAME=$(basename -s '.ui' $f)
     echo $FNAME
-    pyuic5 $f -o "$OUT/$FNAME.py"
+    python3 -m PyQt5.uic.pyuic $f -o "$OUT/$FNAME.py"
 done
 shopt -u nullglob

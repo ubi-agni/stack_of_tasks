@@ -59,9 +59,7 @@ class QPDescWithFixedSize:
         self.A = np.zeros(
             (self.numVars + number_of_columns, self.numVars)
         )  # constraint matrix for all tasks
-        self.lb = np.zeros(
-            self.numVars + number_of_columns
-        )  # lower bound vector for all tasks
+        self.lb = np.zeros(self.numVars + number_of_columns)  # lower bound vector for all tasks
         self.ub = np.zeros(self.numVars + number_of_columns)  # upper         "
 
         self.A[: self.numVars, : self.numVars] = np.identity(
@@ -95,12 +93,8 @@ class QPDescWithFixedSize:
                 self.start_row + numRows : self.start_row + numRows + task_size,
                 : self.N,
             ] = task.A
-            self.lb[
-                self.start_row + numRows : self.start_row + numRows + task_size
-            ] = np.NINF
-            self.ub[
-                self.start_row + numRows : self.start_row + numRows + task_size
-            ] = task.upper
+            self.lb[self.start_row + numRows : self.start_row + numRows + task_size] = np.NINF
+            self.ub[self.start_row + numRows : self.start_row + numRows + task_size] = task.upper
 
             numRows += task_size
         self.A[self.start_row : self.start_row + numRows, self.N :] = -np.eye(
@@ -110,9 +104,7 @@ class QPDescWithFixedSize:
         s = self.start_row + numRows
         numRows = 0
 
-        for task in self.l[
-            self._index
-        ]:  # second iteration for inverted lower bound constraints
+        for task in self.l[self._index]:  # second iteration for inverted lower bound constraints
             task_size = task.size
 
             self.A[s + numRows : s + numRows + task_size, : self.N] = -task.A
@@ -121,18 +113,14 @@ class QPDescWithFixedSize:
 
             numRows += task_size
 
-        self.A[
-            self.start_row + numRows : self.start_row + 2 * numRows, self.N :
-        ] = -np.eye(
+        self.A[self.start_row + numRows : self.start_row + 2 * numRows, self.N :] = -np.eye(
             numRows, self.number_of_slack
         )  # set -1 for slacks
 
         self.H[self.N :, self.N :] = np.zeros(
             (self.number_of_slack, self.number_of_slack)
         )  # set H matrix correctly
-        self.H[self.N : self.N + numRows, self.N : self.N + numRows] = np.identity(
-            numRows
-        )
+        self.H[self.N : self.N + numRows, self.N : self.N + numRows] = np.identity(numRows)
 
         return (
             self.H,
@@ -155,7 +143,9 @@ class QPDescWithFixedSize:
                 self.start_row + numRows : self.start_row + numRows + slackSize
             ] += slack_vector[numRows : numRows + slackSize]
 
-            violations = self.ub < self.lb  # lower bound is larger than upper, happens very close to equality
+            violations = (
+                self.ub < self.lb
+            )  # lower bound is larger than upper, happens very close to equality
             self.ub[violations], self.lb[violations] = self.lb[violations], self.ub[violations]
 
             numRows += slackSize
@@ -173,7 +163,6 @@ class Solver:
         dq = warmstart
 
         desc = QPDescWithFixedSize(self.N, self.rho, list_of_tasks, lower, upper)
-
         for d in desc:
             sol = self._solve_qp(*d, dq)
 

@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import xml
+
 import numpy
 import rospy
 from tf import transformations as tf

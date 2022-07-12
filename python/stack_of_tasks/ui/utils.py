@@ -6,7 +6,7 @@ from stack_of_tasks.marker.PositionOrientationMarker import (
 from stack_of_tasks.tasks.Tasks import (
     ConeTask,
     ConstantSpeed,
-    DisstanceTask,
+    DistanceTask,
     JointPos,
     OrientationTask,
     ParallelTask,
@@ -29,7 +29,7 @@ TASK_CLASSES = [
     PreventJointBounds,
     ConeTask,
     ParallelTask,
-    DisstanceTask,
+    DistanceTask,
     ConstantSpeed,
 ]
 

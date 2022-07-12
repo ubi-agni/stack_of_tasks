@@ -12,7 +12,6 @@ class TaskDesc:
         self.A = A
         self.upper = upper
         self.lower = lower
-        assert upper.shape == lower.shape and upper.shape[0] == A.shape[0]
 
     @property
     def size(self):

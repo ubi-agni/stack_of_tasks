@@ -1,5 +1,5 @@
-from __future__ import print_function
-
+from concurrent.futures import thread
+import typing
 import numpy as np
 from tf import transformations as tf
 
@@ -33,7 +33,7 @@ class OrientationTask(Task):
         return EQTaskDesc(A, b, self.name)
 
 
-class DisstanceTask(Task):
+class DistanceTask(Task):
     """Keep distance to target position, not considering (approach) direction"""
 
     name = "Dist"

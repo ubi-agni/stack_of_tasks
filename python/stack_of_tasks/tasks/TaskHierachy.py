@@ -8,10 +8,7 @@ class TaskHierarchy:
 
     @property
     def higest_hiracy_level(self):
-        if (d := len(self.hierarchy)) == 0:
-            return -1
-        else:
-            return d - 1
+        return len(self.hierarchy) - 1
 
     def clear(self):
         self.hierarchy = []

@@ -1,5 +1,6 @@
-from concurrent.futures import thread
 import typing
+from concurrent.futures import thread
+
 import numpy as np
 from tf import transformations as tf
 
@@ -95,7 +96,6 @@ class PlaneTask(Task):
 
         A = np.array([normal.T.dot(J[:3])])
         b = np.array([-self._scale * (normal.dot(T_c[0:3, 3]) - dist)])
-
         return EQTaskDesc(A, b, self.name)
 
 
@@ -145,10 +145,11 @@ class JointPos(Task):
 
 class PreventJointBounds(Task):
     name = "Prevent Joints Bound"
-    args = ["current_jp", "mins", "maxs"]
+    args = ["joint_position", "min", "max"]
 
     def compute(self, data):
         (current_jp, mins, maxs) = self._map_args(data)
+        current_jp = current_jp[:, 0]
 
         A = np.identity(current_jp.size)
         b = -self._scale * (

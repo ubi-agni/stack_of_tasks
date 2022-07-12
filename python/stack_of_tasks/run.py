@@ -34,7 +34,7 @@ class Main:
             lambda jp: self.set_target_data("joint_position", jp)
         )
 
-        self.set_target_data("min", numpy.atleast_2d(self.controller.mins).T)
+        self.set_target_data("min", numpy.atleast_2d(self.controller.mins))
         self.set_target_data("max", numpy.atleast_2d(self.controller.maxs))
 
         # UI Callbacks

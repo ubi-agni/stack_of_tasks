@@ -22,23 +22,19 @@ class IAMarker(ABC):
         **kwargs,
     ) -> None:
 
-        self.server = server
+        self.server = None
         self.name = name
-
         self.data_callbacks = [callback] if callback else []
 
+        self._setup_server = lambda: self._setup_marker(name, pose, scale, **kwargs)
         if self.server:
-            self._setup_marker(name, pose, scale, **kwargs)
-            self.server.applyChanges()
-        else:
-            # hold back creation
-            self._setup_later = lambda: self._setup_marker(name, pose, scale, **kwargs)
+            self.init_server(server)
 
     def init_server(self, server: InteractiveMarkerServer):
         if self.server is None:
             self.server = server
-            self._setup_later()
-            del self._setup_later
+            self._setup_server()
+            del self._setup_server
             self.server.applyChanges()
         else:
             pass  # Warning, server already set

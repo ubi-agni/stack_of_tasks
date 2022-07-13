@@ -66,6 +66,11 @@ class Main:
         self.ui.adjustSize()
         self.controller.reset()
 
+    def on_quit(self):
+        if self.control_is_running:
+            self.control_is_running = False
+            self._thread.join()
+
     # marker operations
 
     def _create_marker(self, class_name, data):
@@ -167,5 +172,6 @@ if __name__ == "__main__":
     app = QApplication(["TH", *sys.argv])
 
     main = Main()
+    app.aboutToQuit.connect(main.on_quit)
 
     app.exec()

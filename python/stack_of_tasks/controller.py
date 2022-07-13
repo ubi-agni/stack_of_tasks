@@ -164,7 +164,7 @@ class MarkerControl:
 
     def add_marker(self, marker: IAMarker, name):
         self.marker[name] = marker
-        marker.data_callbacks.append(lambda name, data: self.marker_data_callback(name, data))
+        marker.data_callbacks.append(self.marker_data_callback)
         marker.init_server(self.ims)
 
     def delete_marker(self, name):

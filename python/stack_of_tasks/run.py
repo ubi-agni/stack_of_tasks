@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+import signal
 from threading import Lock, Thread
 
 import numpy
@@ -167,11 +169,13 @@ class Main:
 
 if __name__ == "__main__":
     rospy.init_node("ik")
-    import sys
 
     app = QApplication(["TH", *sys.argv])
 
     main = Main()
     app.aboutToQuit.connect(main.on_quit)
+
+    # install the default interrupt handler for Ctrl-C
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     app.exec()

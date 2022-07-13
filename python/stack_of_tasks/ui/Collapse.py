@@ -58,7 +58,7 @@ class CollapseWithDelete(Collapse):
         self.deleteButton.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
         self.deleteButton.setStyleSheet("border: none;")
         self.buttonLayout.addWidget(self.deleteButton)
-        self.deleteButton.clicked.connect(lambda _: self.delete_self.emit())
+        self.deleteButton.clicked.connect(self.delete_self.emit)
 
         self.setDeletabel(deleteable)
 

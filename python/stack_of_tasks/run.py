@@ -126,11 +126,8 @@ class Main:
     # target operation
 
     def set_target_data(self, name, data, notify_ui=True):
-
         self.targets[name] = data
-
         self.ui.hierarchy.target_data_changed.emit(list(self.targets.keys()))
-
         if notify_ui:
             self.ui.targets.set_target_value(name, data)
 

@@ -24,7 +24,7 @@ class Target(QtWidgets.QWidget, Ui_Target):
         self.setupUi(self)
 
         self.targetType.addItems(["Float"])
-        self.addButton.clicked.connect(lambda _: self.add_button_click())
+        self.addButton.clicked.connect(self.add_button_click)
 
         self._widgets = {}
 

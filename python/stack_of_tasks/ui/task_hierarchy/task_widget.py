@@ -42,7 +42,7 @@ class ArgumentDropdown(QComboBox):
     def list_changed(self, targets: list):
         self.emit = False
         currentItem = self.currentText()
-        fa5_icon = qta.icon("mdi.exclamation")
+        fa5_icon = qta.icon("fa.exclamation")
 
         self.clear()
 

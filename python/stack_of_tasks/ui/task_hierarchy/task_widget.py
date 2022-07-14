@@ -42,7 +42,7 @@ class ArgumentDropdown(QComboBox):
     def list_changed(self, targets: list):
         self.emit = False
         currentItem = self.currentText()
-        fa5_icon = qta.icon("mdi.exclamation")
+        fa5_icon = qta.icon("fa.exclamation")
 
         self.clear()
 
@@ -88,15 +88,12 @@ class TaskWidget(CollapseWithDelete):
             ad = ArgumentDropdown(key=k, initial_value=str(k))
 
             self.target_list_changed_signal.connect(ad.list_changed)
-            ad.argument_map_changed.connect(lambda key, text: set_arg(key, text))
+            ad.argument_map_changed.connect(set_arg)
 
             self._contentLayout.addRow(str(k), ad)
 
     def _set_arg(self, arg, val):
         self.task.argmap[arg] = val
-
-    def target_list_changed(self, target_list):
-        self.target_list_changed_signal.emit(target_list)
 
     def mouseMoveEvent(self, e: QMouseEvent) -> None:
 

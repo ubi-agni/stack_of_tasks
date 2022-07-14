@@ -122,14 +122,14 @@ class TaskHierarchy(QWidget, Ui_TaskHierarchy):
             s: LevelWidget = self.hierarchy.layout().itemAt(level).widget()
         else:
             s: LevelWidget = LevelWidget(level)
-            s.delete_task_signal.connect(lambda *args: self.delete_task_signal.emit(*args))
+            s.delete_task_signal.connect(self.delete_task_signal.emit)
             s.delete_self.connect(lambda: self.delete_level(s.level))
             s.delete_self.connect(lambda: self.delete_level_signal.emit(s.level))
             self.hierarchy.layout().addWidget(s)
 
         tw = TaskWidget(task)
-        self.target_data_changed.connect(tw.target_list_changed)
-        tw.target_list_changed(av_targets)
+        self.target_data_changed.connect(tw.target_list_changed_signal.emit)
+        tw.target_list_changed_signal.emit(av_targets)
         s.add_task_widget(tw)
 
     # set available targets

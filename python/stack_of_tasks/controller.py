@@ -164,7 +164,7 @@ class MarkerControl:
 
     def add_marker(self, marker: IAMarker, name):
         self.marker[name] = marker
-        marker.data_callbacks.append(lambda name, data: self.marker_data_callback(name, data))
+        marker.data_callbacks.append(self.marker_data_callback)
         marker.init_server(self.ims)
 
     def delete_marker(self, name):
@@ -195,39 +195,50 @@ class ControlThread(threading.Thread):
 
 
 if __name__ == "__main__":
-    from tasks.Tasks import ConeTask, PositionTask
+    from tasks.Tasks import ConeTask, PositionTask, OrientationTask
+    from marker.PositionOrientationMarker import SixDOFMarker
 
     rospy.init_node("ik")
     rate = rospy.Rate(50)
 
+    def set_target(name, data):
+        targets[name] = data
+
+    targets = {}
     c = Controller()
+    c.T_callback.append(lambda T: set_target("T", T))
+    c.J_callback.append(lambda J: set_target("J", J))
+    c.reset()
+
     mc = MarkerControl()
+    mc.marker_data_callback.append(set_target)
+    marker = SixDOFMarker(name="pose", scale=0.1)
+    mc.add_marker(marker, marker.name)
 
     # setup tasks
-    pos = PositionTask(1)
-    pos.argmap["T_t"] = "Position"
+    pos = PositionTask(1.0)
+    pos.argmap["T_c"] = "T"
+    pos.argmap["T_t"] = marker.name
 
-    cone = ConeTask((0, 0, 1), (0, 0, 1), 0.1)
-    cone.argmap["T_t"] = "Position"
-    cone.argmap["angle"] = "Cone_angle"
+    # cone = ConeTask((0, 0, 1), (0, 0, 1), 0.1)
+    # cone.argmap["T_t"] = "Position"
+    # cone.argmap["angle"] = "Cone_angle"
 
-    # ori = OrientationTask(3)
-    # ori.argmap['T_t'] = 'Position'
+    ori = OrientationTask(1.0)
+    ori.argmap["T_c"] = "T"
+    ori.argmap["T_t"] = marker.name
 
     c.task_hierarchy.add_task_lower(pos)
-    c.task_hierarchy.add_task_same(cone)
+    c.task_hierarchy.add_task_same(ori)
 
-    #
     def loop_function():
         # p = cProfile.Profile()
         # p.enable()
-        rval = not c.hierarchic_control(mc.targets)
+        rval = not c.hierarchic_control(targets)
         # p.disable()
         # p.print_stats()
         rate.sleep()
         return rval
-
-    #
 
     print("Stop with CRTL-D")
     while True:

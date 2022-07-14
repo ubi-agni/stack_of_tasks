@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+import signal
 from threading import Lock, Thread
 
 import numpy
@@ -66,6 +68,11 @@ class Main:
         self.ui.adjustSize()
         self.controller.reset()
 
+    def on_quit(self):
+        if self.control_is_running:
+            self.control_is_running = False
+            self._thread.join()
+
     # marker operations
 
     def _create_marker(self, class_name, data):
@@ -126,11 +133,8 @@ class Main:
     # target operation
 
     def set_target_data(self, name, data, notify_ui=True):
-
         self.targets[name] = data
-
         self.ui.hierarchy.target_data_changed.emit(list(self.targets.keys()))
-
         if notify_ui:
             self.ui.targets.set_target_value(name, data)
 
@@ -165,10 +169,13 @@ class Main:
 
 if __name__ == "__main__":
     rospy.init_node("ik")
-    import sys
 
     app = QApplication(["TH", *sys.argv])
 
     main = Main()
+    app.aboutToQuit.connect(main.on_quit)
+
+    # install the default interrupt handler for Ctrl-C
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     app.exec()

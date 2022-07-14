@@ -78,7 +78,7 @@ class HQPwithSlacks:
         self.lb = np.zeros(self.max_vars + max_rows)  # lower bound vector for all tasks
         self.ub = np.zeros(self.max_vars + max_rows)  # upper         "
 
-        self.A[:self.max_vars, :self.max_vars] = np.identity(self.max_vars)  # joint constraint matrix is identity
+        self.A[:self.N, :self.N] = np.identity(self.N)  # joint constraint matrix is identity
         self.lb[:self.N] = lower  # lower joint bounds
         self.lb[self.N:self.max_vars] = 0  # lower slack bounds
 
@@ -94,8 +94,6 @@ class HQPwithSlacks:
         self._index += 1
         if self._index == len(self.tasks):
             raise StopIteration
-
-        self.A[:, self.N:] = 0  # clear slacks from all constraint rows
 
         # configure upper bound constraints: -∞ ≤ J dq - slack ≤ ub
         used_vars = self.N  # number of optimization variables: dq and slacks
@@ -122,6 +120,10 @@ class HQPwithSlacks:
             used_vars += rows
             used_rows += rows
 
+        self.A[self.N:used_vars, self.N:used_vars] = np.eye(used_vars - self.N)  # slack constraints
+        unused = self.max_vars - used_vars  # unused slack variables
+        self.A[used_vars:self.max_vars, used_vars:self.max_vars] = np.zeros((unused, unused))
+
         return (
             self.H[:used_vars, :used_vars],
             self.q[:used_vars],
@@ -130,24 +132,23 @@ class HQPwithSlacks:
             self.ub[:used_rows],
         )
 
-    def set_slack(self, slacks):
-        # Replace upper-bound part of the current task-level's constraints with upper and lower bounds with computed slacks
-        # lb - slacks ≤ J dq ≤ ub + slacks
+    def nullspace_constraint(self, dq):
+        # Replace upper-bound part of the current task-level's constraints with nullspace constraint
+        # J' dq = fixed, i.e. don't become worse than current, higher-priority solution
         used_rows = 0
         for task in self.tasks[self._index]:
             rows = task.size
+            fixed = task.A.dot(dq)
+            assert(np.allclose(self.A[self.start_row: self.start_row + rows, :self.N], task.A))
 
-            lb = task.lower - slacks[used_rows: used_rows + rows]
-            ub = task.upper + slacks[used_rows: used_rows + rows]
-            # correct violations (lb > ub), happens very close to equality
-            violations = lb > ub
-            ub[violations], lb[violations] = lb[violations], ub[violations]
-
-            self.lb[self.start_row: self.start_row + rows] = lb
-            self.ub[self.start_row: self.start_row + rows] = ub
+            self.A[self.start_row: self.start_row + rows, self.N:] = 0  # clear slacks from constraint rows
+            self.lb[self.start_row: self.start_row + rows] = fixed
+            self.ub[self.start_row: self.start_row + rows] = fixed
 
             used_rows += rows
             self.start_row += rows  # increase start position for next iteration
+
+        self.A[self.start_row: self.start_row + used_rows, self.N:] = 0  # clear slacks from all remaining (lb) rows
 
 
 class Solver:
@@ -168,7 +169,7 @@ class Solver:
                 # return None, None      # TODO handling of failed task!
             else:
                 dq, slack = sol.x[:self.N], sol.x[self.N:]
-                desc.set_slack(slack)
+                desc.nullspace_constraint(dq)
                 task_residuals.append(slack)
 
         return dq, task_residuals

@@ -137,19 +137,18 @@ class Controller(object):
         pass
 
     def hierarchic_control(self, targets):
-
         lb = np.maximum(-0.01, (self.mins * 0.95 - self.joint_msg.position) / self.rate)
         ub = np.minimum(0.01, (self.maxs * 0.95 - self.joint_msg.position) / self.rate)
 
         tasks = self.task_hierarchy.compute(targets)
 
         solver = Solver(self.N, 0.015)
-        q_delta, tcr = solver.solve_sot(tasks, lb, ub, warmstart=self.last_dq)
+        dq, tcr = solver.solve_sot(tasks, lb, ub, warmstart=self.last_dq)
 
-        self.last_dq = q_delta
+        self.last_dq = dq
 
-        if q_delta is not None:
-            self.actuate(q_delta)
+        if dq is not None:
+            self.actuate(dq)
             # return tcr[0] < 1e-12 or all(i < 1e-8 for i in tcr)
 
         return False

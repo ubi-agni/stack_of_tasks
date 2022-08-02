@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import random
 import threading
-from ast import Call
 
 import numpy as np
 import rospy
@@ -11,11 +10,10 @@ from interactive_markers.interactive_marker_server import InteractiveMarkerServe
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from tf import transformations as tf
-from tf2_ros import StaticTransformBroadcaster
 
-from marker.interactive_marker import IAMarker
-from robot_model import Joint, RobotModel
-from solver.solver import Solver
+from stack_of_tasks.marker.interactive_marker import IAMarker
+from stack_of_tasks.robot_model import JointType, RobotModel
+from stack_of_tasks.solver.solver import Solver
 from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
 from stack_of_tasks.utils import Callback
 
@@ -25,13 +23,8 @@ from stack_of_tasks.utils import Callback
 class Controller(object):
     def __init__(
         self,
-        pose=TransformStamped(
-            header=Header(frame_id="panda_link8"),
-            child_frame_id="target",
-            transform=Transform(
-                rotation=Quaternion(*tf.quaternion_about_axis(np.pi / 4, [0, 0, 1])),
-                translation=Vector3(0, 0, 0.105),
-            ),
+        transform=tf.quaternion_matrix([0, 0, 0.382, 0.924]).dot(
+            tf.translation_matrix([0, 0, 0.105])
         ),
         rate=50,
     ):
@@ -39,23 +32,19 @@ class Controller(object):
         self.T_callback = Callback()
         self.J_callback = Callback()
 
-        self.robot = RobotModel()
-        self.robot._add(Joint(pose))  # add a fixed end-effector transform
-
+        self.target_offset = transform
         self.rate = rate
+
+        self.target_link = "panda_joint8"
+
+        self.robot = RobotModel()
 
         self.joint_pub = rospy.Publisher(
             "/target_joint_states", JointState, queue_size=1, latch=True
         )
 
-        # self.static_broadcaster = StaticTransformBroadcaster()
-        # self.static_broadcaster.sendTransform(
-        #    pose
-        # )
-
         self.joint_msg = JointState()
         self.joint_msg.name = [j.name for j in self.robot.active_joints]
-        self.target_link = pose.child_frame_id
 
         self.N = len(self.robot.active_joints)  # number of (active) joints
 
@@ -69,7 +58,9 @@ class Controller(object):
         self.mins = np.array([j.min for j in self.robot.active_joints])
         self.maxs = np.array([j.max for j in self.robot.active_joints])
 
-        self.prismatic = np.array([j.jtype == j.prismatic for j in self.robot.active_joints])
+        self.prismatic = np.array(
+            [j.jtype is JointType.prismatic for j in self.robot.active_joints]
+        )
         self.reset()
 
         self.task_hierarchy = TaskHierarchy()
@@ -117,9 +108,16 @@ class Controller(object):
 
     def update(self):
         self.joint_pub.publish(self.joint_msg)
-        self.T, self.J = self.robot.fk(
+
+        T_all, J = self.robot.fk(
             self.target_link, dict(zip(self.joint_msg.name, self.joint_msg.position))
         )
+
+        T = T_all[self.robot.active_joints[0].name]
+        T = T.dot(self.target_offset)
+
+        self.T = T
+        self.J = J
         self.joint_position = np.atleast_2d(self.joint_msg.position).T
 
     def actuate(self, q_delta):
@@ -142,7 +140,7 @@ class Controller(object):
 
         tasks = self.task_hierarchy.compute(targets)
 
-        solver = Solver(self.N, 0.015)
+        solver = Solver(self.N, 0.1)
         dq, tcr = solver.solve_sot(tasks, lb, ub, warmstart=self.last_dq)
 
         self.last_dq = dq
@@ -194,8 +192,8 @@ class ControlThread(threading.Thread):
 
 
 if __name__ == "__main__":
-    from tasks.Tasks import ConeTask, PositionTask, OrientationTask
-    from marker.PositionOrientationMarker import SixDOFMarker
+    from stack_of_tasks.marker.PositionOrientationMarker import SixDOFMarker
+    from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
 
     rospy.init_node("ik")
     rate = rospy.Rate(50)

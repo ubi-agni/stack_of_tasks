@@ -194,8 +194,8 @@ class ControlThread(threading.Thread):
 
 
 if __name__ == "__main__":
-    from tasks.Tasks import ConeTask, PositionTask, OrientationTask
-    from marker.PositionOrientationMarker import SixDOFMarker
+    from marker.markers import SixDOFMarker
+    from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
 
     rospy.init_node("ik")
     rate = rospy.Rate(50)

@@ -11,7 +11,7 @@ from .interactive_marker import IAMarker
 from .utils import pose_to_matrix
 
 
-class SingelControlMarker(IAMarker, ABC):
+class ControlMarker(IAMarker, ABC):
     def __init__(
         self,
         server: InteractiveMarkerServer = None,
@@ -55,14 +55,14 @@ class SingelControlMarker(IAMarker, ABC):
         self.server.applyChanges()
 
 
-class PositionMarker(SingelControlMarker):
+class PositionMarker(ControlMarker):
     def _setup_marker(self, name, pose, scale, additional_marker=None):
         super()._setup_marker(name, pose, scale, additional_marker=additional_marker)
         self._add_movement_marker(self.marker, "", InteractiveMarkerControl.MOVE_3D, self.sphere())
         self._add_movement_control(self.marker, "", InteractiveMarkerControl.MOVE_AXIS)
 
 
-class OrientationMarker(SingelControlMarker):
+class OrientationMarker(ControlMarker):
     def _setup_marker(self, name, pose, scale, additional_marker=None):
         super()._setup_marker(name, pose, scale, additional_marker=additional_marker)
         self._add_movement_marker(
@@ -74,7 +74,7 @@ class OrientationMarker(SingelControlMarker):
             print("controls: ", c.interaction_mode)
 
 
-class SixDOFMarker(SingelControlMarker):
+class SixDOFMarker(ControlMarker):
     def _setup_marker(self, name, pose, scale, additional_marker=None):
         super()._setup_marker(name, pose, scale, additional_marker=additional_marker)
         self._add_movement_marker(

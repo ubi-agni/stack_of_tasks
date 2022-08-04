@@ -1,4 +1,4 @@
-from stack_of_tasks.marker.PositionOrientationMarker import (
+from stack_of_tasks.marker.markers import (
     OrientationMarker,
     PositionMarker,
     SixDOFMarker,

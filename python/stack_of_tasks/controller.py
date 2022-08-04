@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
-    marker = SixDOFMarker(name="pose", scale=0.1)
+    marker = SixDOFMarker(name="pose", scale=0.1, pose=targets["T"])
     mc.add_marker(marker, marker.name)
 
     # setup tasks

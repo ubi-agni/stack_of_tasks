@@ -4,6 +4,8 @@ import numpy as np
 import osqp
 from scipy import sparse
 
+from .AbstactSolver import Solver
+
 # from stack_of_tasks.utils import prettyprintMatrix
 
 
@@ -54,6 +56,7 @@ class HQPwithSlacks:
         # (quadratic) objective matrix (Hessian): minimize rho*|dq|² + |slack|²
         self.H = np.identity(self.max_vars)
         self.H[:N, :N] *= rho
+        # self.H[N:, N:] *= 50
 
         self.q = np.zeros(self.max_vars)  # (linear) objective vector
 
@@ -142,16 +145,17 @@ class HQPwithSlacks:
         ] = 0  # clear slacks from all remaining (lb) rows
 
 
-class Solver:
-    def __init__(self, N, rho) -> None:
-        self.N = N
-        self.rho = rho
+class HQPSolver(Solver):
+    def __init__(self, number_of_joints, options) -> None:
+        super().__init__(number_of_joints, options)
+        self.rho = options.get("rho")
 
-    def solve_sot(self, tasks, lower_dq, upper_dq, warmstart=None):
+    def solve(self, stack_of_tasks, lower_dq, upper_dq, options):
+        warmstart = options.get("warmstart")
         task_residuals = []
         dq = warmstart
 
-        desc = HQPwithSlacks(self.N, self.rho, tasks, lower_dq, upper_dq)
+        desc = HQPwithSlacks(self.N, self.rho, stack_of_tasks, lower_dq, upper_dq)
         for qp in desc:  # iterate over QPs corresponding to hierarchy levels
             sol = self._solve_qp(*qp, dq)
 

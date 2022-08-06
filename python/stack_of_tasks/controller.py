@@ -13,7 +13,8 @@ from tf import transformations as tf
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
 from stack_of_tasks.robot_model import JointType, RobotModel
-from stack_of_tasks.solver.solver import Solver
+from stack_of_tasks.solver.HQPSolver import HQPSolver
+from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
 from stack_of_tasks.utils import Callback
 
@@ -140,8 +141,11 @@ class Controller(object):
 
         tasks = self.task_hierarchy.compute(targets)
 
-        solver = Solver(self.N, 0.1)
-        dq, tcr = solver.solve_sot(tasks, lb, ub, warmstart=self.last_dq)
+        Solver = HQPSolver
+        solver_options = {"rho": 0.01}
+        solver = Solver(self.N, solver_options)
+        solve_options = {"warmstart": self.dq}
+        dq, tcr = solver.solve(tasks, lb, ub, solve_options)
 
         self.last_dq = dq
 

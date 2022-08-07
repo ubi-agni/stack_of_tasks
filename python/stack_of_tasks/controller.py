@@ -144,7 +144,7 @@ class Controller(object):
         Solver = HQPSolver
         solver_options = {"rho": 0.01}
         solver = Solver(self.N, solver_options)
-        solve_options = {"warmstart": self.dq}
+        solve_options = {"warmstart": self.last_dq}
         dq, tcr = solver.solve(tasks, lb, ub, solve_options)
 
         self.last_dq = dq
@@ -196,7 +196,7 @@ class ControlThread(threading.Thread):
 
 
 if __name__ == "__main__":
-    from stack_of_tasks.marker.PositionOrientationMarker import SixDOFMarker
+    from stack_of_tasks.marker.markers import SixDOFMarker
     from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
 
     rospy.init_node("ik")
@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
-    marker = SixDOFMarker(name="pose", scale=0.1)
+    marker = SixDOFMarker(name="pose", scale=0.1, pose=targets["T"])
     mc.add_marker(marker, marker.name)
 
     # setup tasks

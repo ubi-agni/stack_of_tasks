@@ -4,19 +4,20 @@ from .AbstactSolver import Solver
 
 
 class InverseJacobianSolver(Solver):
-    def __init__(self, number_of_joints, options) -> None:
-        super().__init__(number_of_joints, options)
+    def __init__(self, number_of_joints, **options) -> None:
+        super().__init__(number_of_joints, **options)
 
         self.threshold = options.get("threshold", 0.01)
 
     def _invert_smooth_clip(self, s):
         return s / (self.threshold**2) if s < self.threshold else 1.0 / s
 
-    def solve(self, stack_of_tasks, lower_dq, upper_dq, options):
+    def solve(self, stack_of_tasks, lower_dq, upper_dq, **options):
         N = np.identity(self.N)  # nullspace projector of previous tasks
         JA = np.zeros((0, self.N))  # accumulated Jacobians
         qdot = np.zeros(self.N)
 
+        residuals = []
         for task_level in stack_of_tasks:
 
             # combine tasks of this level into one
@@ -37,6 +38,7 @@ class InverseJacobianSolver(Solver):
             )
 
             qdot += qdotn
+            residuals.append(np.array(e) - J.dot(qdot))
 
             # compute new nullspace projector
             JA = np.vstack([JA, J])
@@ -48,4 +50,4 @@ class InverseJacobianSolver(Solver):
         self.nullspace = VN  # remember nullspace basis
         qdot = np.maximum(qdot, lower_dq)
         qdot = np.minimum(qdot, upper_dq)
-        return qdot, None
+        return qdot, residuals

@@ -146,14 +146,13 @@ class HQPwithSlacks:
 
 
 class HQPSolver(Solver):
-    def __init__(self, number_of_joints, options) -> None:
-        super().__init__(number_of_joints, options)
+    def __init__(self, number_of_joints, **options) -> None:
+        super().__init__(number_of_joints, **options)
         self.rho = options.get("rho")
 
-    def solve(self, stack_of_tasks, lower_dq, upper_dq, options):
-        warmstart = options.get("warmstart")
+    def solve(self, stack_of_tasks, lower_dq, upper_dq, **options):
+        dq = options.get("warmstart")
         task_residuals = []
-        dq = warmstart
 
         desc = HQPwithSlacks(self.N, self.rho, stack_of_tasks, lower_dq, upper_dq)
         for qp in desc:  # iterate over QPs corresponding to hierarchy levels

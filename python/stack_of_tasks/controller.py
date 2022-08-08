@@ -142,10 +142,8 @@ class Controller(object):
         tasks = self.task_hierarchy.compute(targets)
 
         Solver = HQPSolver
-        solver_options = {"rho": 0.01}
-        solver = Solver(self.N, solver_options)
-        solve_options = {"warmstart": self.last_dq}
-        dq, tcr = solver.solve(tasks, lb, ub, solve_options)
+        solver = Solver(self.N, rho=0.01)
+        dq, tcr = solver.solve(tasks, lb, ub, warmstart=self.last_dq)
 
         self.last_dq = dq
 

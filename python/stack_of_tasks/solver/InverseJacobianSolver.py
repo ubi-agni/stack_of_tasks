@@ -48,6 +48,7 @@ class InverseJacobianSolver(Solver):
             N = VN.dot(VN.T)
 
         self.nullspace = VN  # remember nullspace basis
-        qdot = np.maximum(qdot, lower_dq)
-        qdot = np.minimum(qdot, upper_dq)
+        # uniformly scale qdot if any limit is exceeded
+        scales = np.maximum(qdot / lower_dq, qdot / upper_dq)
+        qdot /= np.maximum(1.0, np.max(scales))
         return qdot, residuals

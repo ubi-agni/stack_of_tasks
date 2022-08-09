@@ -175,24 +175,6 @@ class MarkerControl:
         del self.marker[name]
 
 
-class ControlThread(threading.Thread):
-    def __init__(self, func):
-        super().__init__(daemon=True)
-
-        self.dorun = False
-        self.func = func
-
-    def run(self) -> None:
-        self.dorun = True
-
-        while self.dorun:
-            x = self.func()
-            self.dorun = self.dorun & x
-
-    def stop(self):
-        self.dorun = False
-
-
 if __name__ == "__main__":
     from stack_of_tasks.marker.markers import SixDOFMarker
     from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
@@ -230,20 +212,6 @@ if __name__ == "__main__":
     c.task_hierarchy.add_task_lower(pos)
     c.task_hierarchy.add_task_same(ori)
 
-    def loop_function():
-        # p = cProfile.Profile()
-        # p.enable()
-        rval = not c.hierarchic_control(targets)
-        # p.disable()
-        # p.print_stats()
+    while not rospy.is_shutdown():
+        c.hierarchic_control(targets)
         rate.sleep()
-        return rval
-
-    print("Stop with CRTL-D")
-    while True:
-        input("Start control with [ENTER]")
-        t = ControlThread(loop_function)
-        t.start()
-        input("Stop control with [ENTER]")
-        t.stop()
-        t.join()

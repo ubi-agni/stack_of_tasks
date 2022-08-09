@@ -66,7 +66,9 @@ class HQPwithSlacks:
         self.lb = np.zeros(self.max_vars + max_rows)  # lower bound vector for all tasks
         self.ub = np.zeros(self.max_vars + max_rows)  # upper         "
 
-        self.A[: self.N, : self.N] = np.identity(self.N)  # joint constraint matrix is identity
+        self.A[: self.N, : self.N] = np.identity(
+            self.N
+        )  # joint constraint matrix is identity
         self.lb[: self.N] = lower  # lower joint bounds
         self.lb[self.N : self.max_vars] = 0  # lower slack bounds
 
@@ -112,7 +114,9 @@ class HQPwithSlacks:
             used_vars - self.N
         )  # slack constraints
         unused = self.max_vars - used_vars  # unused slack variables
-        self.A[used_vars : self.max_vars, used_vars : self.max_vars] = np.zeros((unused, unused))
+        self.A[used_vars : self.max_vars, used_vars : self.max_vars] = np.zeros(
+            (unused, unused)
+        )
 
         return (
             self.H[:used_vars, :used_vars],
@@ -129,7 +133,9 @@ class HQPwithSlacks:
         for task in self.tasks[self._index]:
             rows = task.size
             fixed = task.A.dot(dq)
-            assert np.allclose(self.A[self.start_row : self.start_row + rows, : self.N], task.A)
+            assert np.allclose(
+                self.A[self.start_row : self.start_row + rows, : self.N], task.A
+            )
 
             self.A[
                 self.start_row : self.start_row + rows, self.N :

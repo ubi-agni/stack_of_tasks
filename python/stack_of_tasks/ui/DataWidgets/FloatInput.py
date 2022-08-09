@@ -15,7 +15,9 @@ class FloatInput(QWidget):
 
         self.number.valueChanged.connect(lambda x: self.slider.setValue(int(x * 100)))
         self.slider.valueChanged.connect(lambda x: self.number.setValue(x / 100.0))
-        self.slider.rangeChanged.connect(lambda m, M: self.number.setRange(m / 100.0, M / 100.0))
+        self.slider.rangeChanged.connect(
+            lambda m, M: self.number.setRange(m / 100.0, M / 100.0)
+        )
         self.value_changed = self.number.valueChanged
 
         self.value_changed.connect(lambda x: print(x))

@@ -23,14 +23,14 @@ from stack_of_tasks.utils import Callback
 class Controller(object):
     def __init__(
         self,
-        solver_class:Solver,
+        solver_class: Solver,
         solver_options,
         transform=tf.quaternion_matrix([0, 0, 0.382, 0.924]).dot(
             tf.translation_matrix([0, 0, 0.105])
         ),
-        rate = 50,
-        publish_joints = True,
-        target_link =  "panda_joint8"
+        rate=50,
+        publish_joints=True,
+        target_link="panda_joint8",
     ):
         self.rate = rate
 
@@ -39,7 +39,7 @@ class Controller(object):
         self.J_callback = Callback()
 
         self.delta_q_callback = Callback()
-        
+
         self.robot = RobotModel()
 
         self.target_link = target_link
@@ -57,27 +57,23 @@ class Controller(object):
         self.mins = np.array([j.min for j in self.robot.active_joints])
         self.maxs = np.array([j.max for j in self.robot.active_joints])
 
-
-
         if publish_joints:
             joint_msg = JointState()
             joint_msg.name = [j.name for j in self.robot.active_joints]
-            
+
             joint_pub = rospy.Publisher(
                 "/target_joint_states", JointState, queue_size=1, latch=True
             )
+
             def _send_joint(joint_values):
                 joint_msg.position = joint_values
                 joint_pub.publish(joint_msg)
 
             self.joint_state_callback.append(_send_joint)
 
-        
         self.last_dq = None
 
         self.reset()
-
-       
 
     @property
     def T(self):
@@ -105,7 +101,8 @@ class Controller(object):
     def joint_position(self, val):
         self._joint_position = val
         T_all, J = self.robot.fk(
-            self.target_link, dict(zip([j.name for j in self.robot.active_joints], self._joint_position))
+            self.target_link,
+            dict(zip([j.name for j in self.robot.active_joints], self._joint_position)),
         )
 
         T = T_all[self.robot.active_joints[0].name]
@@ -125,7 +122,9 @@ class Controller(object):
                 return j + dj * random.uniform(-randomness, randomness)
             return j
 
-        self.joint_position = np.array(list(map(lambda x: _rJoint(*x), zip(self.mins, self.maxs))))
+        self.joint_position = np.array(
+            list(map(lambda x: _rJoint(*x), zip(self.mins, self.maxs)))
+        )
 
     def actuate(self, q_delta):
         self.joint_position += q_delta.ravel()
@@ -139,7 +138,7 @@ class Controller(object):
         ub = np.minimum(0.01, (self.maxs * 0.95 - self._joint_position) / self.rate)
 
         tasks = self.task_hierarchy.compute(targets)
-        
+
         dq, tcr = self.solver.solve(tasks, lb, ub, warmstart=self.last_dq)
 
         self.last_dq = dq
@@ -183,16 +182,15 @@ if __name__ == "__main__":
     def set_target(name, data):
         targets[name] = data
 
-
     targets = {}
-    
-    c = Controller(solver_class=HQPSolver, solver_options={'rho': 0.1})
+
+    c = Controller(solver_class=HQPSolver, solver_options={"rho": 0.1})
     c.T_callback.append(lambda T: set_target("T", T))
     c.J_callback.append(lambda J: set_target("J", J))
     c.reset()
 
-    t = tf.rotation_matrix(np.pi, [1,0,0])
-    t[:3,3] = [0,0,.5]
+    t = tf.rotation_matrix(np.pi, [1, 0, 0])
+    t[:3, 3] = [0, 0, 0.5]
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
     marker = SixDOFMarker(name="pose", scale=0.1, pose=t)
@@ -213,11 +211,11 @@ if __name__ == "__main__":
 
     c.task_hierarchy.add_task_lower(pos)
     c.task_hierarchy.add_task_same(ori)
-    
-    #pp = PlotPublisher()
 
-    #c.delta_q_callback.append(lambda dq: pp.plot(dq, "dq"))
-    #c.joint_state_callback.append(lambda jp: pp.plot(jp, "jp"))
+    # pp = PlotPublisher()
+
+    # c.delta_q_callback.append(lambda dq: pp.plot(dq, "dq"))
+    # c.joint_state_callback.append(lambda jp: pp.plot(jp, "jp"))
 
     while not rospy.is_shutdown():
         c.hierarchic_control(targets)

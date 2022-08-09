@@ -181,7 +181,9 @@ class JointFactory:
 
     @staticmethod
     def get_vector_from_xml(tag: Element, attr, child=None, default=None):
-        v = JointFactory.get_xml_attr(tag, attr, child=child, default=default if default else [])
+        v = JointFactory.get_xml_attr(
+            tag, attr, child=child, default=default if default else []
+        )
         return numpy.array(v.split(" "), numpy.float64)
 
     @staticmethod
@@ -214,7 +216,9 @@ class JointFactory:
                 multiplier = gxa(mimic, "multiplier", float, 0.0)
                 offset = gxa(mimic, "offset", float, 0.0)
 
-                joint = MimicJoint(jtype, name, T, axis, jmin, jmax, m_joint, offset, multiplier)
+                joint = MimicJoint(
+                    jtype, name, T, axis, jmin, jmax, m_joint, offset, multiplier
+                )
 
             else:
                 joint = ActiveJoint(jtype, name, T, axis, jmin, jmax)
@@ -261,7 +265,9 @@ class RobotModel:
                 child_name.parent_joint = link["p"]
 
         # store list of active joints
-        self.active_joints = list(filter(lambda x: type(x) == ActiveJoint, self.joints.values()))
+        self.active_joints = list(
+            filter(lambda x: type(x) == ActiveJoint, self.joints.values())
+        )
 
         # set relation in mimic joints
         for joint in filter(lambda x: type(x) == MimicJoint, self.joints.values()):

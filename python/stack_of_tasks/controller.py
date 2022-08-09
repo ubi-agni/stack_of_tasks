@@ -41,9 +41,6 @@ class Controller(object):
         self.delta_q_callback = Callback()
         
         self.robot = RobotModel()
-        self._prismaticjoints = np.array(
-            [j.jtype is JointType.prismatic for j in self.robot.active_joints]
-        )
 
         self.target_link = target_link
         self.target_offset = transform
@@ -56,9 +53,6 @@ class Controller(object):
 
         self.task_hierarchy = TaskHierarchy()
         self.solver = solver_class(self.N, **solver_options)
-
-        self.joint_weights = np.ones(self.N)
-        self.cartesian_weights = np.ones(6)
 
         self.mins = np.array([j.min for j in self.robot.active_joints])
         self.maxs = np.array([j.max for j in self.robot.active_joints])
@@ -110,14 +104,6 @@ class Controller(object):
     @joint_position.setter
     def joint_position(self, val):
         self._joint_position = val
-
-        # clip joint positions
-        #self._joint_position = np.clip(
-        #    self._joint_position,
-        #    self.mins,
-        #    self.maxs
-        #)
-
         T_all, J = self.robot.fk(
             self.target_link, dict(zip([j.name for j in self.robot.active_joints], self._joint_position))
         )

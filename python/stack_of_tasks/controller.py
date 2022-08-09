@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
 import random
-import threading
 
 import numpy as np
 import rospy
-from geometry_msgs.msg import Quaternion, Transform, TransformStamped, Vector3
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from tf import transformations as tf
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
-from stack_of_tasks.robot_model import JointType, RobotModel
+from stack_of_tasks.robot_model import RobotModel, JointType
+from stack_of_tasks.solver.AbstactSolver import Solver
 from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
@@ -24,34 +23,39 @@ from stack_of_tasks.utils import Callback
 class Controller(object):
     def __init__(
         self,
+        solver_class:Solver,
+        solver_options,
         transform=tf.quaternion_matrix([0, 0, 0.382, 0.924]).dot(
             tf.translation_matrix([0, 0, 0.105])
         ),
-        rate=50,
+        rate = 50,
+        publish_joints = True,
+        target_link =  "panda_joint8"
     ):
+        self.rate = rate
+
         self.joint_state_callback = Callback()
         self.T_callback = Callback()
         self.J_callback = Callback()
 
-        self.target_offset = transform
-        self.rate = rate
-
-        self.target_link = "panda_joint8"
-
+        self.delta_q_callback = Callback()
+        
         self.robot = RobotModel()
-
-        self.joint_pub = rospy.Publisher(
-            "/target_joint_states", JointState, queue_size=1, latch=True
+        self._prismaticjoints = np.array(
+            [j.jtype is JointType.prismatic for j in self.robot.active_joints]
         )
 
-        self.joint_msg = JointState()
-        self.joint_msg.name = [j.name for j in self.robot.active_joints]
+        self.target_link = target_link
+        self.target_offset = transform
 
         self.N = len(self.robot.active_joints)  # number of (active) joints
 
         self._T = np.zeros((4, 4))
-        self._J = np.zeros(())
-        self._joint_position = np.zeros(())
+        self._J = np.zeros((6, self.N))
+        self._joint_position = np.zeros(self.N)
+
+        self.task_hierarchy = TaskHierarchy()
+        self.solver = solver_class(self.N, **solver_options)
 
         self.joint_weights = np.ones(self.N)
         self.cartesian_weights = np.ones(6)
@@ -59,14 +63,27 @@ class Controller(object):
         self.mins = np.array([j.min for j in self.robot.active_joints])
         self.maxs = np.array([j.max for j in self.robot.active_joints])
 
-        self.prismatic = np.array(
-            [j.jtype is JointType.prismatic for j in self.robot.active_joints]
-        )
+
+
+        if publish_joints:
+            joint_msg = JointState()
+            joint_msg.name = [j.name for j in self.robot.active_joints]
+            
+            joint_pub = rospy.Publisher(
+                "/target_joint_states", JointState, queue_size=1, latch=True
+            )
+            def _send_joint(joint_values):
+                joint_msg.position = joint_values
+                joint_pub.publish(joint_msg)
+
+            self.joint_state_callback.append(_send_joint)
+
+        
+        self.last_dq = None
+
         self.reset()
 
-        self.task_hierarchy = TaskHierarchy()
-
-        self.last_dq = None
+       
 
     @property
     def T(self):
@@ -93,6 +110,24 @@ class Controller(object):
     @joint_position.setter
     def joint_position(self, val):
         self._joint_position = val
+
+        # clip joint positions
+        #self._joint_position = np.clip(
+        #    self._joint_position,
+        #    self.mins,
+        #    self.maxs
+        #)
+
+        T_all, J = self.robot.fk(
+            self.target_link, dict(zip([j.name for j in self.robot.active_joints], self._joint_position))
+        )
+
+        T = T_all[self.robot.active_joints[0].name]
+        T = T.dot(self.target_offset)
+
+        self.T = T
+        self.J = J
+
         self.joint_state_callback(self._joint_position)
 
     def reset(self, randomness=0):
@@ -104,46 +139,22 @@ class Controller(object):
                 return j + dj * random.uniform(-randomness, randomness)
             return j
 
-        self.joint_msg.position = list(map(lambda x: _rJoint(*x), zip(self.mins, self.maxs)))
-        self.update()
-
-    def update(self):
-        self.joint_pub.publish(self.joint_msg)
-
-        T_all, J = self.robot.fk(
-            self.target_link, dict(zip(self.joint_msg.name, self.joint_msg.position))
-        )
-
-        T = T_all[self.robot.active_joints[0].name]
-        T = T.dot(self.target_offset)
-
-        self.T = T
-        self.J = J
-        self.joint_position = np.atleast_2d(self.joint_msg.position).T
+        self.joint_position = np.array(list(map(lambda x: _rJoint(*x), zip(self.mins, self.maxs))))
 
     def actuate(self, q_delta):
-        self.joint_msg.position += q_delta.ravel()
-        # clip (prismatic) joints
-        self.joint_msg.position[self.prismatic] = np.clip(
-            self.joint_msg.position[self.prismatic],
-            self.mins[self.prismatic],
-            self.maxs[self.prismatic],
-        )
-
-        self.update()
+        self.joint_position += q_delta.ravel()
+        self.delta_q_callback(q_delta)
 
     def check_end(self):
         pass
 
     def hierarchic_control(self, targets):
-        lb = np.maximum(-0.01, (self.mins * 0.95 - self.joint_msg.position) / self.rate)
-        ub = np.minimum(0.01, (self.maxs * 0.95 - self.joint_msg.position) / self.rate)
+        lb = np.maximum(-0.01, (self.mins * 0.95 - self._joint_position) / self.rate)
+        ub = np.minimum(0.01, (self.maxs * 0.95 - self._joint_position) / self.rate)
 
         tasks = self.task_hierarchy.compute(targets)
-
-        Solver = HQPSolver
-        solver = Solver(self.N, rho=0.01)
-        dq, tcr = solver.solve(tasks, lb, ub, warmstart=self.last_dq)
+        
+        dq, tcr = self.solver.solve(tasks, lb, ub, warmstart=self.last_dq)
 
         self.last_dq = dq
 
@@ -178,6 +189,7 @@ class MarkerControl:
 if __name__ == "__main__":
     from stack_of_tasks.marker.markers import SixDOFMarker
     from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
+    from stack_of_tasks.plot.plot_publisher import PlotPublisher
 
     rospy.init_node("ik")
     rate = rospy.Rate(50)
@@ -185,15 +197,19 @@ if __name__ == "__main__":
     def set_target(name, data):
         targets[name] = data
 
+
     targets = {}
-    c = Controller()
+    
+    c = Controller(solver_class=HQPSolver, solver_options={'rho': 0.1})
     c.T_callback.append(lambda T: set_target("T", T))
     c.J_callback.append(lambda J: set_target("J", J))
     c.reset()
 
+    t = tf.rotation_matrix(np.pi, [1,0,0])
+    t[:3,3] = [0,0,.5]
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
-    marker = SixDOFMarker(name="pose", scale=0.1, pose=targets["T"])
+    marker = SixDOFMarker(name="pose", scale=0.1, pose=t)
     mc.add_marker(marker, marker.name)
 
     # setup tasks
@@ -211,6 +227,11 @@ if __name__ == "__main__":
 
     c.task_hierarchy.add_task_lower(pos)
     c.task_hierarchy.add_task_same(ori)
+    
+    #pp = PlotPublisher()
+
+    #c.delta_q_callback.append(lambda dq: pp.plot(dq, "dq"))
+    #c.joint_state_callback.append(lambda jp: pp.plot(jp, "jp"))
 
     while not rospy.is_shutdown():
         c.hierarchic_control(targets)

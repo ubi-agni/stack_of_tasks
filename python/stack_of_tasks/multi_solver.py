@@ -30,9 +30,9 @@ class Main:
         self.controller = {}
         self.targets = {}
         self.dqs = {}
-        self.plot = PlotPublisher("plot")
+        self.plot = PlotPublisher()
 
-        opt = {'rho': 0.1}
+        opt = {'rho': 0.0001}
         self.add_controller(HQPSolver, opt, "hqp1" )
         self.add_controller(HQPSolverTwo, opt, "hqp2" )
         self.add_controller(InverseJacobianSolver, opt, "inv" )
@@ -61,7 +61,9 @@ class Main:
         controller.task_hierarchy.add_task_lower(pos)
         controller.task_hierarchy.add_task_same(ori)
 
-        controller.delta_q_callback.append(lambda dq: self.plot.plot(dq, f"{name}/dq"))
+        self.plot.add_plot(f"{name}/dq", [ f"{name}/dq/{joint.name}" for joint in controller.robot.active_joints  ])
+        
+        controller.delta_q_callback.append(lambda dq: self.plot.plot(f"{name}/dq", dq))
         controller.delta_q_callback.append(lambda dq: self.set_target(f"{name}_dq", dq))
 
         controller.reset()

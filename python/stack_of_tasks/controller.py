@@ -228,10 +228,11 @@ if __name__ == "__main__":
     c.task_hierarchy.add_task_lower(pos)
     c.task_hierarchy.add_task_same(ori)
     
-    #pp = PlotPublisher()
-
-    #c.delta_q_callback.append(lambda dq: pp.plot(dq, "dq"))
-    #c.joint_state_callback.append(lambda jp: pp.plot(jp, "jp"))
+    # pp = PlotPublisher()
+    # pp.add_plot("q", [f"q/{joint.name}" for joint in c.robot.active_joints])
+    # pp.add_plot("dq", [f"dq/{joint.name}" for joint in c.robot.active_joints])
+    # c.joint_state_callback.append(lambda q: pp.plot("q", q))
+    # c.delta_q_callback.append(lambda dq: pp.plot("dq", dq))
 
     while not rospy.is_shutdown():
         c.hierarchic_control(targets)

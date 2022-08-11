@@ -98,33 +98,20 @@ class Controller(object):
         return self._joint_position
 
     @joint_position.setter
-    def joint_position(self, val):
-        self._joint_position = val
-        T_all, J = self.robot.fk(
-            self.target_link,
-            dict(zip([j.name for j in self.robot.active_joints], self._joint_position)),
-        )
+    def joint_position(self, values):
+        self._joint_position = values
+        self.joint_state_callback(values)
 
-        T = T_all[self.robot.active_joints[0].name]
+        T, J = self.robot.fk(self.target_link, values)
         T = T.dot(self.target_offset)
 
         self.T = T
         self.J = J
 
-        self.joint_state_callback(self._joint_position)
-
     def reset(self, randomness=0):
-        def _rJoint(m, M):
-            j = (m + M) / 2
-            dj = (M - m) / 2
-
-            if randomness > 0:
-                return j + dj * random.uniform(-randomness, randomness)
-            return j
-
-        self.joint_position = np.array(
-            list(map(lambda x: _rJoint(*x), zip(self.mins, self.maxs)))
-        )
+        center = 0.5 * (self.maxs + self.mins)
+        width = 0.5 * (self.maxs - self.mins) * randomness
+        self.joint_position = center + width * (np.random.random_sample(width.shape) - 0.5)
 
     def actuate(self, q_delta):
         self.joint_position += q_delta.ravel()
@@ -189,11 +176,9 @@ if __name__ == "__main__":
     c.J_callback.append(lambda J: set_target("J", J))
     c.reset()
 
-    t = tf.rotation_matrix(np.pi, [1, 0, 0])
-    t[:3, 3] = [0, 0, 0.5]
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
-    marker = SixDOFMarker(name="pose", scale=0.1, pose=t)
+    marker = SixDOFMarker(name="pose", scale=0.1, pose=targets["T"])
     mc.add_marker(marker, marker.name)
 
     # setup tasks

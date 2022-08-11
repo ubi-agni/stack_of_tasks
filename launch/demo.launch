@@ -1,6 +1,9 @@
 <launch>
+  <arg name="robot" default="moveit_resources_panda_moveit_config" />
+  <arg name="robot_pkg_path" value="$(eval find(arg('robot')))" />
+
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
-  <include file="$(find moveit_resources_panda_moveit_config)/launch/planning_context.launch">
+  <include file="$(arg robot_pkg_path)/launch/planning_context.launch">
     <arg name="load_robot_description" value="true" />
   </include>
 

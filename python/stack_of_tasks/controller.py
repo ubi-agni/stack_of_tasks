@@ -58,11 +58,24 @@ class Controller(object):
         self.maxs = np.array([j.max for j in self.robot.active_joints])
 
         if publish_joints:
+            # fetch current joint values
+            try:
+                joint_msg = rospy.wait_for_message("joint_states", JointState, 0.2)
+                names = [j.name for j in self.robot.active_joints]
+                for name, value in zip(joint_msg.name, joint_msg.position):
+                    try:
+                        self._joint_position[names.index(name)] = value
+                    except ValueError:
+                        pass
+            except rospy.ROSException:
+                print("failed to retrieve joint_states")
+
+            # configure callback to publish joint values
             joint_msg = JointState()
             joint_msg.name = [j.name for j in self.robot.active_joints]
 
             joint_pub = rospy.Publisher(
-                "/target_joint_states", JointState, queue_size=1, latch=True
+                "target_joint_states", JointState, queue_size=1, latch=True
             )
 
             def _send_joint(joint_values):
@@ -73,7 +86,7 @@ class Controller(object):
 
         self.last_dq = None
 
-        self.reset()
+        self.joint_position = self._joint_position  # trigger initialization callbacks
 
     @property
     def T(self):
@@ -174,7 +187,10 @@ if __name__ == "__main__":
     c = Controller(solver_class=HQPSolver, solver_options={"rho": 0.1})
     c.T_callback.append(lambda T: set_target("T", T))
     c.J_callback.append(lambda J: set_target("J", J))
-    c.reset()
+    if np.allclose(c.joint_position, 0):
+        c.reset()  # center joints
+    else:
+        c.joint_position = c.joint_position  # trigger initialization callbacks
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)

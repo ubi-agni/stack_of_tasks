@@ -5,7 +5,7 @@ import numpy as np
 
 
 class TaskDesc:
-    def __init__(self, A, upper, lower, name, is_hard=False) -> None:
+    def __init__(self, A, upper, lower, name, is_hard=True) -> None:
 
         self.name = name
         self.is_hard = is_hard

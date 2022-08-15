@@ -24,13 +24,13 @@ class Controller(object):
     def __init__(
         self,
         solver_class: Solver,
-        solver_options,
         transform=tf.quaternion_matrix([0, 0, 0.382, 0.924]).dot(
             tf.translation_matrix([0, 0, 0.105])
         ),
         rate=50,
         publish_joints=True,
         target_link="panda_joint8",
+        **solver_options,
     ):
         self.rate = rate
 
@@ -176,6 +176,8 @@ if __name__ == "__main__":
     from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
     from stack_of_tasks.plot.plot_publisher import PlotPublisher
 
+    np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")
+
     rospy.init_node("ik")
     rate = rospy.Rate(50)
 
@@ -184,7 +186,7 @@ if __name__ == "__main__":
 
     targets = {}
 
-    c = Controller(solver_class=HQPSolver, solver_options={"rho": 0.1})
+    c = Controller(solver_class=HQPSolver, rho=0.1)
     c.T_callback.append(lambda T: set_target("T", T))
     c.J_callback.append(lambda J: set_target("J", J))
     c.reset()

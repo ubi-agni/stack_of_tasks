@@ -10,18 +10,6 @@ from tf import transformations as tf
 import rospy
 
 
-class HQPSolverTwo(HQPSolver):
-    def solve(self, stack_of_tasks, lower_dq, upper_dq, **options):
-        l = np.NINF
-        u = np.PINF
-
-        qdot, tcr = super().solve(stack_of_tasks, l, u, **options)
-        scales = np.maximum(qdot / lower_dq, qdot / upper_dq)
-        qdot /= np.maximum(1.0, np.max(scales))
-
-        return qdot, tcr
-
-
 class Main:
     def __init__(self):
 
@@ -30,19 +18,16 @@ class Main:
         self.dqs = {}
         self.plot = PlotPublisher()
 
-        opt = {"rho": 0.1}
-        self.add_controller(HQPSolver, opt, "hqp1")
-        self.add_controller(HQPSolverTwo, opt, "hqp2")
-        self.add_controller(InverseJacobianSolver, opt, "inv")
+        opt = {"rho": 1.0}
+        self.add_controller(HQPSolver, "new", **opt)
+        self.add_controller(HQPSolver, "old", solver="components", **opt)
+        self.add_controller(InverseJacobianSolver, "jac", **opt)
 
     def set_target(self, name, data):
         self.targets[name] = data
 
-    def add_controller(self, solverclass, solver_options, name):
-
-        controller = Controller(
-            solverclass, publish_joints=False, solver_options=solver_options
-        )
+    def add_controller(self, solverclass, name, **options):
+        controller = Controller(solverclass, publish_joints=False, **options)
         self.controller[name] = controller
         controller.T_callback.append(lambda T: self.set_target(f"T_{name}", T))
         controller.J_callback.append(lambda J: self.set_target(f"J_{name}", J))

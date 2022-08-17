@@ -57,23 +57,23 @@ class Controller(object):
         self.mins = np.array([j.min for j in self.robot.active_joints])
         self.maxs = np.array([j.max for j in self.robot.active_joints])
 
-        if publish_joints:
-            # fetch current joint values
-            try:
-                joint_msg = rospy.wait_for_message("joint_states", JointState, 0.2)
-                names = [j.name for j in self.robot.active_joints]
-                for name, value in zip(joint_msg.name, joint_msg.position):
-                    try:
-                        self._joint_position[names.index(name)] = value
-                    except ValueError:
-                        pass
-            except rospy.ROSException:
-                print("failed to retrieve joint_states")
+        # fetch initial joint states from rosparams
+        self.initial_joints = rospy.get_param(
+            "initial_joints", default=0.5 * (self.mins + self.maxs)
+        )
+        if isinstance(self.initial_joints, dict):
+            names = [j.name for j in self.robot.active_joints]
+            for name, value in self.initial_joints.items():
+                try:
+                    self._joint_position[names.index(name)] = value
+                except:
+                    pass
+            self.initial_joints = self._joint_position
 
-            # configure callback to publish joint values
+        # configure publishing joint states
+        if publish_joints:
             joint_msg = JointState()
             joint_msg.name = [j.name for j in self.robot.active_joints]
-
             joint_pub = rospy.Publisher(
                 "target_joint_states", JointState, queue_size=1, latch=True
             )
@@ -85,8 +85,7 @@ class Controller(object):
             self.joint_state_callback.append(_send_joint)
 
         self.last_dq = None
-
-        self.joint_position = self._joint_position  # trigger initialization callbacks
+        self.reset()  # trigger initialization callbacks
 
     @property
     def T(self):
@@ -122,7 +121,8 @@ class Controller(object):
         self.J = J
 
     def reset(self, randomness=0):
-        center = 0.5 * (self.maxs + self.mins)
+        # center = 0.5 * (self.maxs + self.mins)
+        center = self.initial_joints
         width = 0.5 * (self.maxs - self.mins) * randomness
         self.joint_position = center + width * (np.random.random_sample(width.shape) - 0.5)
 
@@ -187,10 +187,7 @@ if __name__ == "__main__":
     c = Controller(solver_class=HQPSolver, solver_options={"rho": 0.1})
     c.T_callback.append(lambda T: set_target("T", T))
     c.J_callback.append(lambda J: set_target("J", J))
-    if np.allclose(c.joint_position, 0):
-        c.reset()  # center joints
-    else:
-        c.joint_position = c.joint_position  # trigger initialization callbacks
+    c.reset()
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)

@@ -7,15 +7,22 @@
     <arg name="load_robot_description" value="true" />
   </include>
 
-  <!-- Broadcast static tf for robot root -->
-  <node name="virtual_joint" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 world panda_link0" />
+  <group if="$(eval robot=='moveit_resources_panda_moveit_config')">
+    <!-- Broadcast static tf for robot root -->
+    <node name="virtual_joint" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 world panda_link0" />
+    <rosparam param="initial_joints">[0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785, 0.035]</rosparam>
+  </group>
+  <group if="$(eval robot=='pa10_shadow_moveit_config')">
+    <rosparam param="initial_joints">{
+      ra_S1: 1.57, ra_S2: 1.1868, ra_S3: 0.0, ra_E1: -1.4486, ra_E2: 1.3963, ra_W1: -1.4835, ra_W2: 0.0,
+      la_S1: 1.57, la_S2: 1.294, la_S3: 0.0, la_E1: -1.517, la_E2: -1.4, la_W1: -1.4835, la_W2: 0.0
+    }</rosparam>
+  </group>
 
   <!-- Publish joint states -->
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
-    <param name="/use_gui" value="false" />
-    <rosparam param="/source_list">[/target_joint_states]</rosparam>
+    <rosparam param="source_list">[target_joint_states]</rosparam>
   </node>
-
   <!-- Given the published joint states, publish tf for all robot links -->
   <node name="rsp" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" />
 

@@ -1,0 +1,19 @@
+<launch>
+  <include file="$(dirname)/single.launch" ns="jac">
+    <arg name="rviz" value="false" />
+    <arg name="prefix" value="jac" />
+  </include>
+  <include file="$(dirname)/single.launch" ns="old">
+    <arg name="rviz" value="false" />
+    <arg name="prefix" value="old" />
+  </include>
+  <include file="$(dirname)/single.launch" ns="new">
+    <arg name="rviz" value="false" />
+    <arg name="prefix" value="new" />
+  </include>
+
+  <!-- Run Rviz -->
+  <node name="$(anon rviz)" pkg="rviz" type="rviz" output="screen" args="-d $(dirname)/multi.rviz" />
+  <!-- Run PlotJuggler -->
+  <node name="$(anon plot)" pkg="plotjuggler" type="plotjuggler" args="-l $(dirname)/multi.xml" />
+</launch>

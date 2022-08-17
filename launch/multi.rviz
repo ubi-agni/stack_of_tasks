@@ -1,0 +1,350 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /RobotModel - Jacobian1
+        - /RobotModel - Jacobian1/Links1/jac_link81
+        - /RobotModel - Old1
+        - /RobotModel - New1
+        - /RobotModel - New1/Links1/new_link81
+        - /InteractiveMarkers1
+      Splitter Ratio: 0.566107988357544
+    Tree Height: 770
+  - Class: rviz/Help
+    Name: Help
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Selection
+    Name: Selection
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        jac_hand:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_hand_tcp:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        jac_leftfinger:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        jac_link8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: true
+          Value: true
+        jac_rightfinger:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel - Jacobian
+      Robot Description: jac/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        old_hand:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_hand_tcp:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        old_leftfinger:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_link8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        old_rightfinger:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel - Old
+      Robot Description: old/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        new_hand:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_hand_tcp:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        new_leftfinger:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link6:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        new_link8:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: true
+          Value: true
+        new_rightfinger:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel - New
+      Robot Description: new/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz/InteractiveMarkers
+      Enable Transparency: true
+      Enabled: true
+      Name: InteractiveMarkers
+      Show Axes: false
+      Show Descriptions: true
+      Show Visual Aids: false
+      Update Topic: /controller/update
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/XYOrbit
+      Distance: 2.212043046951294
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 0.23371216654777527
+        Y: -0.5176849365234375
+        Z: -7.852847375033889e-06
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.24479727447032928
+      Target Frame: base_link
+      Yaw: 1.2218022346496582
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 921
+  Help:
+    collapsed: false
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000100000000000001ae0000033ffc0200000008fb000000100044006900730070006c006100790073010000003d0000033f000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a005600690065007700730000000321000000b0000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000257000001790000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000206000001cb0000000000000000fb0000001200530065006c0065006300740069006f006e0000000264000000810000005c00ffffff000004000000033f00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1460
+  X: 579
+  Y: 143

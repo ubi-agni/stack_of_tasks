@@ -30,6 +30,7 @@ class Controller(object):
         rate=50,
         publish_joints=True,
         target_link="panda_joint8",
+        ns_prefix="",
         **solver_options,
     ):
         self.rate = rate
@@ -40,7 +41,7 @@ class Controller(object):
 
         self.delta_q_callback = Callback()
 
-        self.robot = RobotModel()
+        self.robot = RobotModel(param=ns_prefix + "robot_description")
 
         self.target_link = target_link
         self.target_offset = transform
@@ -59,7 +60,7 @@ class Controller(object):
 
         # fetch initial joint states from rosparams
         self.initial_joints = rospy.get_param(
-            "initial_joints", default=0.5 * (self.mins + self.maxs)
+            ns_prefix + "initial_joints", default=0.5 * (self.mins + self.maxs)
         )
         if isinstance(self.initial_joints, dict):
             names = [j.name for j in self.robot.active_joints]
@@ -75,7 +76,7 @@ class Controller(object):
             joint_msg = JointState()
             joint_msg.name = [j.name for j in self.robot.active_joints]
             joint_pub = rospy.Publisher(
-                "target_joint_states", JointState, queue_size=1, latch=True
+                ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
             )
 
             def _send_joint(joint_values):

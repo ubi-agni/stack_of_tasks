@@ -27,7 +27,9 @@ class Main:
         self.targets[name] = data
 
     def add_controller(self, solverclass, name, **options):
-        controller = Controller(solverclass, publish_joints=False, **options)
+        controller = Controller(
+            solverclass, target_link=f"{name}_joint8", ns_prefix=f"{name}/", **options
+        )
         self.controller[name] = controller
         controller.T_callback.append(lambda T: self.set_target(f"T_{name}", T))
         controller.J_callback.append(lambda J: self.set_target(f"J_{name}", J))

@@ -21,7 +21,9 @@ class ControlMarker(IAMarker, ABC):
         callback=None,
         additional_marker=None,
     ) -> None:
-        super().__init__(server, name, pose, scale, callback, additional_marker=additional_marker)
+        super().__init__(
+            server, name, pose, scale, callback, additional_marker=additional_marker
+        )
 
     @abstractmethod
     def _setup_marker(self, name, pose, scale, additional_marker=None):
@@ -58,7 +60,9 @@ class ControlMarker(IAMarker, ABC):
 class PositionMarker(ControlMarker):
     def _setup_marker(self, name, pose, scale, additional_marker=None):
         super()._setup_marker(name, pose, scale, additional_marker=additional_marker)
-        self._add_movement_marker(self.marker, "", InteractiveMarkerControl.MOVE_3D, self.sphere())
+        self._add_movement_marker(
+            self.marker, "", InteractiveMarkerControl.MOVE_3D, self.sphere()
+        )
         self._add_movement_control(self.marker, "", InteractiveMarkerControl.MOVE_AXIS)
 
 

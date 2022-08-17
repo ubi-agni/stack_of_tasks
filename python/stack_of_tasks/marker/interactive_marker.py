@@ -62,7 +62,9 @@ class IAMarker(ABC):
         return self.server.marker_contexts.get(name).int_marker
 
     @staticmethod
-    def _create_interactive_marker(server, name, scale, pose, frame_id="world", callback=None):
+    def _create_interactive_marker(
+        server, name, scale, pose, frame_id="world", callback=None
+    ):
         im = InteractiveMarker(name=name)
         im.header.frame_id = frame_id
         im.pose = create_pose(pose)
@@ -165,12 +167,12 @@ class IAMarker(ABC):
             points.append(Point(radius * numpy.sin(theta), radius * numpy.cos(theta), height))
 
             # inside
-            rinside = radius * 0.95
+            inner = radius * 0.95
             theta = twopi * i / numTriangles
-            points.append(Point(rinside * numpy.sin(theta), rinside * numpy.cos(theta), height))
-            points.append(Point(0, 0, radius - rinside))
+            points.append(Point(inner * numpy.sin(theta), inner * numpy.cos(theta), height))
+            points.append(Point(0, 0, radius - inner))
             theta = twopi * (i + 1) / numTriangles
-            points.append(Point(rinside * numpy.sin(theta), rinside * numpy.cos(theta), height))
+            points.append(Point(inner * numpy.sin(theta), inner * numpy.cos(theta), height))
 
         return Marker(
             type=Marker.TRIANGLE_LIST,

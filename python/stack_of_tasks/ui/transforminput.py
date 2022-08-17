@@ -1,4 +1,3 @@
-
 from PyQt5 import QtWidgets
 
 from .generated.TransformInput import Ui_Form

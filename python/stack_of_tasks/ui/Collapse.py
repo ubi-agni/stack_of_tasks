@@ -42,7 +42,9 @@ class Collapse(QtWidgets.QWidget):
     @QtCore.pyqtSlot()
     def on_clicked(self):
         isOpen = self.toggle_button.isChecked()
-        self.toggle_button.setArrowType(QtCore.Qt.DownArrow if isOpen else QtCore.Qt.RightArrow)
+        self.toggle_button.setArrowType(
+            QtCore.Qt.DownArrow if isOpen else QtCore.Qt.RightArrow
+        )
         self.updateGeometry()
 
 

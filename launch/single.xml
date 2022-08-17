@@ -3,43 +3,31 @@
  <tabbed_widget parent="main_window" name="Main Window">
   <Tab containers="1" tab_name="tab1">
    <Container>
-    <DockSplitter count="3" orientation="-" sizes="0.333664;0.332671;0.333664">
+    <DockSplitter sizes="0.500747;0.499253" orientation="-" count="2">
      <DockArea name="...">
-      <plot mode="TimeSeries" style="Lines" flip_y="false" flip_x="false">
-       <range right="4.990969" top="0.010692" left="0.004215" bottom="-0.011389"/>
+      <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
+       <range left="55.680898" right="60.678238" top="0.000000" bottom="-0.000000"/>
        <limitY/>
-       <curve name="/sot/hqp1/dq/panda_joint1" color="#1f77b4"/>
-       <curve name="/sot/hqp1/dq/panda_joint2" color="#d62728"/>
-       <curve name="/sot/hqp1/dq/panda_joint3" color="#1ac938"/>
-       <curve name="/sot/hqp1/dq/panda_joint4" color="#ff7f0e"/>
-       <curve name="/sot/hqp1/dq/panda_joint5" color="#f14cc1"/>
-       <curve name="/sot/hqp1/dq/panda_joint6" color="#9467bd"/>
-       <curve name="/sot/hqp1/dq/panda_joint7" color="#17becf"/>
+       <curve name="/sot/dq/panda_joint1" color="#1f77b4"/>
+       <curve name="/sot/dq/panda_joint2" color="#d62728"/>
+       <curve name="/sot/dq/panda_joint3" color="#1ac938"/>
+       <curve name="/sot/dq/panda_joint4" color="#ff7f0e"/>
+       <curve name="/sot/dq/panda_joint5" color="#f14cc1"/>
+       <curve name="/sot/dq/panda_joint6" color="#9467bd"/>
+       <curve name="/sot/dq/panda_joint7" color="#17becf"/>
       </plot>
      </DockArea>
      <DockArea name="...">
-      <plot mode="TimeSeries" style="Lines" flip_y="false" flip_x="false">
-       <range right="4.990969" top="0.008796" left="0.004215" bottom="-0.010458"/>
+      <plot style="Lines" flip_x="false" mode="TimeSeries" flip_y="false">
+       <range left="55.680898" right="60.678238" top="1.751508" bottom="-2.046880"/>
        <limitY/>
-       <curve name="/sot/hqp2/dq/panda_joint1" color="#bcbd22"/>
-       <curve name="/sot/hqp2/dq/panda_joint2" color="#1f77b4"/>
-       <curve name="/sot/hqp2/dq/panda_joint3" color="#d62728"/>
-       <curve name="/sot/hqp2/dq/panda_joint4" color="#1ac938"/>
-       <curve name="/sot/hqp2/dq/panda_joint5" color="#ff7f0e"/>
-       <curve name="/sot/hqp2/dq/panda_joint6" color="#f14cc1"/>
-      </plot>
-     </DockArea>
-     <DockArea name="...">
-      <plot mode="TimeSeries" style="Lines" flip_y="false" flip_x="false">
-       <range right="4.990969" top="0.010500" left="0.004215" bottom="-0.010500"/>
-       <limitY/>
-       <curve name="/sot/inv/dq/panda_joint1" color="#9467bd"/>
-       <curve name="/sot/inv/dq/panda_joint2" color="#17becf"/>
-       <curve name="/sot/inv/dq/panda_joint3" color="#bcbd22"/>
-       <curve name="/sot/inv/dq/panda_joint4" color="#1f77b4"/>
-       <curve name="/sot/inv/dq/panda_joint5" color="#d62728"/>
-       <curve name="/sot/inv/dq/panda_joint6" color="#1ac938"/>
-       <curve name="/sot/inv/dq/panda_joint7" color="#ff7f0e"/>
+       <curve name="/sot/q/panda_joint1" color="#bcbd22"/>
+       <curve name="/sot/q/panda_joint2" color="#1f77b4"/>
+       <curve name="/sot/q/panda_joint3" color="#d62728"/>
+       <curve name="/sot/q/panda_joint4" color="#1ac938"/>
+       <curve name="/sot/q/panda_joint5" color="#ff7f0e"/>
+       <curve name="/sot/q/panda_joint6" color="#f14cc1"/>
+       <curve name="/sot/q/panda_joint7" color="#9467bd"/>
       </plot>
      </DockArea>
     </DockSplitter>
@@ -52,7 +40,7 @@
  <!-- - - - - - - - - - - - - - - -->
  <Plugins>
   <plugin ID="DataLoad CSV">
-   <default time_axis="" delimiter="0"/>
+   <default delimiter="0" time_axis=""/>
   </plugin>
   <plugin ID="DataLoad ROS bags">
    <use_header_stamp value="false"/>
@@ -71,6 +59,7 @@
   </plugin>
   <plugin ID="UDP Server"/>
   <plugin ID="WebSocket Server"/>
+  <plugin ID="ZMQ Subscriber"/>
   <plugin ID="Fast Fourier Transform"/>
   <plugin ID="Quaternion to RPY"/>
   <plugin ID="Reactive Script Editor">

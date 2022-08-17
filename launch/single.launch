@@ -1,4 +1,5 @@
 <launch>
+  <arg name="rviz" default="true" />
   <arg name="robot" default="moveit_resources_panda_moveit_config" />
   <arg name="robot_pkg_path" value="$(eval find(arg('robot')))" />
 
@@ -27,5 +28,5 @@
   <node name="rsp" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" />
 
   <!-- Run Rviz -->
-  <node name="$(anon rviz)" pkg="rviz" type="rviz" output="screen" args="-d $(dirname)/demo.rviz" />
+  <node if="$(arg rviz)" name="$(anon rviz)" pkg="rviz" type="rviz" output="screen" args="-d $(dirname)/single.rviz" />
 </launch>

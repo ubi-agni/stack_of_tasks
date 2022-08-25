@@ -1,7 +1,14 @@
+import numpy as np
+
+
 class Callback(list):
     def __call__(self, *args) -> None:
         for listener in self:
             listener(*args)
+
+
+def skew(w):
+    return np.array([[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]])
 
 
 def prettyprintMatrix(inmatrix):

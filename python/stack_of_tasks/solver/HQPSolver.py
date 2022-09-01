@@ -1,299 +1,392 @@
 #!/usr/bin/env python
 
+
 import numpy as np
 import osqp
+from numpy.typing import NDArray
 from scipy import sparse
 
+from stack_of_tasks.tasks.Task import (
+    EqTask,
+    TaskHierachyType,
+    TaskSoftnessType,
+    TaskType,
+)
+
 from .AbstactSolver import Solver
-from ..tasks.Task import EQTaskDesc
 
 
-class HQPComponentSlacks:
+class HQPMatrix:
     """
-    Iterator to form QP problems for the stack of tasks.
-    This variant considers soft constraints via componentwise slack variables,
-    i.e. by lb - slack ≤ J dq ≤ ub + slack.
-    For large errors, this results in strong deviations from straight-line solution.
+                              A           lb   ub
+                        ⎧1                 0    1   for lin. task
+    max slack variables ⎨ ⋱             -inf   inf for quad. task
+                        ⎩   0              0    1
+                        ⎧    1            lb   ub
+                     dq ⎨      ⋱
+                        ⎩        1        lb   ub
+    higher-level tasks  {  0   J'      J' dq'  J' dq'
+    hard eq. task       {  0   J           ξ    ξ                    J dq = ξ
+    soft eq. task       {  ξ   J           ξ    ξ              s ξ + J dq = ξ
+    hard ineq. task     {  0   J          lb   ub         lb ≤       J dq ≤ ub
+    quad task ub        { +1   J          lb   inf        lb ≤   s + J dq
+    quad task lb        { -1   J        -inf   ubs              -s + J dq ≤ ub
+    (soft ineq. task    {  1   J          lb   ub         lb ≤ 1 s + J dq ≤ ub)"""
 
-    The constraints of all previous tasks are considered via equality constraints:
-    J' dq = J' dq'.
+    def __init__(self, number_of_vars, rho=0.01) -> None:
+        self.sot: TaskHierachyType = []
 
-    Thus, we can use fixed size constraint and optimization matrices A and H, which are incrementally filled.
-    The maximal number of slack variables for optimization is the number of soft DoFs of a task at a given level.
-    The constraint matrix has the following shape:
-                         ⎧1
-                      dq ⎨ ⋱
-                         ⎩   1
-                         ⎧     1
-     max slack variables ⎨      ⋱
-                         ⎩        0
-     higher-level tasks  {   J'   0
-     cur. task ub        {   J   -1
-     cur. task lb        {   J   +1
-    """
+        self.N = number_of_vars  # number of problem variables
+        self.rho = rho
 
-    @staticmethod
-    def get_matrix_specs(task_stack):
-        max_rows = 0
-        row_sum = 0
-        max_slacks = 0
+        # [m]aximal number of slack variables needed
+        self.m_slack = 0
+        # [m]aximal number of rows occupied by tasks without slack variables
+        self.m_hard_r = 0
+        # [m]aximal number of rows occupied by tasks with slack variables in one level
+        self.m_wslack_r = 0
+        # [m]aximal number of rows occupied by nullspace
+        #   constraints of tasks in previous levels
+        self.m_nspace_r = 0
 
-        for tasks_same_level in task_stack:
-            level_rows = 0
-            for t in tasks_same_level:
-                level_rows += t.size
-            max_slacks = max(max_slacks, level_rows)
-            max_rows = max(max_rows, row_sum + 2 * level_rows)
-            row_sum += level_rows
+        # starting rows for hard, slack and nullspace in A
+        self._hs = self.N + self.m_slack
+        self._ss = self._hs + self.m_hard_r
+        self._ns = self._ss + self.m_wslack_r
 
-        return max_rows, max_slacks
+        # [u]sed rows by hard tasks
+        self.u_hard_r = 0
+        # [u]sed rows by tasks with slack
+        self.u_wslack_r = 0
+        # [u]sed rows by nullspace constraint
+        self.u_nspace_r = 0
 
-    def __init__(self, N, tasks, lower, upper, rho) -> None:
-        super().__init__()
+        self.J = np.identity(self.N)  # J matrix
+        self.p = np.zeros((self.N))  # p vector
 
-        max_rows, self.max_slacks = self.get_matrix_specs(tasks)
-        self.tasks = tasks
+        # internal A matrix, lower and upper bound with space for all constraints
+        self._A = np.zeros((self.N, self.N))
+        self._lower = np.zeros((self.N,))
+        self._upper = np.zeros((self.N,))
 
-        self.N = N  # number of joints
-        self.max_vars = self.N + self.max_slacks  # variable order: dq, slack
+        # stubs for r/w views on _A, _lower and _upper
+        self.slack_diag: NDArray  # diagonal entries of slacks in A
 
-        # (quadratic) objective matrix (Hessian): minimize rho*|dq|² + |slack|²
-        self.H = np.identity(self.max_vars)
-        self.H[:N, :N] *= rho
-        # self.H[N:, N:] *= 50
+        self._A_hard: NDArray  # hard tasks in A
+        self._A_nullspace: NDArray  # nullspace tasks in A
+        self._A_wslack: NDArray  # tasks with slack in A
+        self._A_slacks: NDArray  # slack part of tasks with slacks
+        # same as above but for lower and upper bounds
+        self._l_dq: NDArray
+        self._u_dq: NDArray
+        self._l_slacks: NDArray
+        self._u_slacks: NDArray
+        self._l_hard: NDArray
+        self._u_hard: NDArray
+        self._l_slacked: NDArray
+        self._u_slacked: NDArray
+        self._l_nullspace: NDArray
+        self._u_nullspace: NDArray
 
-        self.q = np.zeros(self.max_vars)  # (linear) objective vector
+        # iterator index
+        self._level_index = 0
 
-        self.A = np.zeros(
-            (self.max_vars + max_rows, self.max_vars)
-        )  # constraint matrix for all tasks
-        self.lb = np.zeros(self.max_vars + max_rows)  # lower bound vector for all tasks
-        self.ub = np.zeros(self.max_vars + max_rows)  # upper         "
+    def set_tasks(self, sot: TaskHierachyType):
+        recalc = self._check_stack_different(sot)
+        self.sot = sot
+        if recalc:
+            self._recalculate_dimensions()
 
-        self.A[: self.N, : self.N] = np.identity(
-            self.N
-        )  # joint constraint matrix is identity
-        self.lb[: self.N] = lower  # lower joint bounds
-        self.lb[self.N : self.max_vars] = 0  # lower slack bounds
+    def _recalculate_dimensions(self):
+        self._calc_matrix_size()
+        self._set_matrices()
+        self._define_views()
 
-        self.ub[: self.N] = upper  # upper joint bounds
-        self.ub[self.N : self.max_vars] = np.PINF  # upper slack bounds
+    def _check_stack_different(self, new_stack: TaskHierachyType):
+        if len(new_stack) == len(self.sot):
+            for nl, ol in zip(new_stack, self.sot):
+                if len(nl) == len(ol):
+                    for tn, to in zip(nl, ol):
+                        if not (type(tn) is type(to) and tn.softnessType is to.softnessType):
+                            return True
+            return False
+        return True
 
-    def __iter__(self):  # initialize iterator
-        self._index = -1
-        self.start_row = self.max_vars
-        return self
+    def _set_matrices(self):
+        self.J = np.identity(self.N + self.m_slack)
+        self.J[self.m_slack :, self.m_slack :] = self.rho
+        self.p = np.zeros((self.N + self.m_slack,))
 
-    def __next__(self):  # forward iterator: return QP problem of next hierarchy level
-        self._index += 1
-        if self._index == len(self.tasks):
-            raise StopIteration
-
-        # configure upper bound constraints: -∞ ≤ J dq - slack ≤ ub
-        used_vars = self.N  # number of optimization variables: dq and slacks
-        used_rows = self.start_row
-        for task in self.tasks[self._index]:
-            rows = task.size
-            self.A[used_rows : used_rows + rows, : self.N] = task.A
-            self.A[used_rows : used_rows + rows, used_vars : used_vars + rows] = -np.eye(rows)
-            self.lb[used_rows : used_rows + rows] = np.NINF
-            self.ub[used_rows : used_rows + rows] = task.upper
-
-            used_vars += rows
-            used_rows += rows
-
-        # configure lower bound constraints: lb ≤ J dq + slack ≤ +∞
-        used_vars = self.N
-        for task in self.tasks[self._index]:
-            rows = task.size
-            self.A[used_rows : used_rows + rows, : self.N] = task.A
-            self.A[used_rows : used_rows + rows, used_vars : used_vars + rows] = np.eye(rows)
-            self.lb[used_rows : used_rows + rows] = task.lower
-            self.ub[used_rows : used_rows + rows] = np.PINF
-
-            used_vars += rows
-            used_rows += rows
-
-        self.A[self.N : used_vars, self.N : used_vars] = np.eye(
-            used_vars - self.N
-        )  # slack constraints
-        unused = self.max_vars - used_vars  # unused slack variables
-        self.A[used_vars : self.max_vars, used_vars : self.max_vars] = np.zeros(
-            (unused, unused)
-        )
-
-        return (
-            self.H[:used_vars, :used_vars],
-            self.q[:used_vars],
-            self.A[:used_rows, :used_vars],
-            self.lb[:used_rows],
-            self.ub[:used_rows],
-        )
-
-    def nullspace_constraint(self, x):
-        # Replace upper-bound part of the current task-level's constraints with nullspace constraint
-        # J' dq = fixed, i.e. don't become worse than current, higher-priority solution
-        dq = x[: self.N]
-        used_rows = 0
-        for task in self.tasks[self._index]:
-            rows = task.size
-            fixed = task.A.dot(dq)
-            assert np.allclose(
-                self.A[self.start_row : self.start_row + rows, : self.N], task.A
+        self._A = np.zeros(
+            (
+                self.m_slack + self.N + self.m_hard_r + self.m_wslack_r + self.m_nspace_r,
+                self.m_slack + self.N,
             )
-
-            self.A[
-                self.start_row : self.start_row + rows, self.N :
-            ] = 0  # clear slacks from constraint rows
-            self.lb[self.start_row : self.start_row + rows] = fixed
-            self.ub[self.start_row : self.start_row + rows] = fixed
-
-            used_rows += rows
-            self.start_row += rows  # increase start position for next iteration
-
-        self.A[
-            self.start_row : self.start_row + used_rows, self.N :
-        ] = 0  # clear slacks from all remaining (lb) rows
-
-        return dq, x[self.N :]
-
-
-class HQPLinearSlacks:
-    """
-    Iterator to form QP problems for the stack of tasks.
-    This variant considers soft equality constraints via linear scale variables λ,
-    i.e. J dq = λ * ξ, maximizing λ subject to 0 ≤ λ ≤ 1.
-
-    As we need to formulate a minimization problem, we actually minimize s = 1-λ.
-
-    The constraints of all previous tasks are considered via equality constraints:
-    J' dq = J' dq'.
-
-    Thus, we can use fixed size constraint and optimization matrices A and H, which are incrementally filled.
-    The maximal number of slack variables for optimization is the number of soft DoFs of a task at a given level.
-    The constraint matrix has the following structure:
-                               A           lb   ub
-                         ⎧1                 0    1
-     max slack variables ⎨ ⋱
-                         ⎩   1              0    1
-                         ⎧     1           lb   ub
-                      dq ⎨      ⋱
-                         ⎩        1        lb   ub
-     higher-level tasks  {  0   J'          J' dq'
-     hard eq. task       {  0   J           ξ    ξ                    J dq = ξ
-     soft eq. task       {  ξ   J           ξ    ξ              s ξ + J dq = ξ
-     hard ineq. task     {  0   J          lb   ub         lb ≤       J dq ≤ ub
-    (soft ineq. task     {  1   J          lb   ub         lb ≤ 1 s + J dq ≤ ub)
-    """
-
-    def __init__(self, N, tasks, lower, upper, rho) -> None:
-        super().__init__()
-        self.tasks = tasks
-        self.max_slacks = np.amax(
-            [np.sum([not task.is_hard for task in level]) for level in tasks]
         )
-        max_constraints = np.sum([task.size for level in tasks for task in level])
 
-        self.N = N  # number of joints
-        self.max_vars = self.N + self.max_slacks  # variable order: slack, dq
+        self._lower = np.zeros(
+            (self.m_slack + self.N + self.m_hard_r + self.m_wslack_r + self.m_nspace_r,)
+        )
 
-        # objective to minimize: rho*|dq|² + |slack|²
-        self.H = np.identity(self.max_vars)  # Hessian matrix
-        np.fill_diagonal(self.H[-N:, -N:], rho)
-        self.q = np.zeros(self.max_vars)  # gradient vector
+        self._upper = np.zeros(
+            (self.m_slack + self.N + self.m_hard_r + self.m_wslack_r + self.m_nspace_r,)
+        )
 
-        # allocate constraint matrix and lb/ub vectors once
-        self.A = np.zeros((self.max_vars + max_constraints, self.max_vars))
-        self.lb = np.zeros(self.max_vars + max_constraints)
-        self.ub = np.zeros(self.max_vars + max_constraints)
+        # set diagonal entries of A for dq to 1
+        self._A[
+            self.m_slack : self.m_slack + self.N, self.m_slack : self.m_slack + self.N
+        ] = np.identity(self.N)
 
-        # (fixed) direct variable constraints (slack and dq)
-        np.fill_diagonal(self.A[: self.max_vars, : self.max_vars], 1.0)
-        self.lb[self.max_slacks : self.max_vars] = lower  # lower joint bounds
-        self.ub[self.max_slacks : self.max_vars] = upper  # upper joint bounds
+    def _define_views(self):
 
-        self.lb[: self.max_slacks] = 0.0  # lower slack bounds
-        self.ub[: self.max_slacks] = 1.0  # upper slack bounds
+        self.slack_diag = np.lib.stride_tricks.as_strided(
+            self._A,
+            shape=(self.m_slack,),
+            strides=(sum(self._A.strides),),
+        )
 
-    def __iter__(self):  # initialize iterator
-        self._index = -1
-        self.start_row = self.max_vars
+        self._A_hard = self._A[self._hs : self._hs + self.m_hard_r, self.m_slack :]
+        self._A_nullspace = self._A[self._ns : self._ns + self.m_nspace_r, self.m_slack :]
+        self._A_wslack = self._A[self._ss : self._ss + self.m_wslack_r, self.m_slack :]
+        self._A_slacks = self._A[self._ss : self._ss + self.m_wslack_r, : self.m_slack]
+
+        self._l_dq = self._lower[self.m_slack : self.m_slack + self.N]
+        self._u_dq = self._upper[self.m_slack : self.m_slack + self.N]
+
+        self._l_slacks = self._lower[
+            : self.m_slack,
+        ]
+
+        self._u_slacks = self._upper[
+            : self.m_slack,
+        ]
+
+        self._l_hard = self._lower[
+            self._hs : self._hs + self.m_hard_r,
+        ]
+
+        self._u_hard = self._upper[
+            self._hs : self._hs + self.m_hard_r,
+        ]
+
+        self._l_slacked = self._lower[
+            self._ss : self._ss + self.m_wslack_r,
+        ]
+
+        self._u_slacked = self._upper[
+            self._ss : self._ss + self.m_wslack_r,
+        ]
+        self._l_nullspace = self._lower[
+            self._ns : self._ns + self.m_nspace_r,
+        ]
+
+        self._u_nullspace = self._upper[
+            self._ns : self._ns + self.m_nspace_r,
+        ]
+
+    def _calc_matrix_size(self):
+        for level in self.sot:
+            slacks = 0
+            rows = 0
+            for task in level:
+                if task.softnessType is TaskSoftnessType.hard:
+                    self.m_hard_r += 1
+                elif task.softnessType is TaskSoftnessType.linear:
+                    slacks += 1
+                    rows += task.task_size
+                    self.m_nspace_r += task.task_size
+                elif task.softnessType is TaskSoftnessType.quadratic:
+                    slacks += task.task_size
+                    rows += task.task_size * 2
+                    self.m_nspace_r += task.task_size
+            self.m_wslack_r = max(self.m_wslack_r, rows)
+            self.m_slack = max(self.m_slack, slacks)
+        self._hs = self.N + self.m_slack
+        self._ss = self._hs + self.m_hard_r
+        self._ns = self._ss + self.m_wslack_r
+
+    def reset(self):
+        if self.m_hard_r > 0:
+            self._A_hard[:] = 0
+        if self.m_nspace_r > 0:
+            self._A_nullspace[:] = 0
+        if self.m_wslack_r > 0:
+            self._A_wslack[:] = 0
+        if self.m_slack > 0:
+            self._A_slacks[:] = 0
+            self.slack_diag[:] = 0
+
+        self.u_hard_r = 0
+        self.u_wslack_r = 0
+        self.u_nspace_r = 0
+
+        self._level_index = 0
+
         return self
 
-    def __next__(self):  # forward iterator: return QP problem of next hierarchy level
-        self._index += 1
-        if self._index == len(self.tasks):
-            raise StopIteration
+    def set_dq_bounds(self, lower, upper):
+        self._l_dq[:] = lower
+        self._u_dq[:] = upper
 
-        # configure upper bound constraints: -∞ ≤ J dq - slack ≤ ub
+    def __next__(self):
+        if self._level_index >= len(self.sot):
+            return False
+
+        self._A_wslack[:] = 0
+        self._A_slacks[:] = 0
+        self.slack_diag[:] = 0
+        self._l_slacks[:] = 0
+        self._u_slacks[:] = 0
+
+        self.u_wslack_r = 0
+
         used_slacks = 0
-        used_rows = self.start_row
-        for task in self.tasks[self._index]:
-            rows = slice(used_rows, used_rows + task.size)
-            self.A[rows, : self.N] = 0.0
-            self.A[rows, -self.N :] = task.A
-            if isinstance(task, EQTaskDesc):
-                if task.is_hard:
-                    self.lb[rows] = self.ub[rows] = task.upper
-                else:
-                    used_slacks += 1
-                    self.A[rows, self.max_slacks - used_slacks] = task.upper
-                    self.lb[rows] = self.ub[rows] = task.upper
-            else:  # inequality task
-                self.lb[rows] = task.lower
-                self.ub[rows] = task.upper
+        for task in self.sot[self._level_index]:
+            task: TaskType
+            if task.softnessType is TaskSoftnessType.hard:
+                self._A_hard[self.u_hard_r : self.u_hard_r + task.task_size, :] = task.A
+                (
+                    self._l_hard[self.u_hard_r : self.u_hard_r + task.task_size],
+                    self._u_hard[self.u_hard_r : self.u_hard_r + task.task_size],
+                ) = (
+                    (task.bound, task.bound)
+                    if isinstance(task, EqTask)
+                    else (task.lower_bound, task.upper_bound)
+                )
+                self.u_hard_r += task.task_size
+            elif task.softnessType is TaskSoftnessType.linear and isinstance(task, EqTask):
+                s = self.u_wslack_r
+                e = s + task.task_size
 
-            used_rows += task.size
+                self.slack_diag[used_slacks] = 1
+                self._l_slacks[used_slacks] = 0
+                self._u_slacks[used_slacks] = 1
 
-        vars = slice(self.max_slacks - used_slacks, None)
-        rows = slice(self.max_slacks - used_slacks, used_rows)
-        return (
-            self.H[vars, vars],
-            self.q[vars],
-            self.A[rows, vars],
-            self.lb[rows],
-            self.ub[rows],
-        )
+                self._A_wslack[s:e, :] = task.A
+                self._A_slacks[s:e, used_slacks] = task.bound
+                self._l_slacked[s:e] = task.bound
+                self._u_slacked[s:e] = task.bound
 
-    def nullspace_constraint(self, x):
-        # Replace current task-level's constraints with nullspace constraint
-        # J' dq = fixed, i.e. don't become worse than current, higher-priority solution
-        level = self.tasks[self._index]
-        used_rows = np.sum([task.size for task in level])
-        used_slacks = np.sum([task.is_hard for task in level])
-        dq = x[-self.N :]
-        rows = slice(self.start_row, self.start_row + used_rows)
-        self.lb[rows] = self.ub[rows] = self.A[rows, -self.N :].dot(dq)  # fix task delta
-        self.A[rows, : self.max_slacks] = 0  # zero slack contribution
+                used_slacks += 1
+                self.u_wslack_r += task.task_size
 
-        return dq, x[self.max_slacks - used_slacks : self.max_slacks]
+            elif task.softnessType is TaskSoftnessType.quadratic:
+                s = self.u_wslack_r
+                e = s + task.task_size
+
+                self.slack_diag[used_slacks : used_slacks + task.task_size] = 1
+                self._l_slacks[used_slacks : used_slacks + task.task_size] = np.NINF
+                self._u_slacks[used_slacks : used_slacks + task.task_size] = np.PINF
+
+                self._A_wslack[s:e, :] = task.A
+                self._l_slacked[s:e] = (
+                    task.bound if isinstance(task, EqTask) else task.lower_bound
+                )
+                self._u_slacked[s:e] = np.PINF
+                self._A_slacks[s:e][used_slacks : used_slacks + task.task_size] = np.identity(
+                    task.task_size
+                )
+
+                s += task.task_size
+                e += task.task_size
+
+                self._A_wslack[s:e, :] = task.A
+                self._A_slacks[s:e][
+                    used_slacks : used_slacks + task.task_size
+                ] = -np.identity(task.task_size)
+                self._l_slacked[s:e] = np.NINF
+                self._u_slacked[s:e] = (
+                    task.bound if isinstance(task, EqTask) else task.upper_bound
+                )
+
+                used_slacks += task.task_size
+                self.u_wslack_r += task.task_size * 2
+
+        self._level_index += 1
+        return True
+
+    def add_nullspace_constraint(self, solution_vector):
+        dq, slacks = solution_vector[self.m_slack :], solution_vector[: self.m_slack]
+
+        for task in self.sot[self._level_index - 1]:
+            s = self.u_nspace_r
+            e = s + task.task_size
+            b = task.A.dot(dq)
+
+            self._A_nullspace[s:e] = task.A
+            self._l_nullspace[s:e] = b
+            self._u_nullspace[s:e] = b
+
+            self.u_nspace_r += task.task_size
+
+        return dq, slacks
+
+    @property
+    def A(self):
+        return self._A[
+            np.r_[
+                0 : self.N + self.m_slack,
+                self._hs : self._hs + self.u_hard_r,
+                self._ss : self._ss + self.u_wslack_r,
+                self._ns : self._ns + self.u_nspace_r,
+            ],
+            :,
+        ]
+
+    @property
+    def lower(self):
+        return self._lower[
+            np.r_[
+                : self.N + self.m_slack,
+                self._hs : self._hs + self.u_hard_r,
+                self._ss : self._ss + self.u_wslack_r,
+                self._ns : self._ns + self.u_nspace_r,
+            ],
+        ]
+
+    @property
+    def upper(self):
+        return self._upper[
+            np.r_[
+                : self.N + self.m_slack,
+                self._hs : self._hs + self.u_hard_r,
+                self._ss : self._ss + self.u_wslack_r,
+                self._ns : self._ns + self.u_nspace_r,
+            ],
+        ]
 
 
 class HQPSolver(Solver):
-    def __init__(self, number_of_joints, solver=None, **options) -> None:
+    def __init__(self, number_of_joints, **options) -> None:
         super().__init__(number_of_joints)
         self.options = options
-        if solver == "components":
-            self.HQP = HQPComponentSlacks
-        else:
-            self.HQP = HQPLinearSlacks
 
-    def solve(self, tasks, lower_dq, upper_dq, **options):
+        self.hqp_mats = HQPMatrix(self.N, **options)
+
+    def solve(self, stack_of_tasks, lower_dq, upper_dq, **options):
         dq = options.get("warmstart")
         task_residuals = []
 
-        desc = self.HQP(self.N, tasks, lower_dq, upper_dq, **self.options)
-        for qp in desc:  # iterate over QPs corresponding to hierarchy levels
-            # print("Level: {level}".format(level=desc._index))
-            # print(np.vstack(qp[0])) # H
-            # print(np.hstack([qp[2], qp[3][:,np.newaxis], qp[4][:,np.newaxis]])) # A, lb, ub
-            sol = self._solve_qp(*qp, dq)
+        self.hqp_mats.reset()
+        self.hqp_mats.set_tasks(stack_of_tasks)
+        self.hqp_mats.set_dq_bounds(lower_dq, upper_dq)
+
+        while next(self.hqp_mats):  # iterate over QPs corresponding to hierarchy levels
+            sol = self._solve_qp(
+                self.hqp_mats.J,
+                self.hqp_mats.p,
+                self.hqp_mats.A,
+                self.hqp_mats.lower,
+                self.hqp_mats.upper,
+                dq,
+            )
 
             if sol.info.status_val < 0:
                 print(sol.info.status)
                 # return None, None      # TODO handling of failed task!
             else:
-                dq, slack = desc.nullspace_constraint(sol.x)
+
+                dq, slack = self.hqp_mats.add_nullspace_constraint(sol.x)
                 task_residuals.append(slack)
 
         return dq, task_residuals

@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 
-import random
-
 import numpy as np
 import rospy
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Header
 from tf import transformations as tf
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
-from stack_of_tasks.robot_model import RobotModel, JointType
+from stack_of_tasks.robot_model import RobotModel
 from stack_of_tasks.solver.AbstactSolver import Solver
 from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
@@ -138,9 +135,11 @@ class Controller(object):
         lb = np.maximum(-0.01, (self.mins * 0.95 - self._joint_position) / self.rate)
         ub = np.minimum(0.01, (self.maxs * 0.95 - self._joint_position) / self.rate)
 
-        tasks = self.task_hierarchy.compute(targets)
+        self.task_hierarchy.compute(targets)
 
-        dq, tcr = self.solver.solve(tasks, lb, ub, warmstart=self.last_dq)
+        dq, tcr = self.solver.solve(
+            self.task_hierarchy.hierarchy, lb, ub, warmstart=self.last_dq
+        )
 
         self.last_dq = dq
 
@@ -174,8 +173,10 @@ class MarkerControl:
 
 if __name__ == "__main__":
     from stack_of_tasks.marker.markers import SixDOFMarker
-    from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
-    from stack_of_tasks.plot.plot_publisher import PlotPublisher
+    from stack_of_tasks.tasks.Eq_Tasks import JointPos, OrientationTask, PositionTask
+    from stack_of_tasks.tasks.Task import TaskSoftnessType
+
+    # from stack_of_tasks.tasks.Ieq_Tasks import ConeTask
 
     np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")
 
@@ -190,6 +191,7 @@ if __name__ == "__main__":
     c = Controller(solver_class=HQPSolver, rho=0.1)
     c.T_callback.append(lambda T: set_target("T", T))
     c.J_callback.append(lambda J: set_target("J", J))
+
     c.reset()
 
     mc = MarkerControl()
@@ -198,20 +200,23 @@ if __name__ == "__main__":
     mc.add_marker(marker, marker.name)
 
     # setup tasks
-    pos = PositionTask(1.0)
-    pos.argmap["T_c"] = "T"
-    pos.argmap["T_t"] = marker.name
+    pos = PositionTask(1, TaskSoftnessType.linear)
+    pos.set_argument_mapping("current", "T")
+    pos.set_argument_mapping("target", marker.name)
 
     # cone = ConeTask((0, 0, 1), (0, 0, 1), 0.1)
     # cone.argmap["T_t"] = "Position"
     # cone.argmap["angle"] = "Cone_angle"
 
-    ori = OrientationTask(1.0)
-    ori.argmap["T_c"] = "T"
-    ori.argmap["T_t"] = marker.name
+    ori = OrientationTask(
+        1,
+        TaskSoftnessType.linear,
+    )
+    ori.set_argument_mapping("current", "T")
+    ori.set_argument_mapping("target", marker.name)
 
     c.task_hierarchy.add_task_lower(pos)
-    c.task_hierarchy.add_task_same(ori)
+    c.task_hierarchy.add_task_lower(ori)
 
     # pp = PlotPublisher()
     # pp.add_plot("q", [f"q/{joint.name}" for joint in c.robot.active_joints])

@@ -1,3 +1,4 @@
+import typing
 from abc import ABC, abstractmethod
 from enum import Enum
 from inspect import signature
@@ -10,7 +11,7 @@ from numpy.typing import ArrayLike
 class TaskSoftnessType(Enum):
     hard = 1
     linear = 2
-    quadratic: 3
+    quadratic = 3
 
 
 class Task(ABC):
@@ -26,7 +27,7 @@ class Task(ABC):
                 for p in signature(self._compute).parameters.values()
             ]
         )
-        self.argmap = dict([(i, i) for i in self.args])
+        self.argmap = dict([(i, i) for i, _ in self.args])
 
         self.weight = wheight
         self.softnessType = softnessType
@@ -38,9 +39,10 @@ class Task(ABC):
         self.importance = None
 
     def set_argument_mapping(self, argument: str, mapping_value: str) -> Optional[NoReturn]:
-        if argument not in self.args:
+        if argument not in map(lambda x: x[0], self.args):
             raise LookupError(
-                f"No such argument '{argument}' in task {self.__class__.name}.\n  Possible mappings are: {self.args}"
+                f"""No such argument '{argument}' in task {self.__class__.name}.
+                Possible mappings are: {self.args}"""
             )
 
         self.argmap[argument] = mapping_value
@@ -82,3 +84,7 @@ class IeqTask(Task):
     def compute(self, data) -> Tuple[ArrayLike, ArrayLike, ArrayLike]:
         super().compute(data)
         return self.A, self.lower_bound, self.upper_bound
+
+
+TaskType = typing.Union[EqTask, IeqTask]
+TaskHierachyType = typing.List[typing.List[TaskType]]

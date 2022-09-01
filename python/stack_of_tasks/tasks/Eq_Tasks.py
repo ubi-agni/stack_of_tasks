@@ -88,12 +88,12 @@ class JointPos(EqTask):
     def __init__(
         self, wheight: float, softnessType: TaskSoftnessType, number_of_joints: int
     ) -> None:
-        super().__init__(wheight, softnessType)
         self.task_size = number_of_joints
+        super().__init__(wheight, softnessType)
 
-    def _compute(self, current_jount_pose, desired_joint_pose):
-        self.A = np.identity(current_jount_pose.size)
-        self.bound = current_jount_pose + desired_joint_pose
+    def _compute(self, current_joint_pose, desired_joint_pose):
+        self.A = np.identity(current_joint_pose.size)
+        self.bound = current_joint_pose - desired_joint_pose
 
 
 if __name__ == "__main__":

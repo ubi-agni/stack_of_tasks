@@ -1,7 +1,7 @@
 [tool.black]
 line-length = 94
 
-[tool.pylint]
+[tool.pylint.'MESSAGES CONTROL']
 max-line-length = 94
 disable = [
     "C0103", # (invalid-name)
@@ -9,3 +9,6 @@ disable = [
     "C0115", # (missing-class-docstring)
     "C0116", # (missing-function-docstring)
 ]
+
+[tool.isort]
+profile = "black"

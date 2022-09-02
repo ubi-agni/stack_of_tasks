@@ -283,7 +283,8 @@ class HQPMatrix:
                     task.bound if isinstance(task, EqTask) else task.lower_bound
                 )
                 self._u_slacked[s:e] = np.PINF
-                self._A_slacks[s:e][used_slacks : used_slacks + task.task_size] = np.identity(
+
+                self._A_slacks[s:e, used_slacks : used_slacks + task.task_size] = np.identity(
                     task.task_size
                 )
 
@@ -291,8 +292,8 @@ class HQPMatrix:
                 e += task.task_size
 
                 self._A_wslack[s:e, :] = task.A
-                self._A_slacks[s:e][
-                    used_slacks : used_slacks + task.task_size
+                self._A_slacks[
+                    s:e, used_slacks : used_slacks + task.task_size
                 ] = -np.identity(task.task_size)
                 self._l_slacked[s:e] = np.NINF
                 self._u_slacked[s:e] = (

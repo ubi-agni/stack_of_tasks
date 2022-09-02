@@ -32,11 +32,8 @@ class Controller(object):
     ):
         self.rate = rate
 
-        self.joint_state_callback = Callback()
-        self.T_callback = Callback()
-        self.J_callback = Callback()
-
-        self.delta_q_callback = Callback()
+        self.joint_callback = Callback()
+        self.control_step_callback = Callback()
 
         self.robot = RobotModel(param=ns_prefix + "robot_description")
 
@@ -45,8 +42,8 @@ class Controller(object):
 
         self.N = len(self.robot.active_joints)  # number of (active) joints
 
-        self._T = np.zeros((4, 4))
-        self._J = np.zeros((6, self.N))
+        self.T = np.zeros((4, 4))
+        self.J = np.zeros((6, self.N))
         self._joint_position = np.zeros(self.N)
 
         self.task_hierarchy = TaskHierarchy()
@@ -80,28 +77,10 @@ class Controller(object):
                 joint_msg.position = joint_values
                 joint_pub.publish(joint_msg)
 
-            self.joint_state_callback.append(_send_joint)
+            self.joint_callback.append(lambda: _send_joint(self._joint_position))
 
         self.last_dq = None
         self.reset()  # trigger initialization callbacks
-
-    @property
-    def T(self):
-        return self._T
-
-    @T.setter
-    def T(self, val):
-        self._T = val
-        self.T_callback(self._T)
-
-    @property
-    def J(self):
-        return self._J
-
-    @J.setter
-    def J(self, val):
-        self._J = val
-        self.J_callback(self._J)
 
     @property
     def joint_position(self):
@@ -110,13 +89,13 @@ class Controller(object):
     @joint_position.setter
     def joint_position(self, values):
         self._joint_position = values
-        self.joint_state_callback(values)
 
         T, J = self.robot.fk(self.target_link, values)
         T = T.dot(self.target_offset)
 
         self.T = T
         self.J = J
+        self.joint_callback()
 
     def reset(self, randomness=0):
         # center = 0.5 * (self.maxs + self.mins)
@@ -126,7 +105,6 @@ class Controller(object):
 
     def actuate(self, q_delta):
         self.joint_position += q_delta.ravel()
-        self.delta_q_callback(q_delta)
 
     def check_end(self):
         pass
@@ -147,6 +125,7 @@ class Controller(object):
             self.actuate(dq)
             # return tcr[0] < 1e-12 or all(i < 1e-8 for i in tcr)
 
+        self.control_step_callback()
         return False
 
 
@@ -189,10 +168,12 @@ if __name__ == "__main__":
     targets = {}
 
     c = Controller(solver_class=HQPSolver, rho=0.1)
-    c.T_callback.append(lambda T: set_target("T", T))
-    c.J_callback.append(lambda J: set_target("J", J))
+
+    c.control_step_callback.append(lambda: set_target("T", c.T))
+    c.control_step_callback.append(lambda: set_target("J", c.J))
 
     c.reset()
+    c.control_step_callback()
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
@@ -210,7 +191,7 @@ if __name__ == "__main__":
 
     ori = OrientationTask(
         1,
-        TaskSoftnessType.linear,
+        TaskSoftnessType.quadratic,
     )
     ori.set_argument_mapping("current", "T")
     ori.set_argument_mapping("target", marker.name)

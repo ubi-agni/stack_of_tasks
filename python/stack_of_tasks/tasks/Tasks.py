@@ -2,6 +2,7 @@ import typing
 from concurrent.futures import thread
 
 import numpy as np
+
 from tf import transformations as tf
 
 from .Task import EQTaskDesc, Task, TaskDesc

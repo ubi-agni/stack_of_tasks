@@ -11,9 +11,10 @@ from PyQt5.QtGui import (
     QPixmap,
 )
 from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout
+from yaml import emit
+
 from stack_of_tasks.tasks.Task import Task as TaskData
 from stack_of_tasks.ui.Collapse import CollapseWithDelete
-from yaml import emit
 
 
 class ArgumentDropdown(QComboBox):

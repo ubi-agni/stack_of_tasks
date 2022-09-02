@@ -1,7 +1,7 @@
 [tool.black]
 line-length = 94
 
-[tool.pylint]
+[tool.pylint.'MESSAGES CONTROL']
 max-line-length = 94
 disable = [
     "C0103", # (invalid-name)
@@ -9,3 +9,12 @@ disable = [
     "C0115", # (missing-class-docstring)
     "C0116", # (missing-function-docstring)
 ]
+
+[tool.isort]
+profile = "black"
+line_length = 94
+known_msgs = "std_msgs,sensor_msgs,geometry_msgs,visualization_msgs"
+known_ros = "rospy,tf,interactive_markers"
+known_first_party = "stack_of_tasks"
+sections = "FUTURE,STDLIB,THIRDPARTY,ROS,MSGS,FIRSTPARTY,LOCALFOLDER"
+no_lines_before = "MSGS"

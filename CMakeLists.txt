@@ -103,8 +103,8 @@ catkin_python_setup()
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES controller
-CATKIN_DEPENDS 
-  rospy 
+CATKIN_DEPENDS
+  rospy
   message_runtime
   plotjuggler_msg
 #  DEPENDS system_lib

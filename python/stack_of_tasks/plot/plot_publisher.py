@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 
+from random import getrandbits
 from time import time
 from typing import List
-from rospy import Publisher, Duration
+
+from plotjuggler_msgs.msg import DataPoint, DataPoints, Dictionary
+
+from rospy import Duration, Publisher
 from rospy.timer import Timer, TimerEvent
-from plotjuggler_msgs.msg import Dictionary, DataPoints, DataPoint
-from random import getrandbits
 
 
 class PlotPublisher:
@@ -51,8 +53,9 @@ class PlotPublisher:
 
 
 if __name__ == "__main__":
+    from math import cos, sin
+
     import rospy
-    from math import sin, cos
 
     rospy.init_node("plot_publisher")
 

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-import sys
 import signal
+import sys
 from threading import Lock, Thread
 
 import numpy
-import rospy
 from PyQt5.QtWidgets import QApplication
+
+import rospy
 from tf import transformations as tf
 
 from stack_of_tasks.controller import Controller, MarkerControl

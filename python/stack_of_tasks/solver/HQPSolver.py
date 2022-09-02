@@ -4,8 +4,8 @@ import numpy as np
 import osqp
 from scipy import sparse
 
-from .AbstactSolver import Solver
 from ..tasks.Task import EQTaskDesc
+from .AbstactSolver import Solver
 
 
 class HQPComponentSlacks:

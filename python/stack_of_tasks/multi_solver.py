@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
+import numpy as np
+
+import rospy
+from tf import transformations as tf
+
 from stack_of_tasks.controller import Controller
 from stack_of_tasks.plot.plot_publisher import PlotPublisher
 from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
-import numpy as np
-from tf import transformations as tf
-import rospy
 
 
 class Main:

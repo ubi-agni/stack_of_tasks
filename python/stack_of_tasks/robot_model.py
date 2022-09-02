@@ -6,9 +6,10 @@ This module contains different Joint and RobotModel representation with an forwa
 
 from enum import Enum
 from typing import List
-from xml.dom import minidom, Node
+from xml.dom import Node, minidom
 
 import numpy
+
 import rospy
 from tf import transformations as tf
 

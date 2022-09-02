@@ -1,17 +1,16 @@
-from PyQt5.QtWidgets import QVBoxLayout
-from PyQt5.QtCore import Qt, QMimeData, pyqtSignal
+from PyQt5.QtCore import QMimeData, Qt, pyqtSignal
 from PyQt5.QtGui import (
     QDrag,
-    QPixmap,
     QDragEnterEvent,
     QDragMoveEvent,
     QDropEvent,
     QMouseEvent,
+    QPixmap,
 )
-
-from stack_of_tasks.ui.utils import TASK_MIME_FOTMAT_NAME, TASKS, mime_data_from_name
+from PyQt5.QtWidgets import QVBoxLayout
 
 from stack_of_tasks.ui.Collapse import CollapseWithDelete
+from stack_of_tasks.ui.utils import TASK_MIME_FOTMAT_NAME, TASKS, mime_data_from_name
 
 from .task_widget import TaskWidget
 

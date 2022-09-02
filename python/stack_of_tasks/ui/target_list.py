@@ -3,6 +3,7 @@ from turtle import shape
 import numpy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QVBoxLayout
+
 from stack_of_tasks.ui.Collapse import CollapseWithDelete
 
 from .DataWidgets.MatrixInput import MatrixInput

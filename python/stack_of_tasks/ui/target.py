@@ -1,6 +1,5 @@
 import numpy
 from PyQt5 import QtCore, QtGui, QtWidgets
-
 from ui.DataWidgets.FloatInput import FloatInput
 
 from .DataWidgets.MatrixInput import MatrixInput

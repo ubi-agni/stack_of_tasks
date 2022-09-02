@@ -3,14 +3,15 @@
 import random
 
 import numpy as np
+
 import rospy
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
+from tf import transformations as tf
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
-from tf import transformations as tf
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
-from stack_of_tasks.robot_model import RobotModel, JointType
+from stack_of_tasks.robot_model import JointType, RobotModel
 from stack_of_tasks.solver.AbstactSolver import Solver
 from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
@@ -174,8 +175,8 @@ class MarkerControl:
 
 if __name__ == "__main__":
     from stack_of_tasks.marker.markers import SixDOFMarker
-    from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
     from stack_of_tasks.plot.plot_publisher import PlotPublisher
+    from stack_of_tasks.tasks.Tasks import ConeTask, OrientationTask, PositionTask
 
     np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")
 

@@ -12,9 +12,10 @@ from PyQt5.QtGui import (
     QPixmap,
 )
 from PyQt5.QtWidgets import QApplication, QLabel, QListWidgetItem, QPushButton, QWidget
+from sympy import re
+
 from stack_of_tasks.ui.generated.TaskHierarchy import Ui_TaskHierarchy
 from stack_of_tasks.ui.utils import TASK_MIME_FOTMAT_NAME, TASKS, mime_data_from_name
-from sympy import re
 
 from .level_widget import LevelWidget
 from .task_widget import TaskWidget

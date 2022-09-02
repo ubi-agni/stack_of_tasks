@@ -1,8 +1,4 @@
-from stack_of_tasks.marker.markers import (
-    OrientationMarker,
-    PositionMarker,
-    SixDOFMarker,
-)
+from stack_of_tasks.marker.markers import OrientationMarker, PositionMarker, SixDOFMarker
 from stack_of_tasks.tasks.Tasks import (
     ConeTask,
     ConstantSpeed,

@@ -32,8 +32,6 @@ class TaskHierarchy:
         pass
 
     def compute(self, data):
-        r = []
-
-        for h in self.hierarchy:
-            r.append(list(map(lambda x: x.compute(data), h)))
-        return r
+        for level in self.hierarchy:
+            for task in level:
+                task.compute(data)

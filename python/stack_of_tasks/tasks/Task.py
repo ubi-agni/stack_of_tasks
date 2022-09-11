@@ -21,13 +21,10 @@ class Task(ABC):
     def __init__(self, wheight: float, softnessType: TaskSoftnessType) -> None:
         super().__init__()
 
-        self.args = frozenset(
-            [
-                (p.name, None if p.annotation is p.empty else p.annotation)
-                for p in signature(self._compute).parameters.values()
-            ]
-        )
-        self.argmap = dict([(i, i) for i, _ in self.args])
+        # extract arguments of _compute() method
+        args = {p.name for p in signature(self._compute).parameters.values()}
+        # initialize argmap as i -> i
+        self.argmap = dict([(i, i) for i in args])
 
         self.weight = wheight
         self.softnessType = softnessType
@@ -38,14 +35,15 @@ class Task(ABC):
         self.violation = None
         self.importance = None
 
-    def set_argument_mapping(self, argument: str, mapping_value: str) -> Optional[NoReturn]:
-        if argument not in map(lambda x: x[0], self.args):
+    def set_argument_mapping(self, argument: str, mapping_name: str) -> Optional[NoReturn]:
+        if argument not in self.argmap.keys():
+            args = ", ".join(self.argmap.keys())
             raise LookupError(
-                f"""No such argument '{argument}' in task {self.__class__.name}.
-                Possible mappings are: {self.args}"""
+                f"No argument '{argument}' in task '{self.__class__.name}'.\n"
+                f"Possible values are: {args}"
             )
 
-        self.argmap[argument] = mapping_value
+        self.argmap[argument] = mapping_name
 
     def _map_args(self, data: dict):
         return {k: data.get(v) for k, v in self.argmap.items()}
@@ -54,7 +52,6 @@ class Task(ABC):
     def _compute(self, *args, **kwargs):
         pass
 
-    @abstractmethod
     def compute(self, data) -> Any:
         mapped = self._map_args(data)
         self._compute(**mapped)
@@ -65,10 +62,6 @@ class EqTask(Task):
         super().__init__(wheight, softnessType)
         self.bound = np.zeros((1, 0))
 
-    @abstractmethod
-    def _compute(self, *args, **kwargs):
-        pass
-
     def compute(self, data) -> Tuple[ArrayLike, ArrayLike]:
         super().compute(data)
         return self.A, self.bound
@@ -77,7 +70,6 @@ class EqTask(Task):
 class IeqTask(Task):
     def __init__(self, wheight: float, softnessType: TaskSoftnessType) -> None:
         super().__init__(wheight, softnessType)
-
         self.lower_bound = np.zeros((1, 0))
         self.upper_bound = np.zeros((1, 0))
 

@@ -99,4 +99,4 @@ class JointPos(EqTask):
 
 if __name__ == "__main__":
     p = PositionTask(1, TaskSoftnessType.hard)
-    print(p.args)
+    print(p.argmap.keys())

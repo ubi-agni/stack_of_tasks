@@ -93,7 +93,7 @@ class Main:
 
         if level == -1:
             self.task_hierarchy.add_task_lower(task)
-            level = self.task_hierarchy.higest_hiracy_level
+            level = self.task_hierarchy.depth
         else:
             self.task_hierarchy.add_task_at(task, level)
 

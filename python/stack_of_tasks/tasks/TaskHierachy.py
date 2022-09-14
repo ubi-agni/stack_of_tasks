@@ -7,7 +7,7 @@ class TaskHierarchy:
         self.hierarchy = []
 
     @property
-    def higest_hiracy_level(self):
+    def depth(self):
         return len(self.hierarchy) - 1
 
     def clear(self):
@@ -20,7 +20,7 @@ class TaskHierarchy:
         self.hierarchy.append([task])
 
     def add_task_same(self, task: Task):
-        if (l := self.higest_hiracy_level) < 0:
+        if (l := self.depth) < 0:
             self.add_task_lower(task)
         else:
             self.hierarchy[l].append(task)

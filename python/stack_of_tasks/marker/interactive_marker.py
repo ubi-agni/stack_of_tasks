@@ -8,7 +8,7 @@ from geometry_msgs.msg import Point, Quaternion, Vector3
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 
-from .utils import create_pose, pose_to_matrix
+from stack_of_tasks.utils import create_pose, pose_to_matrix
 
 
 class IAMarker(ABC):
@@ -255,7 +255,7 @@ class ConeMarker(IAMarker):
             self.server,
             f"{self.name}_Handle",
             scale=0.05,
-            callback=self._callback_angel,
+            callback=self._callback_angle,
             pose=tf.translation_matrix([0, 0, 0]),
         )
         self._add_movement_marker(
@@ -291,7 +291,7 @@ class ConeMarker(IAMarker):
         self._data_callback(f"{self.name}_pose", T)
         self.server.applyChanges()
 
-    def _callback_angel(self, feedback):
+    def _callback_angle(self, feedback):
         T_marker = pose_to_matrix(feedback.pose)
         coneM = self._get_marker(f"{self.name}_Pos")
         T_cone = pose_to_matrix(coneM.pose)

@@ -7,6 +7,8 @@ from typing import Any, NoReturn, Optional, Tuple
 import numpy as np
 from numpy.typing import ArrayLike
 
+from stack_of_tasks.utils import OffsetTransform
+
 
 class TaskSoftnessType(Enum):
     hard = 1
@@ -18,13 +20,18 @@ class Task(ABC):
     name: str
     task_size: int
 
-    def __init__(self, weight: float, softnessType: TaskSoftnessType) -> None:
+    def __init__(
+        self, frame: OffsetTransform, softnessType: TaskSoftnessType, weight: float
+    ) -> None:
         super().__init__()
 
         # extract arguments of _compute() method
         args = {p.name for p in signature(self._compute).parameters.values()}
         # initialize argmap as i -> i
         self.argmap = dict([(i, i) for i in args])
+
+        self.controller = None
+        self.frame = frame
 
         self.weight = weight
         self.softnessType = softnessType
@@ -52,14 +59,20 @@ class Task(ABC):
     def _compute(self, *args, **kwargs):
         pass
 
+    def fk(self, frame: OffsetTransform):
+        T, J = self.controller.fk(frame.frame)
+        return T.dot(frame.offset), J
+
     def compute(self, data) -> Any:
         mapped = self._map_args(data)
         self._compute(**mapped)
 
 
 class EqTask(Task):
-    def __init__(self, weight: float, softnessType: TaskSoftnessType) -> None:
-        super().__init__(weight, softnessType)
+    def __init__(
+        self, frame: OffsetTransform, softnessType: TaskSoftnessType, weight: float = 1.0
+    ) -> None:
+        super().__init__(frame, softnessType, weight)
         self.bound = np.zeros((1, 0))
 
     def compute(self, data) -> Tuple[ArrayLike, ArrayLike]:
@@ -68,8 +81,10 @@ class EqTask(Task):
 
 
 class IeqTask(Task):
-    def __init__(self, weight: float, softnessType: TaskSoftnessType) -> None:
-        super().__init__(weight, softnessType)
+    def __init__(
+        self, frame: OffsetTransform, softnessType: TaskSoftnessType, weight: float = 1.0
+    ) -> None:
+        super().__init__(frame, softnessType, weight)
         self.lower_bound = np.zeros((1, 0))
         self.upper_bound = np.zeros((1, 0))
 

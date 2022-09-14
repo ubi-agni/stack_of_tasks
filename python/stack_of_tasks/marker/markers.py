@@ -7,8 +7,9 @@ from interactive_markers.interactive_marker_server import (
 from tf import transformations as tf
 from visualization_msgs.msg import InteractiveMarkerControl
 
+from stack_of_tasks.utils import OffsetTransform
+
 from .interactive_marker import IAMarker
-from .utils import pose_to_matrix
 
 
 class ControlMarker(IAMarker, ABC):
@@ -43,7 +44,7 @@ class ControlMarker(IAMarker, ABC):
             else:
                 self._add_display_marker(self.marker, "", additional_marker)
 
-        self._data_callback(self.name, pose)
+        self._data_callback(self.name, OffsetTransform(self.marker.header.frame_id, pose))
 
     def delete(self):
         self.server.erase(self.name)
@@ -53,7 +54,7 @@ class ControlMarker(IAMarker, ABC):
         return [self.name]
 
     def _callback(self, fb: InteractiveMarkerFeedback):
-        self._data_callback(fb.marker_name, pose_to_matrix(fb.pose))
+        self._data_callback(fb.marker_name, OffsetTransform(fb.header.frame_id, fb.pose))
         self.server.applyChanges()
 
 

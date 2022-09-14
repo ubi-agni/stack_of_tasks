@@ -261,21 +261,23 @@ class RobotModel:
         joint.parent = self.links.get(parent, None)
         return dict([(joint, parent)]) if joint.parent is None else dict()
 
-    def fk(self, target_joint_name: str, joint_values: List[float]):
+    def fk(self, target: str, joint_values: List[float]):
         """Calculates forward kinematric for all joints up to ``target_joint_name``
 
 
         Args:
-            target_joint_name (str): Name of target joint
+            target (str): Name of target link or joint
             joint_values (Dict[str, float]): current joint values
 
         Returns:
             (NDArray, NDArray): Return Transformation T and Jacobi matrix
         """
-
         T = numpy.identity(4)
         J = numpy.zeros((6, len(self.active_joints)))
-        joint = self.links.get(target_joint_name, None) or self.joints[target_joint_name]
+        if target == "world":
+            return T, J
+
+        joint = self.links.get(target, None) or self.joints[target]
 
         while joint is not None:
             T_offset = joint.T  # fixed transform from parent to joint frame

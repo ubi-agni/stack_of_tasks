@@ -8,10 +8,10 @@ from .Task import IeqTask
 class ConeTask(IeqTask):
     name = "Cone"
 
-    def _compute(self, J, current, target, threshold, target_axis, robot_axis):
-        """Align axis in eef frame to lie in cone spanned by reference axis and opening angle acos(threshold)"""
+    def _compute(self, J, current, target, angle, target_axis, robot_axis):
+        """Align axis in eef frame to lie in cone spanned by reference axis and opening angle"""
 
-        threshold = np.cos(threshold)
+        threshold = np.cos(angle)
         # transform axis from eef frame to base frame
         axis = current[0:3, 0:3].dot(robot_axis)
         reference = target[0:3, 0:3].dot(target_axis)

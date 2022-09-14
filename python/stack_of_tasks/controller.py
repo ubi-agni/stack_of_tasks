@@ -4,7 +4,6 @@ import numpy as np
 
 import rospy
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
-from tf import transformations as tf
 from sensor_msgs.msg import JointState
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
@@ -13,7 +12,7 @@ from stack_of_tasks.solver.AbstactSolver import Solver
 from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
-from stack_of_tasks.utils import Callback
+from stack_of_tasks.utils import Callback, OffsetTransform
 
 # random.seed(1)
 
@@ -22,12 +21,8 @@ class Controller(object):
     def __init__(
         self,
         solver_class: Solver,
-        transform=tf.quaternion_matrix([0, 0, 0.382, 0.924]).dot(
-            tf.translation_matrix([0, 0, 0.105])
-        ),
         rate=50,
         publish_joints=True,
-        target_link="panda_joint8",
         ns_prefix="",
         **solver_options,
     ):
@@ -37,19 +32,13 @@ class Controller(object):
         self.control_step_callback = Callback()
 
         self.robot = RobotModel(param=ns_prefix + "robot_description")
+        N = len(self.robot.active_joints)  # number of (active) joints
 
-        self.target_link = target_link
-        self.target_offset = transform
+        self.task_hierarchy = TaskHierarchy(self)
+        self.solver = solver_class(N, **solver_options)
 
-        self.N = len(self.robot.active_joints)  # number of (active) joints
-
-        self.T = np.zeros((4, 4))
-        self.J = np.zeros((6, self.N))
-        self._joint_position = np.zeros(self.N)
-
-        self.task_hierarchy = TaskHierarchy()
-        self.solver = solver_class(self.N, **solver_options)
-
+        self._fk_cache = {}
+        self._joint_position = np.zeros(N)
         self.mins = np.array([j.min for j in self.robot.active_joints])
         self.maxs = np.array([j.max for j in self.robot.active_joints])
 
@@ -90,13 +79,16 @@ class Controller(object):
     @joint_position.setter
     def joint_position(self, values):
         self._joint_position = values
-
-        T, J = self.robot.fk(self.target_link, values)
-        T = T.dot(self.target_offset)
-
-        self.T = T
-        self.J = J
+        self._fk_cache = {}  # invalidate FK cache
         self.joint_callback()
+
+    def fk(self, target: str):
+        cached = self._fk_cache.get(target)
+        if cached is not None:
+            return cached
+        result = self.robot.fk(target, self._joint_position)
+        self._fk_cache[target] = result
+        return result
 
     def reset(self, randomness=0):
         # center = 0.5 * (self.maxs + self.mins)
@@ -134,7 +126,6 @@ class MarkerControl:
     def __init__(self) -> None:
         self.ims = InteractiveMarkerServer("controller")
         self.marker = {}
-
         self.marker_data_callback = Callback()
 
     def add_marker(self, marker: IAMarker, name):
@@ -152,6 +143,8 @@ class MarkerControl:
 
 
 if __name__ == "__main__":
+    from geometry_msgs.msg import Pose, PoseStamped, Quaternion, Vector3
+
     from stack_of_tasks.marker.markers import SixDOFMarker
     from stack_of_tasks.tasks.Eq_Tasks import JointPos, OrientationTask, PositionTask
     from stack_of_tasks.tasks.Task import TaskSoftnessType
@@ -163,38 +156,32 @@ if __name__ == "__main__":
     rospy.init_node("ik")
     rate = rospy.Rate(50)
 
+    targets = {}
+
     def set_target(name, data):
         targets[name] = data
 
-    targets = {}
-
+    frame = OffsetTransform(
+        "panda_link8",
+        Pose(position=Vector3(0, 0, 0.105), orientation=Quaternion(0, 0, 0.382, 0.924)),
+    )
     c = Controller(solver_class=HQPSolver, rho=0.1)
-
-    c.control_step_callback.append(lambda: set_target("T", c.T))
-    c.control_step_callback.append(lambda: set_target("J", c.J))
-
-    c.reset()
-    c.control_step_callback()
+    frame_pose = c.fk(frame.frame)[0].dot(frame.offset)
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
-    marker = SixDOFMarker(name="pose", scale=0.1, pose=targets["T"])
+    marker = SixDOFMarker(name="pose", scale=0.1, pose=frame_pose)
     mc.add_marker(marker, marker.name)
 
     # setup tasks
-    pos = PositionTask(1, TaskSoftnessType.linear)
-    pos.set_argument_mapping("current", "T")
+    pos = PositionTask(frame, TaskSoftnessType.linear, 1.0)
     pos.set_argument_mapping("target", marker.name)
 
     # cone = ConeTask((0, 0, 1), (0, 0, 1), 0.1)
     # cone.argmap["T_t"] = "Position"
     # cone.argmap["angle"] = "Cone_angle"
 
-    ori = OrientationTask(
-        1,
-        TaskSoftnessType.quadratic,
-    )
-    ori.set_argument_mapping("current", "T")
+    ori = OrientationTask(frame, TaskSoftnessType.linear, 1.0)
     ori.set_argument_mapping("target", marker.name)
 
     c.task_hierarchy.add_task_lower(pos)

@@ -10,7 +10,6 @@ from sensor_msgs.msg import JointState
 from stack_of_tasks.marker.interactive_marker import IAMarker
 from stack_of_tasks.robot_model import RobotModel
 from stack_of_tasks.solver.AbstactSolver import Solver
-from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
 from stack_of_tasks.utils import Callback
@@ -48,7 +47,7 @@ class Controller(object):
         self._joint_position = np.zeros(self.N)
 
         self.task_hierarchy = TaskHierarchy()
-        self.solver = solver_class(self.N, **solver_options)
+        self.solver = solver_class(self.N, self.task_hierarchy, **solver_options)
 
         self.mins = np.array([j.min for j in self.robot.active_joints])
         self.maxs = np.array([j.max for j in self.robot.active_joints])
@@ -116,9 +115,7 @@ class Controller(object):
 
         self.task_hierarchy.compute(targets)
 
-        dq, tcr = self.solver.solve(
-            self.task_hierarchy.hierarchy, lb, ub, warmstart=self.last_dq
-        )
+        dq = self.solver.solve(lb, ub, warmstart=self.last_dq)
 
         self.last_dq = dq
 
@@ -152,11 +149,13 @@ class MarkerControl:
 
 
 if __name__ == "__main__":
-    from stack_of_tasks.marker.markers import SixDOFMarker
+    from stack_of_tasks.marker.markers import ConeMarker, SixDOFMarker
+    from stack_of_tasks.solver.CVXOPTSolver import CVXOPTSolver
+    from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+    from stack_of_tasks.solver.SCSSolver import SCSSolver
     from stack_of_tasks.tasks.Eq_Tasks import JointPos, OrientationTask, PositionTask
+    from stack_of_tasks.tasks.Ieq_Tasks import ConeTask
     from stack_of_tasks.tasks.Task import TaskSoftnessType
-
-    # from stack_of_tasks.tasks.Ieq_Tasks import ConeTask
 
     np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")
 
@@ -168,7 +167,7 @@ if __name__ == "__main__":
 
     targets = {}
 
-    c = Controller(solver_class=HQPSolver, rho=0.1)
+    c = Controller(solver_class=OSQPSolver, rho=0.01)
 
     c.control_step_callback.append(lambda: set_target("T", c.T))
     c.control_step_callback.append(lambda: set_target("J", c.J))
@@ -178,27 +177,32 @@ if __name__ == "__main__":
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
+
     marker = SixDOFMarker(name="pose", scale=0.1, pose=targets["T"])
     mc.add_marker(marker, marker.name)
 
+    cone_marker = ConeMarker(name="cone", pose=tf.translation_matrix([0, 0.5, 0]), scale=0.2)
+    mc.add_marker(cone_marker, cone_marker.name)
     # setup tasks
     pos = PositionTask(1, TaskSoftnessType.linear)
     pos.set_argument_mapping("current", "T")
-    pos.set_argument_mapping("target", marker.name)
+    pos.set_argument_mapping("target", f"{cone_marker.name}_pose")
 
-    # cone = ConeTask((0, 0, 1), (0, 0, 1), 0.1)
-    # cone.argmap["T_t"] = "Position"
-    # cone.argmap["angle"] = "Cone_angle"
+    targets["threshold"] = 1
+    targets["target_axis"] = np.array([0, 0, 1])
+    targets["robot_axis"] = np.array([0, 0, 1])
 
-    ori = OrientationTask(
-        1,
-        TaskSoftnessType.quadratic,
-    )
-    ori.set_argument_mapping("current", "T")
-    ori.set_argument_mapping("target", marker.name)
+    cone = ConeTask(1, TaskSoftnessType.quadratic)
+    cone.set_argument_mapping("current", "T")
+    cone.set_argument_mapping("target", f"{cone_marker.name}_pose")
+    cone.set_argument_mapping("threshold", f"{cone_marker.name}_angle")
+
+    # ori = OrientationTask(1, TaskSoftnessType.quadratic)
+    # ori.set_argument_mapping("current", "T")
+    # ori.set_argument_mapping("target", marker.name)
 
     c.task_hierarchy.add_task_lower(pos)
-    c.task_hierarchy.add_task_lower(ori)
+    c.task_hierarchy.add_task_lower(cone)
 
     # pp = PlotPublisher()
     # pp.add_plot("q", [f"q/{joint.name}" for joint in c.robot.active_joints])
@@ -206,6 +210,10 @@ if __name__ == "__main__":
     # c.joint_state_callback.append(lambda q: pp.plot("q", q))
     # c.delta_q_callback.append(lambda dq: pp.plot("dq", dq))
 
+    c.solver.stack_changed()
+
     while not rospy.is_shutdown():
+
         c.hierarchic_control(targets)
+        print(cone.upper_bound)
         rate.sleep()

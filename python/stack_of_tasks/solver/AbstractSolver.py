@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
+from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 
 
 class Solver(ABC):

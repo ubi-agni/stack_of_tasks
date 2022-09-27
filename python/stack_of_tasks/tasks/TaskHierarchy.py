@@ -1,13 +1,13 @@
-from .Task import Task, TaskHierachyType
+from .Task import Task, TaskHierarchyType
 
 
 class TaskHierarchy:
     def __init__(self) -> None:
 
-        self.hierarchy: TaskHierachyType = []
+        self.hierarchy: TaskHierarchyType = []
 
     @property
-    def higest_hiracy_level(self):
+    def highest_hierarchy_level(self):
         return len(self.hierarchy) - 1
 
     def clear(self):
@@ -20,7 +20,7 @@ class TaskHierarchy:
         self.hierarchy.append([task])
 
     def add_task_same(self, task: Task):
-        if (l := self.higest_hiracy_level) < 0:
+        if (l := self.highest_hierarchy_level) < 0:
             self.add_task_lower(task)
         else:
             self.hierarchy[l].append(task)

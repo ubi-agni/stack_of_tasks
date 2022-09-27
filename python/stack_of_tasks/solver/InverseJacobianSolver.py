@@ -4,7 +4,7 @@ import numpy as np
 
 from stack_of_tasks.tasks.Task import EqTask
 
-from .AbstactSolver import Solver
+from .AbstractSolver import Solver
 
 
 class InverseJacobianSolver(Solver):
@@ -15,7 +15,7 @@ class InverseJacobianSolver(Solver):
         self.threshold = options.get("threshold", 0.01)
 
     def stack_changed(self):
-        return super().stack_changed()
+        pass
 
     def _invert_smooth_clip(self, s):
         return s / (self.threshold**2) if s < self.threshold else 1.0 / s

@@ -31,8 +31,8 @@ class TaskSoftnessType(Enum):
 class Task(ABC):
     name: str
     task_size: int
-    # TODO fix typo
-    def __init__(self, wheight: float, softnessType: TaskSoftnessType) -> None:
+
+    def __init__(self, weight: float, softnessType: TaskSoftnessType) -> None:
         super().__init__()
 
         # extract arguments of _compute() method
@@ -40,7 +40,7 @@ class Task(ABC):
         # initialize argmap as i -> i
         self.argmap = dict([(i, i) for i in args])
 
-        self.weight = wheight
+        self.weight = weight
         self.softnessType = softnessType
 
         self.A: ArrayLike = np.zeros((0, self.task_size))
@@ -98,8 +98,8 @@ class Task(ABC):
 
 
 class EqTask(Task):
-    def __init__(self, wheight: float, softnessType: TaskSoftnessType) -> None:
-        super().__init__(wheight, softnessType)
+    def __init__(self, weight: float, softnessType: TaskSoftnessType) -> None:
+        super().__init__(weight, softnessType)
         self.bound = np.zeros((1, 0))
 
     def compute(self, data) -> Tuple[ArrayLike, ArrayLike]:
@@ -108,8 +108,8 @@ class EqTask(Task):
 
 
 class IeqTask(Task):
-    def __init__(self, wheight: float, softnessType: TaskSoftnessType) -> None:
-        super().__init__(wheight, softnessType)
+    def __init__(self, weight: float, softnessType: TaskSoftnessType) -> None:
+        super().__init__(weight, softnessType)
         self.lower_bound = np.zeros((1, 0))
         self.upper_bound = np.zeros((1, 0))
 
@@ -119,4 +119,4 @@ class IeqTask(Task):
 
 
 TaskType = typing.Union[EqTask, IeqTask]
-TaskHierachyType = typing.List[typing.List[TaskType]]
+TaskHierarchyType = typing.List[typing.List[TaskType]]

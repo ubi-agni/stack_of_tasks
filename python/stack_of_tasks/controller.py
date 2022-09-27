@@ -9,9 +9,9 @@ from sensor_msgs.msg import JointState
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
 from stack_of_tasks.robot_model import RobotModel
-from stack_of_tasks.solver.AbstactSolver import Solver
+from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
-from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
+from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.utils import Callback
 
 # random.seed(1)

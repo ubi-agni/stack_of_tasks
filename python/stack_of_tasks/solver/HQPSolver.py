@@ -6,9 +6,9 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from stack_of_tasks.solver.AbstactSolver import Solver
+from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks.Task import EqTask, TaskSoftnessType, TaskTypes
-from stack_of_tasks.tasks.TaskHierachy import TaskHierarchy
+from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 
 
 class HqpSolver(Solver, ABC):

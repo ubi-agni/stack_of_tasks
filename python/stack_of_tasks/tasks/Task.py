@@ -1,11 +1,25 @@
 import typing
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import Enum, auto
 from inspect import signature
 from typing import Any, NoReturn, Optional, Tuple
 
 import numpy as np
 from numpy.typing import ArrayLike
+
+
+class TaskTypes(Enum):
+    HARD = auto()
+    HARD_EQ = auto()
+    HARD_IEQ = auto()
+
+    LINEAR = auto()
+    LINEAR_EQ = auto()
+    LINEAR_IEQ = auto()
+
+    QUADRATIC = auto()
+    QUADRATIC_EQ = auto()
+    QUADRATIC_IEQ = auto()
 
 
 class TaskSoftnessType(Enum):
@@ -17,7 +31,7 @@ class TaskSoftnessType(Enum):
 class Task(ABC):
     name: str
     task_size: int
-
+    # TODO fix typo
     def __init__(self, wheight: float, softnessType: TaskSoftnessType) -> None:
         super().__init__()
 
@@ -55,6 +69,32 @@ class Task(ABC):
     def compute(self, data) -> Any:
         mapped = self._map_args(data)
         self._compute(**mapped)
+
+    def is_task_type(self, taskType: TaskTypes) -> bool:
+        if taskType is TaskTypes.HARD:
+            return self.softnessType is TaskSoftnessType.hard
+        elif taskType is TaskTypes.HARD_EQ:
+            return self.softnessType is TaskSoftnessType.hard and isinstance(self, EqTask)
+        elif taskType is TaskTypes.HARD_IEQ:
+            return self.softnessType is TaskSoftnessType.hard and isinstance(self, IeqTask)
+
+        elif taskType is TaskTypes.LINEAR:
+            return self.softnessType is TaskSoftnessType.linear
+        elif taskType is TaskTypes.LINEAR_EQ:
+            return self.softnessType is TaskSoftnessType.linear and isinstance(self, EqTask)
+        elif taskType is TaskTypes.LINEAR_IEQ:
+            return self.softnessType is TaskSoftnessType.linear and isinstance(self, IeqTask)
+
+        elif taskType is TaskTypes.QUADRATIC:
+            return self.softnessType is TaskSoftnessType.quadratic
+        elif taskType is TaskTypes.QUADRATIC_EQ:
+            return self.softnessType is TaskSoftnessType.quadratic and isinstance(
+                self, EqTask
+            )
+        elif taskType is TaskTypes.QUADRATIC_IEQ:
+            return self.softnessType is TaskSoftnessType.quadratic and isinstance(
+                self, IeqTask
+            )
 
 
 class EqTask(Task):

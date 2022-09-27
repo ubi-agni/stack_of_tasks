@@ -1,10 +1,10 @@
-from .Task import Task
+from .Task import Task, TaskHierachyType
 
 
 class TaskHierarchy:
     def __init__(self) -> None:
 
-        self.hierarchy = []
+        self.hierarchy: TaskHierachyType = []
 
     @property
     def higest_hiracy_level(self):

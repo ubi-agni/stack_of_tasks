@@ -8,21 +8,25 @@ from .AbstactSolver import Solver
 
 
 class InverseJacobianSolver(Solver):
-    def __init__(self, number_of_joints, **options) -> None:
+    def __init__(
+        self, number_of_joints, stack_of_tasks: List[List[EqTask]], **options
+    ) -> None:
         super().__init__(number_of_joints, **options)
-
         self.threshold = options.get("threshold", 0.01)
+
+    def stack_changed(self):
+        return super().stack_changed()
 
     def _invert_smooth_clip(self, s):
         return s / (self.threshold**2) if s < self.threshold else 1.0 / s
 
-    def solve(self, stack_of_tasks: List[List[EqTask]], lower_dq, upper_dq, **options):
+    def solve(self, lower_dq, upper_dq, **options):
         N = np.identity(self.N)  # nullspace projector of previous tasks
         JA = np.zeros((0, self.N))  # accumulated Jacobians
         qdot = np.zeros(self.N)
 
         residuals = []
-        for task_level in stack_of_tasks:
+        for task_level in self._stack_of_tasks:
 
             # combine tasks of this level into one
             J = np.concatenate([task.A for task in task_level], axis=0)

@@ -1,400 +1,289 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
+from abc import ABC, abstractmethod
+from typing import Any
 
 import numpy as np
-import osqp
 from numpy.typing import NDArray
-from scipy import sparse
 
-from stack_of_tasks.tasks.Task import EqTask, TaskHierachyType, TaskSoftnessType, TaskType
+from stack_of_tasks.solver.AbstractSolver import Solver
+from stack_of_tasks.tasks.Task import EqTask, TaskSoftnessType, TaskTypes
+from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 
-from .AbstactSolver import Solver
 
+class HqpSolver(Solver):
 
-class HQPMatrix:
-    """
-                              A           lb   ub
-                        ⎧1                 0    1   for lin. task
-    max slack variables ⎨ ⋱             -inf   inf for quad. task
-                        ⎩   0              0    1
-                        ⎧    1            lb   ub
-                     dq ⎨      ⋱
-                        ⎩        1        lb   ub
-    higher-level tasks  {  0   J'      J' dq'  J' dq'
-    hard eq. task       {  0   J           ξ    ξ                    J dq = ξ
-    soft eq. task       {  ξ   J           ξ    ξ              s ξ + J dq = ξ
-    hard ineq. task     {  0   J          lb   ub         lb ≤       J dq ≤ ub
-    quad task ub        { +1   J          lb   inf        lb ≤   s + J dq
-    quad task lb        { -1   J        -inf   ubs              -s + J dq ≤ ub
-    (soft ineq. task    {  1   J          lb   ub         lb ≤ 1 s + J dq ≤ ub)"""
+    r"""The HQPSolver Base class.
+                             P
+                        ⎧rho
+    dq                  ⎨    ⋱
+                        ⎩       rho
+                        ⎧           1
+    slacks              ⎨             ⋱
+                        ⎩               1
 
-    def __init__(self, number_of_vars, rho=0.01) -> None:
-        self.sot: TaskHierachyType = []
+                             A                        lb/b      ub         formula
+    joint constraint         I                       jl         ju
+    slack constraint                     I               depending on task type
 
-        self.N = number_of_vars  # number of problem variables
-        self.rho = rho
+                             ns_matrix                ns_bound
+    higher-level tasks  {    J'      0 ⋯ 0 ⋯ 0        J' dq'     ∅
 
-        # [m]aximal number of slack variables needed
-        self.m_slack = 0
-        # [m]aximal number of rows occupied by tasks without slack variables
-        self.m_hard_r = 0
-        # [m]aximal number of rows occupied by tasks with slack variables in one level
-        self.m_wslack_r = 0
-        # [m]aximal number of rows occupied by nullspace
-        #   constraints of tasks in previous levels
-        self.m_nspace_r = 0
+                             eq_matrix                eq_bound
+    hard eq. task       {    J       0 ⋯ 0 ⋯ 0        ξ          ∅      ξ = J dq
+    soft eq. task       {    J       0 ⋯ ξ  ⋯ 0       ξ          ∅      ξ = s ξ + J dq
 
-        # starting rows for hard, slack and nullspace in A
-        self._hs = self.N + self.m_slack
-        self._ss = self._hs + self.m_hard_r
-        self._ns = self._ss + self.m_wslack_r
+                             ieq_matrix               ieq_upper  ieq_lower
+    hard ineq. task     {    J       0 ⋯ 0 ⋯ 0        lb         ub    lb ≤ J dq ≤ ub
 
-        # [u]sed rows by hard tasks
-        self.u_hard_r = 0
-        # [u]sed rows by tasks with slack
-        self.u_wslack_r = 0
-        # [u]sed rows by nullspace constraint
-        self.u_nspace_r = 0
+                            sieq_matrix             sieq_bound
+    quad task lb        {    J       0 ⋯ I ⋯ 0       lb          ∅     lb ≤  J dq + s
+    quad task ub        {   -J       0 ⋯ I ⋯ 0       -ub         ∅    -ub ≤  -J dq + s"""
 
-        self.J = np.identity(self.N)  # J matrix
-        self.p = np.zeros((self.N))  # p vector
+    #  (soft ineq. task    {  1   J          lb   ub         lb ≤ 1 s + J dq ≤ ub)
 
-        # internal A matrix, lower and upper bound with space for all constraints
-        self._A = np.zeros((self.N, self.N))
-        self._lower = np.zeros((self.N,))
-        self._upper = np.zeros((self.N,))
+    def __init__(
+        self, number_of_joints: int, stack_of_tasks: TaskHierarchy, **options
+    ) -> None:
+        super().__init__(number_of_joints, stack_of_tasks, **options)
 
-        # stubs for r/w views on _A, _lower and _upper
-        self.slack_diag: NDArray  # diagonal entries of slacks in A
+        self.m_slacks = 0
+        self.m_eq = 0
+        self.m_ieq = 0
+        self.m_sieq = 0
+        self.m_ns = 0
 
-        self._A_hard: NDArray  # hard tasks in A
-        self._A_nullspace: NDArray  # nullspace tasks in A
-        self._A_wslack: NDArray  # tasks with slack in A
-        self._A_slacks: NDArray  # slack part of tasks with slacks
-        # same as above but for lower and upper bounds
-        self._l_dq: NDArray
-        self._u_dq: NDArray
-        self._l_slacks: NDArray
-        self._u_slacks: NDArray
-        self._l_hard: NDArray
-        self._u_hard: NDArray
-        self._l_slacked: NDArray
-        self._u_slacked: NDArray
-        self._l_nullspace: NDArray
-        self._u_nullspace: NDArray
+        self.ns_rows = 0
+        self.eq_rows = 0
+        self.ieq_rows = 0
+        self.sieq_rows = 0
+        self.slacks = 0
 
-        # iterator index
-        self._level_index = 0
+        self.objective_matrix: NDArray
+        self.objective_vector: NDArray
 
-    def set_tasks(self, sot: TaskHierachyType):
-        recalc = self._check_stack_different(sot)
-        self.sot = sot
-        if recalc:
-            self._recalculate_dimensions()
+        self.joints_slack_lower: NDArray
+        self.joints_slack_upper: NDArray
 
-    def _recalculate_dimensions(self):
-        self._calc_matrix_size()
-        self._set_matrices()
-        self._define_views()
+        self.nullspace_matrix: NDArray
+        self.nullspace_bound: NDArray
 
-    def _check_stack_different(self, new_stack: TaskHierachyType):
-        if len(new_stack) == len(self.sot):
-            for nl, ol in zip(new_stack, self.sot):
-                if len(nl) == len(ol):
-                    for tn, to in zip(nl, ol):
-                        if not (type(tn) is type(to) and tn.softnessType is to.softnessType):
-                            return True
-            return False
-        return True
+        self.eq_matrix: NDArray
+        self.eq_bound: NDArray
 
-    def _set_matrices(self):
-        self.J = np.identity(self.N + self.m_slack)
-        self.J[self.m_slack :, self.m_slack :] = self.rho
-        self.p = np.zeros((self.N + self.m_slack,))
+        self.sieq_matrix: NDArray
+        self.sieq_bound: NDArray
 
-        self._A = np.zeros(
-            (
-                self.m_slack + self.N + self.m_hard_r + self.m_wslack_r + self.m_nspace_r,
-                self.m_slack + self.N,
-            )
-        )
+        self.ieq_matrix: NDArray
+        self.ieq_upper: NDArray
+        self.ieq_lower: NDArray
 
-        self._lower = np.zeros(
-            (self.m_slack + self.N + self.m_hard_r + self.m_wslack_r + self.m_nspace_r,)
-        )
+        self.sieq_matrix: NDArray
+        self.sieq_bound: NDArray
 
-        self._upper = np.zeros(
-            (self.m_slack + self.N + self.m_hard_r + self.m_wslack_r + self.m_nspace_r,)
-        )
+        self._calculate_sot_sizes()
+        self._create_matrix()
 
-        # set diagonal entries of A for dq to 1
-        self._A[
-            self.m_slack : self.m_slack + self.N, self.m_slack : self.m_slack + self.N
-        ] = np.identity(self.N)
+    def set_stack_of_tasks(self, stack_of_tasks: TaskHierarchy):
+        self._stack_of_tasks = stack_of_tasks
 
-    def _define_views(self):
+    def stack_changed(self):
+        super().stack_changed()
+        self._calculate_sot_sizes()
+        self._create_matrix()
 
-        self.slack_diag = np.lib.stride_tricks.as_strided(
-            self._A,
-            shape=(self.m_slack,),
-            strides=(sum(self._A.strides),),
-        )
+    def _reset(self):
+        self.ns_rows = 0
+        self.joints_slack_lower[:] = 0
+        self.joints_slack_upper[:] = 0
 
-        self._A_hard = self._A[self._hs : self._hs + self.m_hard_r, self.m_slack :]
-        self._A_nullspace = self._A[self._ns : self._ns + self.m_nspace_r, self.m_slack :]
-        self._A_wslack = self._A[self._ss : self._ss + self.m_wslack_r, self.m_slack :]
-        self._A_slacks = self._A[self._ss : self._ss + self.m_wslack_r, : self.m_slack]
+    def _calculate_sot_sizes(self):
+        self.level_slack_mapping = []
 
-        self._l_dq = self._lower[self.m_slack : self.m_slack + self.N]
-        self._u_dq = self._upper[self.m_slack : self.m_slack + self.N]
+        self.m_slacks = 0
+        self.m_eq = 0
+        self.m_ieq = 0
+        self.m_sieq = 0
+        self.m_ns = 0
 
-        self._l_slacks = self._lower[
-            : self.m_slack,
-        ]
+        # find number of slacks
+        for level in self._stack_of_tasks.hierarchy:
+            level_slacks = level_ieq_r = level_sieq_r = level_eq_r = 0
 
-        self._u_slacks = self._upper[
-            : self.m_slack,
-        ]
-
-        self._l_hard = self._lower[
-            self._hs : self._hs + self.m_hard_r,
-        ]
-
-        self._u_hard = self._upper[
-            self._hs : self._hs + self.m_hard_r,
-        ]
-
-        self._l_slacked = self._lower[
-            self._ss : self._ss + self.m_wslack_r,
-        ]
-
-        self._u_slacked = self._upper[
-            self._ss : self._ss + self.m_wslack_r,
-        ]
-        self._l_nullspace = self._lower[
-            self._ns : self._ns + self.m_nspace_r,
-        ]
-
-        self._u_nullspace = self._upper[
-            self._ns : self._ns + self.m_nspace_r,
-        ]
-
-    def _calc_matrix_size(self):
-        for level in self.sot:
-            slacks = 0
-            rows = 0
             for task in level:
-                if task.softnessType is TaskSoftnessType.hard:
-                    self.m_hard_r += 1
-                elif task.softnessType is TaskSoftnessType.linear:
-                    slacks += 1
-                    rows += task.task_size
-                    self.m_nspace_r += task.task_size
-                elif task.softnessType is TaskSoftnessType.quadratic:
-                    slacks += task.task_size
-                    rows += task.task_size * 2
-                    self.m_nspace_r += task.task_size
-            self.m_wslack_r = max(self.m_wslack_r, rows)
-            self.m_slack = max(self.m_slack, slacks)
-        self._hs = self.N + self.m_slack
-        self._ss = self._hs + self.m_hard_r
-        self._ns = self._ss + self.m_wslack_r
 
-    def reset(self):
-        if self.m_hard_r > 0:
-            self._A_hard[:] = 0
-        if self.m_nspace_r > 0:
-            self._A_nullspace[:] = 0
-        if self.m_wslack_r > 0:
-            self._A_wslack[:] = 0
-        if self.m_slack > 0:
-            self._A_slacks[:] = 0
-            self.slack_diag[:] = 0
+                if task.softnessType is TaskSoftnessType.quadratic:
+                    level_slacks += task.task_size
+                    level_sieq_r += 2 * task.task_size
+                else:
+                    if task.softnessType is TaskSoftnessType.linear:
+                        level_slacks += 1
 
-        self.u_hard_r = 0
-        self.u_wslack_r = 0
-        self.u_nspace_r = 0
+                    if isinstance(task, EqTask):
+                        level_eq_r += task.task_size
+                    else:
+                        level_ieq_r += task.task_size
 
-        self._level_index = 0
+                self.m_ns += task.task_size
 
-        return self
+            self.m_slacks = max(self.m_slacks, level_slacks)
+            self.m_ieq = max(self.m_ieq, level_ieq_r)
+            self.m_sieq = max(self.m_sieq, level_sieq_r)
+            self.m_eq = max(self.m_eq, level_eq_r)
 
-    def set_dq_bounds(self, lower, upper):
-        self._l_dq[:] = lower
-        self._u_dq[:] = upper
+    def _create_matrix(self):
+        # Objective matrix P and vector q
+        self.objective_matrix = np.identity(self.N + self.m_slacks)
+        self.objective_matrix[self.N :, self.N :] = self._options.get("rho", 0.1)
 
-    def __next__(self):
-        if self._level_index >= len(self.sot):
-            return False
+        self.objective_vector = np.zeros((self.N + self.m_slacks,))
 
-        self._A_wslack[:] = 0
-        self._A_slacks[:] = 0
-        self.slack_diag[:] = 0
-        self._l_slacks[:] = 0
-        self._u_slacks[:] = 0
+        # lower and upper bounds for joints and slacks,
+        # if needed corresponding identity matrix is created in concrete solver
+        self.joints_slack_lower = np.zeros((self.N + self.m_slacks,))
+        self.joints_slack_upper = np.zeros((self.N + self.m_slacks,))
 
-        self.u_wslack_r = 0
+        # nullspace matrix and bound
+        self.nullspace_matrix = np.zeros((self.m_ns, self.N + self.m_slacks))
+        self.nullspace_bound = np.zeros((self.m_ns,))
 
-        used_slacks = 0
-        for task in self.sot[self._level_index]:
-            task: TaskType
-            if task.softnessType is TaskSoftnessType.hard:
-                self._A_hard[self.u_hard_r : self.u_hard_r + task.task_size, :] = task.A
-                (
-                    self._l_hard[self.u_hard_r : self.u_hard_r + task.task_size],
-                    self._u_hard[self.u_hard_r : self.u_hard_r + task.task_size],
-                ) = (
-                    (task.bound, task.bound)
-                    if isinstance(task, EqTask)
-                    else (task.lower_bound, task.upper_bound)
-                )
-                self.u_hard_r += task.task_size
-            elif task.softnessType is TaskSoftnessType.linear and isinstance(task, EqTask):
-                s = self.u_wslack_r
-                e = s + task.task_size
+        # matrix and bounds for box-inequalities
+        self.ieq_matrix = np.zeros((self.m_ieq, self.N + self.m_slacks))
+        self.ieq_upper = np.zeros((self.m_ieq,))
+        self.ieq_lower = np.zeros((self.m_ieq,))
 
-                self.slack_diag[used_slacks] = 1
-                self._l_slacks[used_slacks] = 0
-                self._u_slacks[used_slacks] = 1
+        # matrix and bound for single-sided inequalities
+        self.sieq_matrix = np.zeros((self.m_sieq, self.N + self.m_slacks))
+        self.sieq_bound = np.zeros((self.m_sieq,))
 
-                self._A_wslack[s:e, :] = task.A
-                self._A_slacks[s:e, used_slacks] = task.bound
-                self._l_slacked[s:e] = task.bound
-                self._u_slacked[s:e] = task.bound
+        # matrix and bound for equalities
+        self.eq_matrix = np.zeros((self.m_eq, self.N + self.m_slacks))
+        self.eq_bound = np.zeros((self.m_eq,))
 
-                used_slacks += 1
-                self.u_wslack_r += task.task_size
+    def _set_bounds(self, lb, ub):
+        self.joints_slack_lower[: self.N] = lb
+        self.joints_slack_upper[: self.N] = ub
 
-            elif task.softnessType is TaskSoftnessType.quadratic:
-                s = self.u_wslack_r
-                e = s + task.task_size
+    def _add_nullspace(self, matrix: NDArray, bound):
+        rows = bound.shape[0]
+        self.nullspace_matrix[self.ns_rows : self.ns_rows + rows, : self.N] = matrix
+        self.nullspace_bound[self.ns_rows : self.ns_rows + rows] = bound
+        self.ns_rows += rows
 
-                self.slack_diag[used_slacks : used_slacks + task.task_size] = 1
-                self._l_slacks[used_slacks : used_slacks + task.task_size] = np.NINF
-                self._u_slacks[used_slacks : used_slacks + task.task_size] = np.PINF
+    def _prepare_level(self, level_index) -> Any:
+        self.eq_rows = 0
+        self.ieq_rows = 0
+        self.sieq_rows = 0
+        self.slacks = 0
 
-                self._A_wslack[s:e, :] = task.A
-                self._l_slacked[s:e] = (
+        for task in self._stack_of_tasks.hierarchy[level_index]:
+            if task.is_task_type(TaskTypes.HARD_EQ):
+
+                self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
+                self.eq_matrix[
+                    self.eq_rows : self.eq_rows + task.task_size, : self.N
+                ] = task.A
+
+            elif task.is_task_type(TaskTypes.HARD_IEQ):
+
+                self.ieq_lower[
+                    self.ieq_rows : self.ieq_rows + task.task_size
+                ] = task.lower_bound
+
+                self.ieq_upper[
+                    self.ieq_rows : self.ieq_rows + task.task_size
+                ] = task.upper_bound
+
+                self.ieq_matrix[
+                    self.ieq_rows : self.ieq_rows + task.task_size, : self.N
+                ] = task.A
+
+                self.ieq_rows += task.task_size
+
+            elif task.is_task_type(TaskTypes.LINEAR_EQ):
+                # slack variables in linear eqs have bounds [0,1]
+                self.joints_slack_lower[self.N + self.slacks] = 0
+                self.joints_slack_upper[self.N + self.slacks] = 1
+
+                self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
+
+                self.eq_matrix[
+                    self.eq_rows : self.eq_rows + task.task_size, : self.N
+                ] = task.A
+
+                self.eq_matrix[
+                    self.eq_rows : self.eq_rows + task.task_size, self.N + self.slacks
+                ] = task.bound
+
+                self.slacks += 1
+                self.eq_rows += task.task_size
+
+            elif task.is_task_type(TaskTypes.QUADRATIC):
+                # Quadratic (in) equalities are split into lower and upper bounds and are transferred
+                # to be only lower bounds.
+
+                self.joints_slack_lower[
+                    self.N + self.slacks : self.N + self.slacks + task.task_size
+                ] = -np.inf
+
+                self.joints_slack_upper[
+                    self.N + self.slacks : self.N + self.slacks + task.task_size
+                ] = np.inf
+
+                self.sieq_bound[self.sieq_rows : self.sieq_rows + task.task_size] = (
                     task.bound if isinstance(task, EqTask) else task.lower_bound
                 )
-                self._u_slacked[s:e] = np.PINF
 
-                self._A_slacks[s:e, used_slacks : used_slacks + task.task_size] = np.identity(
-                    task.task_size
-                )
+                self.sieq_matrix[
+                    self.sieq_rows : self.sieq_rows + task.task_size, : self.N
+                ] = task.A
 
-                s += task.task_size
-                e += task.task_size
+                self.sieq_matrix[
+                    self.sieq_rows : self.sieq_rows + task.task_size, self.N :
+                ] = np.eye(task.task_size, self.m_slacks, self.slacks)
 
-                self._A_wslack[s:e, :] = task.A
-                self._A_slacks[
-                    s:e, used_slacks : used_slacks + task.task_size
-                ] = -np.identity(task.task_size)
-                self._l_slacked[s:e] = np.NINF
-                self._u_slacked[s:e] = (
+                self.sieq_rows += task.task_size
+
+                self.sieq_bound[self.sieq_rows : self.sieq_rows + task.task_size] = -(
                     task.bound if isinstance(task, EqTask) else task.upper_bound
                 )
 
-                used_slacks += task.task_size
-                self.u_wslack_r += task.task_size * 2
+                # upper bounds are swapped
+                self.sieq_matrix[
+                    self.sieq_rows : self.sieq_rows + task.task_size, : self.N
+                ] = -task.A
 
-        self._level_index += 1
-        return True
+                self.sieq_matrix[
+                    self.sieq_rows : self.sieq_rows + task.task_size, self.N :
+                ] = np.eye(task.task_size, self.m_slacks, self.slacks)
 
-    def add_nullspace_constraint(self, solution_vector):
-        dq, slacks = solution_vector[self.m_slack :], solution_vector[: self.m_slack]
+                self.sieq_rows += task.task_size
+                self.slacks += task.task_size
 
-        for task in self.sot[self._level_index - 1]:
-            s = self.u_nspace_r
-            e = s + task.task_size
-            b = task.A.dot(dq)
-
-            self._A_nullspace[s:e] = task.A
-            self._l_nullspace[s:e] = b
-            self._u_nullspace[s:e] = b
-
-            self.u_nspace_r += task.task_size
-
-        return dq, slacks
-
-    @property
-    def A(self):
-        return self._A[
-            np.r_[
-                0 : self.N + self.m_slack,
-                self._hs : self._hs + self.u_hard_r,
-                self._ss : self._ss + self.u_wslack_r,
-                self._ns : self._ns + self.u_nspace_r,
-            ],
-            :,
-        ]
-
-    @property
-    def lower(self):
-        return self._lower[
-            np.r_[
-                : self.N + self.m_slack,
-                self._hs : self._hs + self.u_hard_r,
-                self._ss : self._ss + self.u_wslack_r,
-                self._ns : self._ns + self.u_nspace_r,
-            ],
-        ]
-
-    @property
-    def upper(self):
-        return self._upper[
-            np.r_[
-                : self.N + self.m_slack,
-                self._hs : self._hs + self.u_hard_r,
-                self._ss : self._ss + self.u_wslack_r,
-                self._ns : self._ns + self.u_nspace_r,
-            ],
-        ]
-
-
-class HQPSolver(Solver):
-    def __init__(self, number_of_joints, **options) -> None:
-        super().__init__(number_of_joints)
-        self.options = options
-
-        self.hqp_mats = HQPMatrix(self.N, **options)
-
-    def solve(self, stack_of_tasks, lower_dq, upper_dq, **options):
-        dq = options.get("warmstart")
-        task_residuals = []
-
-        self.hqp_mats.reset()
-        self.hqp_mats.set_tasks(stack_of_tasks)
-        self.hqp_mats.set_dq_bounds(lower_dq, upper_dq)
-
-        while next(self.hqp_mats):  # iterate over QPs corresponding to hierarchy levels
-            sol = self._solve_qp(
-                self.hqp_mats.J,
-                self.hqp_mats.p,
-                self.hqp_mats.A,
-                self.hqp_mats.lower,
-                self.hqp_mats.upper,
-                dq,
-            )
-
-            if sol.info.status_val < 0:
-                print(sol.info.status)
-                # return None, None      # TODO handling of failed task!
             else:
+                raise NotImplementedError("Not Implemented Task Type")
 
-                dq, slack = self.hqp_mats.add_nullspace_constraint(sol.x)
-                task_residuals.append(slack)
+    @abstractmethod
+    def _interpret_solution(self, level_index, solution) -> Any:
+        pass
 
-        return dq, task_residuals
+    @abstractmethod
+    def _solve(self, warmstart, **options):
+        pass
 
-    def _solve_qp(self, H, q, A, lb, ub, warmstart=None):
-        H = sparse.csc_matrix(H)
-        A = sparse.csc_matrix(A)
+    def solve(self, lower_dq, upper_dq, **options):
+        self._reset()
+        self._set_bounds(lower_dq, upper_dq)
+        dq_warmstart = options.pop("warmstart")
 
-        m = osqp.OSQP()
-        m.setup(P=H, q=q, A=A, l=lb, u=ub, verbose=False)
-        if warmstart is not None:
-            m.warm_start(x=np.r_[warmstart, np.full(q.size - warmstart.size, 0)])
+        for level_index, _ in enumerate(self._stack_of_tasks.hierarchy):
+            # prepare matrices
 
-        sol = m.solve()
-        return sol
+            self._prepare_level(level_index)
+            solution = self._solve(dq_warmstart, **options)
+
+            solution = self._interpret_solution(level_index, solution)
+            if solution is not None:
+                dq_warmstart = solution
+
+        return dq_warmstart

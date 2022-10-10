@@ -8,7 +8,7 @@ from geometry_msgs.msg import Point, Quaternion, Vector3
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 
-from .utils import create_pose, pose_to_matrix
+from .utils import create_pose
 
 
 class IAMarker(ABC):
@@ -132,11 +132,11 @@ class IAMarker(ABC):
         )
 
     @staticmethod
-    def cylinder(radius=0.02, len=0.1, color=ColorRGBA(1, 0, 0, 1), **kwargs):
+    def cylinder(radius=0.02, length=0.1, color=ColorRGBA(1, 0, 0, 1), **kwargs):
         """Create a cylinder marker"""
         return Marker(
             type=Marker.CYLINDER,
-            scale=Vector3(radius, radius, len),
+            scale=Vector3(radius, radius, length),
             color=color,
             **kwargs,
         )
@@ -184,10 +184,10 @@ class IAMarker(ABC):
         )
 
     @staticmethod
-    def arrow(len=0.1, width=None, color=ColorRGBA(1, 0, 0, 1), **kwargs):
+    def arrow(length=0.1, width=None, color=ColorRGBA(1, 0, 0, 1), **kwargs):
         """Create an arrow marker"""
-        width = width or 0.1 * len
-        scale = Vector3(len, width, width)
+        width = width or 0.1 * length
+        scale = Vector3(length, width, width)
         return Marker(type=Marker.ARROW, scale=scale, color=color, **kwargs)
 
     @staticmethod
@@ -221,88 +221,3 @@ class IAMarker(ABC):
         m.pose.position = Point(*(p + T[:3, :3].dot(offset)))
         markers.append(m)
         return markers
-
-
-class ConeMarker(IAMarker):
-    def __init__(
-        self,
-        server: InteractiveMarkerServer,
-        pose,
-        name: str = "Cone",
-        scale: float = 1,
-        angle=0.4,
-        mode=InteractiveMarkerControl.ROTATE_3D,
-    ) -> None:
-        super().__init__(server, pose=pose, name=name, scale=scale, angle=angle, mode=mode)
-
-    def _setup_marker(self, name, pose, scale, angle, mode):
-        self._angle = angle
-        self._scale = scale
-
-        loc_marker = self._create_interactive_marker(
-            self.server,
-            f"{self.name}_Pos",
-            pose=pose,
-            scale=0.1,
-            callback=self._callback_pose,
-        )
-
-        # self._add_display_marker(loc_marker, "", cone(self._angle, self._scale))
-        self._add_movement_control(loc_marker, "", InteractiveMarkerControl.MOVE_AXIS)
-        self._add_movement_control(loc_marker, "", InteractiveMarkerControl.ROTATE_AXIS)
-
-        handle_marker = self._create_interactive_marker(
-            self.server,
-            f"{self.name}_Handle",
-            scale=0.05,
-            callback=self._callback_angel,
-            pose=tf.translation_matrix([0, 0, 0]),
-        )
-        self._add_movement_marker(
-            handle_marker, "", InteractiveMarkerControl.MOVE_PLANE, marker=self.sphere()
-        )
-        self._add_movement_control(
-            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="z"
-        )
-        self._add_movement_control(
-            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="y"
-        )
-
-        self._data_callback(f"{self.name}_angle", self._angle)
-        self._data_callback(f"{self.name}_pose", pose)
-
-    def provided_targets(self):
-        return ["{self.name}_Pos", "{self.name}_Handle"]
-
-    def delete(self):
-        self.server.erase(f"{self.name}_Pos")
-        self.server.erase(f"{self.name}_Handle")
-        self.server.applyChanges()
-
-    def _calc_handle_pose(self, T_root):
-        handle_pose = tf.rotation_matrix(self._angle, [1, 0, 0]).dot(
-            tf.translation_matrix([0, 0, self._scale])
-        )
-        self.server.setPose(f"{self.name}_Handle", create_pose(T_root.dot(handle_pose)))
-
-    def _callback_pose(self, feedback):
-        T = pose_to_matrix(feedback.pose)
-        self._calc_handle_pose(T)
-        self._data_callback(f"{self.name}_pose", T)
-        self.server.applyChanges()
-
-    def _callback_angel(self, feedback):
-        T_marker = pose_to_matrix(feedback.pose)
-        coneM = self._get_marker(f"{self.name}_Pos")
-        T_cone = pose_to_matrix(coneM.pose)
-
-        # vector from cone's origin to marker
-        v = T_marker[0:3, 3] - T_cone[0:3, 3]
-        self._scale = numpy.linalg.norm(v)
-        self._angle = numpy.arccos(numpy.maximum(0, T_cone[0:3, 2].dot(v) / self._scale))
-
-        self._calc_handle_pose(T_cone)
-        # coneM.controls[0].markers[0].points = cone(self._angle, self._scale).points
-        self._update_marker(coneM)
-        self._data_callback(f"{self.name}_angle", self._angle)
-        self.server.applyChanges()

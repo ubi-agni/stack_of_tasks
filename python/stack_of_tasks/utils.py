@@ -1,3 +1,5 @@
+from typing import Iterable
+
 import numpy as np
 
 
@@ -11,19 +13,25 @@ def skew(w):
     return np.array([[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]])
 
 
-def prettyprintMatrix(inmatrix):
-    matrix = []
+def prettyprintMatrix(matrix):
+
+    str_matrix = []
     maxL = 0
-    for row in inmatrix:
+    for row in matrix:
         col = []
-        for x in row:
-            s = f"{x:.2e}"
+        if isinstance(row, Iterable):
+            for x in row:
+                s = f"{x:.2e}"
+                maxL = max(len(s), maxL)
+                col.append(s)
+        else:
+            s = f"{row:.2e}"
             maxL = max(len(s), maxL)
             col.append(s)
-        matrix.append(col)
+        str_matrix.append(col)
 
     s = ""
-    for r in matrix[:-1]:
+    for r in str_matrix[:-1]:
         for x in r[:-1]:
             s += f"{x :^{maxL}}│"
         s += f"{r[-1] :^{maxL}}"
@@ -31,8 +39,8 @@ def prettyprintMatrix(inmatrix):
         s += ("─" * maxL + "┼") * (len(r) - 1) + "─" * maxL
         s += "\n"
 
-    for r in matrix[-1][:-1]:
+    for r in str_matrix[-1][:-1]:
         s += f"{r :^{maxL}}│"
-    s += f"{matrix[-1][-1] :^{maxL}}"
+    s += f"{str_matrix[-1][-1] :^{maxL}}"
 
     return s

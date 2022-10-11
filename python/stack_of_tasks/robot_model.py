@@ -182,6 +182,9 @@ class MimicJoint(ActiveJoint):
         self.offset = offset
         self.twist *= self.multiplier
 
+    def T_motion(self, joint_angle):
+        return super().T_motion(joint_angle * self.multiplier + self.offset)
+
 
 class RobotModel:
     def __init__(self, param="robot_description"):
@@ -281,14 +284,10 @@ class RobotModel:
             T_offset = joint.T  # fixed transform from parent to joint frame
 
             if isinstance(joint, ActiveJoint):
-                if isinstance(joint, MimicJoint):
-                    value = joint_values[joint.idx] * joint.multiplier + joint.offset
-                else:
-                    value = joint_values[joint.idx]
 
                 # transform twist from current joint frame (joint.axis) into eef frame (via T^-1)
                 twist = adjoint(T, inverse=True).dot(joint.twist)
-                T_motion = joint.T_motion(value)
+                T_motion = joint.T_motion(joint_values[joint.idx])
                 # post-multiply joint's motion transform (rotation / translation along joint axis)
                 T_offset = T_offset.dot(T_motion)
 

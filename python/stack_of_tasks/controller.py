@@ -5,7 +5,6 @@ import numpy as np
 import rospy
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from tf import transformations as tf
-from sensor_msgs.msg import JointState
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
 from stack_of_tasks.robot_model import RobotModel
@@ -36,94 +35,45 @@ class Controller(object):
         self.joint_callback = Callback()
         self.control_step_callback = Callback()
 
-        self.robot = RobotModel(param=ns_prefix + "robot_description")
+        self.robot = RobotModel(
+            param=ns_prefix + "robot_description",
+            ns_prefix=ns_prefix,
+            publish_joints=publish_joints,
+        )
+
+        self.robot.joints_changed.append(self.robot_joints_changed)
 
         self.target_link = target_link
         self.target_offset = transform
 
-        self.N = len(self.robot.active_joints)  # number of (active) joints
-
-        self.T = np.zeros((4, 4))
-        self.J = np.zeros((6, self.N))
-        self._joint_position = np.zeros(self.N)
+        self.T, self.J = self.robot.fk(self.target_link)
 
         self.task_hierarchy = TaskHierarchy()
-        self.solver = solver_class(self.N, **solver_options)
-
-        self.mins = np.array([j.min for j in self.robot.active_joints])
-        self.maxs = np.array([j.max for j in self.robot.active_joints])
-
-        # fetch initial joint states from rosparams
-        self.initial_joints = rospy.get_param(
-            ns_prefix + "initial_joints", default=0.5 * (self.mins + self.maxs)
-        )
-        if isinstance(self.initial_joints, dict):
-            names = [j.name for j in self.robot.active_joints]
-            for name, value in self.initial_joints.items():
-                try:
-                    self._joint_position[names.index(name)] = value
-                except:
-                    pass
-            self.initial_joints = self._joint_position
-
-        # configure publishing joint states
-        if publish_joints:
-            joint_msg = JointState()
-            joint_msg.name = [j.name for j in self.robot.active_joints]
-            joint_pub = rospy.Publisher(
-                ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
-            )
-
-            def _send_joint(joint_values):
-                joint_msg.position = joint_values
-                joint_pub.publish(joint_msg)
-
-            self.joint_callback.append(lambda: _send_joint(self._joint_position))
+        self.solver = solver_class(self.robot.N, **solver_options)
 
         self.last_dq = None
-        self.reset()  # trigger initialization callbacks
 
-    @property
-    def joint_position(self):
-        return self._joint_position
-
-    @joint_position.setter
-    def joint_position(self, values):
-        self._joint_position = values
-
-        T, J = self.robot.fk(self.target_link, values)
-        T = T.dot(self.target_offset)
-
-        self.T = T
-        self.J = J
-        self.joint_callback()
-
-    def reset(self, randomness=0):
-        # center = 0.5 * (self.maxs + self.mins)
-        center = self.initial_joints
-        width = 0.5 * (self.maxs - self.mins) * randomness
-        self.joint_position = center + width * (np.random.random_sample(width.shape) - 0.5)
-
-    def actuate(self, q_delta):
-        self.joint_position += q_delta.ravel()
+    def robot_joints_changed(self):
+        self.T, self.J = self.robot.fk(self.target_link)
+        self.T = self.T.dot(self.target_offset)
 
     def check_end(self):
         pass
 
     def hierarchic_control(self, targets):
-        lb = np.maximum(-0.01, (self.mins * 0.95 - self._joint_position) / self.rate)
-        ub = np.minimum(0.01, (self.maxs * 0.95 - self._joint_position) / self.rate)
+        lb = np.maximum(-0.01, (self.robot.mins * 0.95 - self.robot.joint_values) / self.rate)
+        ub = np.minimum(0.01, (self.robot.maxs * 0.95 - self.robot.joint_values) / self.rate)
 
         self.task_hierarchy.compute(targets)
 
-        dq, tcr = self.solver.solve(
+        dq, _ = self.solver.solve(
             self.task_hierarchy.hierarchy, lb, ub, warmstart=self.last_dq
         )
 
         self.last_dq = dq
 
         if dq is not None:
-            self.actuate(dq)
+            self.robot.actuate(dq)
             # return tcr[0] < 1e-12 or all(i < 1e-8 for i in tcr)
 
         self.control_step_callback()
@@ -173,7 +123,6 @@ if __name__ == "__main__":
     c.control_step_callback.append(lambda: set_target("T", c.T))
     c.control_step_callback.append(lambda: set_target("J", c.J))
 
-    c.reset()
     c.control_step_callback()
 
     mc = MarkerControl()

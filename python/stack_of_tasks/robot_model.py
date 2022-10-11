@@ -230,6 +230,8 @@ class RobotModel:
         self.joint_state.name = [j.name for j in self.active_joints]
         self.joints_changed = Callback()
 
+        self._fk_cache: Dict[Joint, numpy.ndarray, numpy.ndarray] = {}
+
         # set initial joint positions
         if rospy.has_param(ns_prefix + "initial_joints"):
             self.joint_state.position = numpy.empty((self.N))
@@ -257,8 +259,12 @@ class RobotModel:
     @joint_values.setter
     def joint_values(self, joint_position):
         self.joint_state.position = joint_position
+        self.clear_cache()
         self._send_joints()
         self.joints_changed()
+
+    def clear_cache(self):
+        self._fk_cache.clear()
 
     def _send_joints(self):
         if self._publish_joints:
@@ -325,45 +331,31 @@ class RobotModel:
 
         return dict([(joint, parent)]) if joint.parent is None else dict()
 
-    def fk(self, target_joint_name: str):
-        """Calculates forward kinematric for all joints up to ``target_joint_name``
+    def _fk_recursive(self, joint):
+        if joint in self._fk_cache:
+            return self._fk_cache[joint]
 
+        if joint is None:
+            return numpy.identity(4), numpy.zeros((6, self.N))
 
-        Args:
-            target_joint_name (str): Name of target joint
-            joint_values (Dict[str, float]): current joint values
+        T_offset = joint.T
+        T_prev, J_prev = self._fk_recursive(joint.parent)
 
-        Returns:
-            (NDArray, NDArray): Return Transformation T and Jacobi matrix
-        """
+        if isinstance(joint, ActiveJoint):
+            T_offset = T_offset.dot(joint.T_motion(self.joint_values[joint.idx]))
 
-        T = numpy.identity(4)
-        J = numpy.zeros((6, len(self.active_joints)))
-        joint = self.links.get(target_joint_name, None) or self.joints[target_joint_name]
+            J_prev = adjoint(T_offset, inverse=True).dot(J_prev)
+            J_prev[:, joint.idx] = joint.twist
+        else:
+            J_prev = adjoint(T_offset, inverse=True).dot(J_prev)
 
-        while joint is not None:
-            T_offset = joint.T  # fixed transform from parent to joint frame
+        a, b = T_prev.dot(T_offset), J_prev
+        self._fk_cache[joint] = a, b
+        return a, b
 
-            if isinstance(joint, ActiveJoint):
-
-                # transform twist from current joint frame (joint.axis) into eef frame (via T^-1)
-                twist = adjoint(T, inverse=True).dot(joint.twist)
-                T_motion = joint.T_motion(self.joint_values[joint.idx])
-                # post-multiply joint's motion transform (rotation / translation along joint axis)
-                T_offset = T_offset.dot(T_motion)
-
-                # update the Jacobian
-                J[:, joint.idx] += twist  # add twist contribution
-
-            # pre-multiply joint transform with T (because traversing from eef to root)
-            T = T_offset.dot(T)  # T' = joint.T * T_motion * T
-            # climb upwards to parent joint
-            joint = joint.parent
-
-        # As we climbed the kinematic tree from end-effector to base frame, we have
-        # represented all Jacobian twists w.r.t. the end-effector frame.
-        # Now transform all twists into the orientation of the base frame
-        R = T[0:3, 0:3]
-        Ad_R = numpy.zeros((6, 6))
-        Ad_R[:3, :3] = Ad_R[3:, 3:] = R
-        return T, Ad_R.dot(J)
+    def fk(self, target_joint_name: str, final_transform=True):
+        T, J = self._fk_recursive(self.joints[target_joint_name])
+        if final_transform:
+            return T, adjoint(T[:3, :3]).dot(J)
+        else:
+            return T, J

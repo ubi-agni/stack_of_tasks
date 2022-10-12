@@ -1,0 +1,20 @@
+<launch>
+	<arg name="rviz" default="true" />
+
+	<!-- Load URDF -->
+	<param name="robot_description" command="xacro '$(find franka_description)/robots/dual_panda/dual_panda_example.urdf.xacro' arm_id_1:=left arm_id_2:=right" />
+	<rosparam param="initial_joints">[0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785, 0.035,   0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785, 0.035]</rosparam>
+
+	<!-- Publish static tf for world -> base -->
+	<node name="virtual_joint" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 world base" />
+
+	<!-- Publish joint states -->
+	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+		<rosparam param="source_list">[target_joint_states]</rosparam>
+	</node>
+	<!-- Given the published joint states, publish tf for all robot links -->
+	<node name="rsp" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" />
+
+	<!-- Run Rviz -->
+	<node if="$(arg rviz)" name="$(anon rviz)" pkg="rviz" type="rviz" output="screen" args="-d $(dirname)/dual.rviz" required="true" />
+</launch>

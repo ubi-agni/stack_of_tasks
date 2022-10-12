@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
+from typing import Union
 
 from interactive_markers.interactive_marker_server import (
     InteractiveMarkerFeedback,
     InteractiveMarkerServer,
 )
 from tf import transformations as tf
+from geometry_msgs.msg import Pose, PoseStamped
 from visualization_msgs.msg import InteractiveMarkerControl
 
 from stack_of_tasks.utils import OffsetTransform
@@ -27,14 +29,11 @@ class ControlMarker(IAMarker, ABC):
         )
 
     @abstractmethod
-    def _setup_marker(self, name, pose, scale, additional_marker=None):
+    def _setup_marker(
+        self, name: str, pose: Union[Pose, PoseStamped], scale: float, additional_marker=None
+    ):
         self.marker = self._create_interactive_marker(
-            self.server,
-            name,
-            scale=scale,
-            pose=pose,
-            callback=self._callback,
-            frame_id="world",
+            self.server, name, scale=scale, pose=pose, callback=self._callback
         )
 
         if additional_marker:
@@ -44,7 +43,9 @@ class ControlMarker(IAMarker, ABC):
             else:
                 self._add_display_marker(self.marker, "", additional_marker)
 
-        self._data_callback(self.name, OffsetTransform(self.marker.header.frame_id, pose))
+        self._data_callback(
+            self.name, OffsetTransform(self.marker.header.frame_id, self.marker.pose)
+        )
 
     def delete(self):
         self.server.erase(self.name)

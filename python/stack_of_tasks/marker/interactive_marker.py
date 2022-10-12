@@ -4,7 +4,7 @@ import numpy
 
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from tf import transformations as tf
-from geometry_msgs.msg import Point, Quaternion, Vector3
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 
@@ -18,7 +18,6 @@ class IAMarker(ABC):
         name: str,
         pose,
         scale: float,
-        frame: str = "world",
         callback=None,
         **kwargs,
     ) -> None:
@@ -63,12 +62,14 @@ class IAMarker(ABC):
         return self.server.marker_contexts.get(name).int_marker
 
     @staticmethod
-    def _create_interactive_marker(
-        server, name, scale, pose, frame_id="world", callback=None
-    ):
+    def _create_interactive_marker(server, name, scale, pose, callback=None):
         im = InteractiveMarker(name=name)
-        im.header.frame_id = frame_id
-        im.pose = create_pose(pose)
+        if isinstance(pose, PoseStamped):
+            im.header.frame_id = pose.header.frame_id
+            im.pose = pose.pose
+        else:
+            im.header.frame_id = "world"
+            im.pose = pose if isinstance(pose, Pose) else create_pose(pose)
         im.scale = scale
 
         server.insert(im, callback)
@@ -125,20 +126,14 @@ class IAMarker(ABC):
     def sphere(radius=0.02, color=ColorRGBA(1, 0, 1, 0.5), **kwargs):
         """Create a sphere marker"""
         return Marker(
-            type=Marker.SPHERE,
-            scale=Vector3(radius, radius, radius),
-            color=color,
-            **kwargs,
+            type=Marker.SPHERE, scale=Vector3(radius, radius, radius), color=color, **kwargs
         )
 
     @staticmethod
     def cylinder(radius=0.02, len=0.1, color=ColorRGBA(1, 0, 0, 1), **kwargs):
         """Create a cylinder marker"""
         return Marker(
-            type=Marker.CYLINDER,
-            scale=Vector3(radius, radius, len),
-            color=color,
-            **kwargs,
+            type=Marker.CYLINDER, scale=Vector3(radius, radius, len), color=color, **kwargs
         )
 
     @staticmethod

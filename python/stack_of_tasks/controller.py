@@ -5,6 +5,7 @@ import numpy as np
 import rospy
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
 from stack_of_tasks.robot_model import RobotModel
@@ -161,12 +162,17 @@ if __name__ == "__main__":
     def set_target(name, data):
         targets[name] = data
 
-    frame = OffsetTransform("panda_hand_tcp")
+    frame = OffsetTransform("right_hand_tcp")
     c = Controller(solver_class=HQPSolver, rho=0.1)
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
-    marker = SixDOFMarker(name="pose", scale=0.1, pose=c.fk(frame.frame)[0].dot(frame.offset))
+    # define marker relative to left_hand_tcp with an offset
+    offset = PoseStamped(
+        header=Header(frame_id="left_hand_tcp"),
+        pose=Pose(position=Vector3(0, 0, 0.2), orientation=Quaternion(1, 0, 0, 0)),
+    )
+    marker = SixDOFMarker(name="pose", scale=0.1, pose=offset)
     mc.add_marker(marker, marker.name)
 
     # setup tasks

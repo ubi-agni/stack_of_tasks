@@ -161,16 +161,12 @@ if __name__ == "__main__":
     def set_target(name, data):
         targets[name] = data
 
-    frame = OffsetTransform(
-        "panda_link8",
-        Pose(position=Vector3(0, 0, 0.105), orientation=Quaternion(0, 0, 0.382, 0.924)),
-    )
+    frame = OffsetTransform("panda_hand_tcp")
     c = Controller(solver_class=HQPSolver, rho=0.1)
-    frame_pose = c.fk(frame.frame)[0].dot(frame.offset)
 
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
-    marker = SixDOFMarker(name="pose", scale=0.1, pose=frame_pose)
+    marker = SixDOFMarker(name="pose", scale=0.1, pose=c.fk(frame.frame)[0].dot(frame.offset))
     mc.add_marker(marker, marker.name)
 
     # setup tasks

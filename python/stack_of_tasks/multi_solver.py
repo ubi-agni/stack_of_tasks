@@ -60,10 +60,7 @@ class Main:
 
         controller.reset()
 
-        frame = OffsetTransform(
-            f"{name}_link8",
-            Pose(position=Vector3(0, 0, 0.105), orientation=Quaternion(0, 0, 0.382, 0.924)),
-        )
+        frame = OffsetTransform(f"{name}_hand_tcp")
         return controller, frame
 
     def run(self):

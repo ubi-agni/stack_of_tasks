@@ -14,7 +14,7 @@ class Callback(list):
 
 
 class OffsetTransform:
-    def __init__(self, frame: str, offset: Union[NDArray, Pose]) -> None:
+    def __init__(self, frame: str, offset: Union[NDArray, Pose] = np.eye(4)) -> None:
         self.frame = frame
         if isinstance(offset, Pose):
             self.offset = pose_to_matrix(offset)

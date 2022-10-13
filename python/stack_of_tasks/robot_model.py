@@ -191,7 +191,7 @@ class MimicJoint(ActiveJoint):
 
 
 class RobotModel:
-    def __init__(self, param="robot_description", ns_prefix="", publish_joints=True):
+    def __init__(self, param="robot_description"):
 
         self.joints: Dict[str, Joint] = {}  # map joint name to joint instance
         self.links = {}  # map link name to driving joint instance
@@ -210,7 +210,7 @@ class RobotModel:
             joint.parent = self.links.get(parent, None)
 
         # store list of active joints
-        self.active_joints = [j for j in self.joints.values() if type(j) == ActiveJoint]
+        self.active_joints = [j for j in self.joints.values() if isinstance(j, ActiveJoint)]
         for idx, joint in enumerate(self.active_joints):
             joint.idx = idx
 
@@ -224,59 +224,6 @@ class RobotModel:
         self.N = len(self.active_joints)
         self.mins = numpy.array([j.min for j in self.active_joints])
         self.maxs = numpy.array([j.max for j in self.active_joints])
-
-        # store joint positions
-        self.joint_state = JointState()
-        self.joint_state.name = [j.name for j in self.active_joints]
-        self.joints_changed = Callback()
-
-        self._fk_cache: Dict[Joint, numpy.ndarray, numpy.ndarray] = {}
-
-        # set initial joint positions
-        if rospy.has_param(ns_prefix + "initial_joints"):
-            self.joint_state.position = numpy.empty((self.N))
-
-            init_pos = rospy.get_param(ns_prefix + "initial_joints")  # TODO dict vs list
-            for idx, value in enumerate(init_pos):
-                self.joint_state.position[idx] = value
-        else:
-            self.joint_state.position = 0.5 * (self.mins + self.maxs)
-
-        # publish joints ?
-        self._publish_joints = publish_joints
-
-        if self._publish_joints:
-            self._joint_pub = rospy.Publisher(
-                ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
-            )
-
-            self._send_joints()
-
-    @property
-    def joint_values(self):
-        return self.joint_state.position
-
-    @joint_values.setter
-    def joint_values(self, joint_position):
-        self.joint_state.position = joint_position
-        self.clear_cache()
-        self._send_joints()
-        self.joints_changed()
-
-    def clear_cache(self):
-        self._fk_cache.clear()
-
-    def _send_joints(self):
-        if self._publish_joints:
-            self._joint_pub.publish(self.joint_state)
-
-    def set_random_joints(self, randomness=0):
-        center = 0.5 * (self.maxs + self.mins)
-        width = 0.5 * (self.maxs - self.mins) * randomness
-        self.joint_values = center + width * (numpy.random.random_sample(width.shape) - 0.5)
-
-    def actuate(self, joint_position_delta):
-        self.joint_values += joint_position_delta
 
     def _mimic_base(self, name: str, multiplier: float, offset: float):
         "recursively resolve MimicJoint to its base"
@@ -331,12 +278,71 @@ class RobotModel:
 
         return dict([(joint, parent)]) if joint.parent is None else dict()
 
+
+class RobotState:
+    def __init__(self, model: RobotModel, ns_prefix="", publish_joints=True) -> None:
+        self._rm = model
+
+        # store joint positions
+        self.joint_state = JointState()
+        self.joint_state.name = [j.name for j in self._rm.active_joints]
+
+        self.joints_changed = Callback()
+
+        self._fk_cache: Dict[Joint, numpy.ndarray, numpy.ndarray] = {}
+
+        # set initial joint positions
+        if rospy.has_param(ns_prefix + "initial_joints"):
+            self.joint_state.position = numpy.empty((self._rm.N))
+
+            init_pos = rospy.get_param(ns_prefix + "initial_joints")  # TODO dict vs list
+            for idx, value in enumerate(init_pos):
+                self.joint_state.position[idx] = value
+        else:
+            self.joint_state.position = 0.5 * (self._rm.mins + self._rm.maxs)
+
+        # publish joints ?
+        self._publish_joints = publish_joints
+
+        if self._publish_joints:
+            self._joint_pub = rospy.Publisher(
+                ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
+            )
+
+            self._send_joints()
+
+    @property
+    def joint_values(self):
+        return self.joint_state.position
+
+    @joint_values.setter
+    def joint_values(self, joint_position):
+        self.joint_state.position = joint_position
+        self.clear_cache()
+        self._send_joints()
+        self.joints_changed()
+
+    def clear_cache(self):
+        self._fk_cache.clear()
+
+    def _send_joints(self):
+        if self._publish_joints:
+            self._joint_pub.publish(self.joint_state)
+
+    def set_random_joints(self, randomness=0):
+        center = 0.5 * (self._rm.maxs + self._rm.mins)
+        width = 0.5 * (self._rm.maxs - self._rm.mins) * randomness
+        self.joint_values = center + width * (numpy.random.random_sample(width.shape) - 0.5)
+
+    def actuate(self, joint_position_delta):
+        self.joint_values += joint_position_delta
+
     def _fk_recursive(self, joint):
         if joint in self._fk_cache:
             return self._fk_cache[joint]
 
         if joint is None:
-            return numpy.identity(4), numpy.zeros((6, self.N))
+            return numpy.identity(4), numpy.zeros((6, self._rm.N))
 
         T_offset = joint.T
         T_prev, J_prev = self._fk_recursive(joint.parent)
@@ -354,7 +360,7 @@ class RobotModel:
         return a, b
 
     def fk(self, target_joint_name: str, final_transform=True):
-        T, J = self._fk_recursive(self.joints[target_joint_name])
+        T, J = self._fk_recursive(self._rm.joints[target_joint_name])
         if final_transform:
             return T, adjoint(T[:3, :3]).dot(J)
         else:

@@ -7,7 +7,7 @@ from interactive_markers.interactive_marker_server import InteractiveMarkerServe
 from tf import transformations as tf
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
-from stack_of_tasks.robot_model import RobotModel
+from stack_of_tasks.robot_model import RobotModel, RobotState
 from stack_of_tasks.solver.AbstactSolver import Solver
 from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
@@ -21,10 +21,11 @@ class Controller(object):
     def __init__(
         self,
         solver_class: Solver,
+        robot_model: RobotModel,
+        rate=50,
         transform=tf.quaternion_matrix([0, 0, 0.382, 0.924]).dot(
             tf.translation_matrix([0, 0, 0.105])
         ),
-        rate=50,
         publish_joints=True,
         target_link="panda_joint8",
         ns_prefix="",
@@ -35,34 +36,37 @@ class Controller(object):
         self.joint_callback = Callback()
         self.control_step_callback = Callback()
 
-        self.robot = RobotModel(
-            param=ns_prefix + "robot_description",
-            ns_prefix=ns_prefix,
-            publish_joints=publish_joints,
+        self.robot_model = robot_model
+        self.robot_state = RobotState(
+            robot_model, ns_prefix=ns_prefix, publish_joints=publish_joints
         )
 
-        self.robot.joints_changed.append(self.robot_joints_changed)
+        self.robot_state.joints_changed.append(self.robot_joints_changed)
 
         self.target_link = target_link
         self.target_offset = transform
 
-        self.T, self.J = self.robot.fk(self.target_link)
+        self.T, self.J = self.robot_state.fk(self.target_link)
 
         self.task_hierarchy = TaskHierarchy()
-        self.solver = solver_class(self.robot.N, **solver_options)
+        self.solver = solver_class(self.robot_model.N, **solver_options)
 
         self.last_dq = None
 
     def robot_joints_changed(self):
-        self.T, self.J = self.robot.fk(self.target_link)
+        self.T, self.J = self.robot_state.fk(self.target_link)
         self.T = self.T.dot(self.target_offset)
 
     def check_end(self):
         pass
 
     def hierarchic_control(self, targets):
-        lb = np.maximum(-0.01, (self.robot.mins * 0.95 - self.robot.joint_values) / self.rate)
-        ub = np.minimum(0.01, (self.robot.maxs * 0.95 - self.robot.joint_values) / self.rate)
+        lb = np.maximum(
+            -0.01, (self.robot_model.mins * 0.95 - self.robot_state.joint_values) / self.rate
+        )
+        ub = np.minimum(
+            0.01, (self.robot_model.maxs * 0.95 - self.robot_state.joint_values) / self.rate
+        )
 
         self.task_hierarchy.compute(targets)
 
@@ -73,7 +77,7 @@ class Controller(object):
         self.last_dq = dq
 
         if dq is not None:
-            self.robot.actuate(dq)
+            self.robot_state.actuate(dq)
             # return tcr[0] < 1e-12 or all(i < 1e-8 for i in tcr)
 
         self.control_step_callback()
@@ -113,12 +117,14 @@ if __name__ == "__main__":
     rospy.init_node("ik")
     rate = rospy.Rate(50)
 
+    robot = RobotModel("robot_description")
+
     def set_target(name, data):
         targets[name] = data
 
     targets = {}
 
-    c = Controller(solver_class=HQPSolver, rho=0.1)
+    c = Controller(solver_class=HQPSolver, robot_model=robot, rho=0.1)
 
     c.control_step_callback.append(lambda: set_target("T", c.T))
     c.control_step_callback.append(lambda: set_target("J", c.J))

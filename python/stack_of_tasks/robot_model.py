@@ -349,19 +349,21 @@ class RobotState:
 
         if isinstance(joint, ActiveJoint):
             T_offset = T_offset.dot(joint.T_motion(self.joint_values[joint.idx]))
+            T_offset = T_prev.dot(T_offset)
 
-            J_prev = adjoint(T_offset, inverse=True).dot(J_prev)
-            J_prev[:, joint.idx] = joint.twist
+            J_prev[:, joint.idx] += adjoint(T_offset).dot(joint.twist)
         else:
-            J_prev = adjoint(T_offset, inverse=True).dot(J_prev)
+            T_offset = T_prev.dot(T_offset)
 
-        a, b = T_prev.dot(T_offset), J_prev
+        a, b = T_offset, J_prev
+
         self._fk_cache[joint] = a, b
         return a, b
 
     def fk(self, target_joint_name: str, final_transform=True):
         T, J = self._fk_recursive(self._rm.joints[target_joint_name])
+
         if final_transform:
-            return T, adjoint(T[:3, :3]).dot(J)
+            return T, adjoint(T[:3, 3], inverse=True).dot(J)
         else:
             return T, J

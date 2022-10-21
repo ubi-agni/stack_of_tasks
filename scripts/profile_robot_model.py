@@ -8,14 +8,15 @@ import numpy
 
 import rospy
 
-from stack_of_tasks.robot_model import RobotModel
+from stack_of_tasks.robot_model import RobotModel, RobotState
 
 
 def _main():
 
     rospy.init_node("ik")
     numpy.set_printoptions(precision=2, linewidth=200)
-    rm = RobotModel(param="robot_description", ns_prefix="")
+    rm = RobotModel(param="robot_description")
+    rs = RobotState(rm)
 
     j = numpy.zeros((rm.N,))
     rm.joint_values = j
@@ -40,11 +41,8 @@ def _main():
 
     with Profile() as p:
         for j1, j2, j3 in random_joints:
-            rm.fk(j1)
-            rm.fk(j2)
-            rm.fk(j3)
-
-            rm.clear_cache()
+            rs.fk(j1)
+            rs.clear_cache()
 
     dump_stats(p, "Recursive, caching FK 3 random joints over 1000 runs")
 

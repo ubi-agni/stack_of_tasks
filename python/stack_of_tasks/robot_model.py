@@ -141,25 +141,11 @@ class ActiveJoint(Joint):
 
         if self.jtype is JointType.revolute:
             self.twist = numpy.block([numpy.zeros(3), self.axis])
+            self.T_motion = lambda q: tf.rotation_matrix(angle=q, direction=self.axis)
 
         elif self.jtype is JointType.prismatic:
             self.twist = numpy.block([self.axis, numpy.zeros(3)])
-
-    def T_motion(self, joint_angle):
-        """Returns transformmatrix for this joints motion, given a joint angle
-
-        Args:
-            joint_angle (float): Current joint angle
-
-        Returns:
-            Any: Transform matrix
-        """
-        if self.jtype is JointType.revolute:
-            return tf.quaternion_matrix(
-                tf.quaternion_about_axis(angle=joint_angle, axis=self.axis)
-            )
-        elif self.jtype is JointType.prismatic:
-            return tf.translation_matrix(joint_angle * self.axis)
+            self.T_motion = lambda q: tf.translation_matrix(q * self.axis)
 
 
 class MimicJoint(ActiveJoint):

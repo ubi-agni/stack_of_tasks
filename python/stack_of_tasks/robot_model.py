@@ -289,6 +289,7 @@ class RobotState:
 
         self.joints_changed = Callback()
 
+        # cache mapping joint -> (T, J)
         self._fk_cache: Dict[Joint, numpy.ndarray, numpy.ndarray] = {}
 
         # set initial joint positions
@@ -337,33 +338,32 @@ class RobotState:
     def actuate(self, joint_position_delta):
         self.joint_values += joint_position_delta
 
-    def _fk_recursive(self, joint):
-        if joint in self._fk_cache:
-            return self._fk_cache[joint]
-
+    def _fk(self, joint):
+        """Recursively compute forward kinematics and Jacobian (w.r.t. base) for joint"""
         if joint is None:
             return numpy.identity(4), numpy.zeros((6, self._rm.N))
 
-        T_offset = joint.T
-        T_prev, J_prev = self._fk_recursive(joint.parent)
+        if joint in self._fk_cache:
+            return self._fk_cache[joint]
+
+        T, J = self._fk(joint.parent)
 
         if isinstance(joint, ActiveJoint):
-            T_offset = T_offset.dot(joint.T_motion(self.joint_values[joint.idx]))
-            T_offset = T_prev.dot(T_offset)
-
-            J_prev[:, joint.idx] += adjoint(T_offset).dot(joint.twist)
+            T = T @ joint.T @ joint.T_motion(self.joint_values[joint.idx])
+            J[:, joint.idx] += adjoint(T).dot(joint.twist)
         else:
-            T_offset = T_prev.dot(T_offset)
+            T = T @ joint.T
 
-        a, b = T_offset, J_prev
+        self._fk_cache[joint] = result = T, J
+        return result
 
-        self._fk_cache[joint] = a, b
-        return a, b
-
-    def fk(self, target_joint_name: str, final_transform=True):
-        T, J = self._fk_recursive(self._rm.joints[target_joint_name])
-
-        if final_transform:
-            return T, adjoint(T[:3, 3], inverse=True).dot(J)
-        else:
-            return T, J
+    def fk(self, target_joint_name: str):
+        """
+        Compute FK and Jacobian for joint.
+        Jacobian uses standard robotics frame:
+        - orientation: base frame
+        - origin: end-effector frame
+        """
+        T, J = self._fk(self._rm.joints[target_joint_name])
+        # shift reference point of J into origin of frame T
+        return T, adjoint(T[:3, 3], inverse=True).dot(J)

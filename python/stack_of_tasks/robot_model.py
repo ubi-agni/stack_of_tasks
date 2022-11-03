@@ -195,8 +195,9 @@ class RobotModel:
         for joint, parent in unlinked.items():  # find parent for all not yet linked joints
             joint.parent = self.links.get(parent, None)
 
-        # store list of active joints
-        self.active_joints = [j for j in self.joints.values() if isinstance(j, ActiveJoint)]
+        # store list of active joints. Attention: Mimic joints are no true active joints!
+        self.active_joints = [j for j in self.joints.values() if type(j) is ActiveJoint]
+
         for idx, joint in enumerate(self.active_joints):
             joint.idx = idx
 

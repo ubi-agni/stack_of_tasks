@@ -7,7 +7,7 @@ from interactive_markers.interactive_marker_server import InteractiveMarkerServe
 from tf import transformations as tf
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
-from stack_of_tasks.robot_model import RobotModel, RobotState
+from stack_of_tasks.robot_model import JointStatePublisher, RobotModel, RobotState
 from stack_of_tasks.solver.AbstactSolver import Solver
 from stack_of_tasks.solver.HQPSolver import HQPSolver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
@@ -21,26 +21,26 @@ class Controller(object):
     def __init__(
         self,
         solver_class: Solver,
-        robot_model: RobotModel,
+        robot_model=None,
         rate=50,
         transform=tf.quaternion_matrix([0, 0, 0.382, 0.924]).dot(
             tf.translation_matrix([0, 0, 0.105])
         ),
-        publish_joints=True,
         target_link="panda_joint8",
         ns_prefix="",
-        **solver_options,
+        **solver_options
     ):
+
         self.rate = rate
 
         self.joint_callback = Callback()
         self.control_step_callback = Callback()
 
-        self.robot_model = robot_model
-        self.robot_state = RobotState(
-            robot_model, ns_prefix=ns_prefix, publish_joints=publish_joints
-        )
+        if robot_model is None:
+            robot_model = RobotModel()
 
+        self.robot_model = robot_model
+        self.robot_state = RobotState(robot_model, ns_prefix=ns_prefix)
         self.robot_state.joints_changed.append(self.robot_joints_changed)
 
         self.target_link = target_link
@@ -117,14 +117,13 @@ if __name__ == "__main__":
     rospy.init_node("ik")
     rate = rospy.Rate(50)
 
-    robot = RobotModel("robot_description")
-
     def set_target(name, data):
         targets[name] = data
 
     targets = {}
 
-    c = Controller(solver_class=HQPSolver, robot_model=robot, rho=0.1)
+    c = Controller(solver_class=HQPSolver, rho=0.1)
+    p = JointStatePublisher(c.robot_state, "")
 
     c.control_step_callback.append(lambda: set_target("T", c.T))
     c.control_step_callback.append(lambda: set_target("J", c.J))

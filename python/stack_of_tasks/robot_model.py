@@ -270,37 +270,36 @@ class RobotModel:
 
 
 class RobotState:
-    def __init__(self, model: RobotModel, ns_prefix="", publish_joints=True) -> None:
-        self._rm = model
+    def __init__(
+        self, model: RobotModel, ns_prefix: str = "", init_joint_values=None
+    ) -> None:
+        self.robot_model = model
 
         # store joint positions
         self.joint_state = JointState()
-        self.joint_state.name = [j.name for j in self._rm.active_joints]
+        self.joint_state.name = [j.name for j in self.robot_model.active_joints]
 
         self.joints_changed = Callback()
-
         # cache mapping joint -> (T, J)
         self._fk_cache: Dict[Joint, numpy.ndarray, numpy.ndarray] = {}
 
-        # set initial joint positions
-        if rospy.has_param(ns_prefix + "initial_joints"):
-            self.joint_state.position = numpy.empty((self._rm.N))
+        if init_joint_values is not None:
+            self.init_values = init_joint_values
+        elif rospy.has_param(ns_prefix + "initial_joints"):
 
-            init_pos = rospy.get_param(ns_prefix + "initial_joints")  # TODO dict vs list
-            for idx, value in enumerate(init_pos):
-                self.joint_state.position[idx] = value
+            self.joint_state.position = numpy.empty((self.robot_model.N))
+            init_pos = rospy.get_param(ns_prefix + "initial_joints")
+
+            if isinstance(init_pos, dict):
+                self.init_values = [
+                    init_pos[joint.name] for joint in self.robot_model.active_joints
+                ]
+            else:
+                self.init_values = init_pos
         else:
-            self.joint_state.position = 0.5 * (self._rm.mins + self._rm.maxs)
+            self.init_values = 0.5 * (self.robot_model.mins + self.robot_model.maxs)
 
-        # publish joints ?
-        self._publish_joints = publish_joints
-
-        if self._publish_joints:
-            self._joint_pub = rospy.Publisher(
-                ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
-            )
-
-            self._send_joints()
+        self.joint_state.position = self.init_values
 
     @property
     def joint_values(self):
@@ -310,20 +309,19 @@ class RobotState:
     def joint_values(self, joint_position):
         self.joint_state.position = joint_position
         self.clear_cache()
-        self._send_joints()
         self.joints_changed()
+
+    def reset(self):
+        self.joint_values = self.init_values
 
     def clear_cache(self):
         self._fk_cache.clear()
 
-    def _send_joints(self):
-        if self._publish_joints:
-            self._joint_pub.publish(self.joint_state)
-
     def set_random_joints(self, randomness=0):
-        center = 0.5 * (self._rm.maxs + self._rm.mins)
-        width = 0.5 * (self._rm.maxs - self._rm.mins) * randomness
-        self.joint_values = center + width * (numpy.random.random_sample(width.shape) - 0.5)
+        width = 0.5 * (self.robot_model.maxs - self.robot_model.mins) * randomness
+        self.joint_values = self.init_values + width * (
+            numpy.random.random_sample(width.shape) - 0.5
+        )
 
     def actuate(self, joint_position_delta):
         self.joint_values += joint_position_delta
@@ -331,7 +329,7 @@ class RobotState:
     def _fk(self, joint):
         """Recursively compute forward kinematics and Jacobian (w.r.t. base) for joint"""
         if joint is None:
-            return numpy.identity(4), numpy.zeros((6, self._rm.N))
+            return numpy.identity(4), numpy.zeros((6, self.robot_model.N))
 
         if joint in self._fk_cache:
             return self._fk_cache[joint]
@@ -354,6 +352,21 @@ class RobotState:
         - orientation: base frame
         - origin: end-effector frame
         """
-        T, J = self._fk(self._rm.joints[target_joint_name])
+        T, J = self._fk(self.robot_model.joints[target_joint_name])
         # shift reference point of J into origin of frame T
         return T, adjoint(T[:3, 3], inverse=True).dot(J)
+
+
+class JointStatePublisher:
+    def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
+        self.robot_state = robot_state
+        self.ns_prefix = ns_prefix
+
+        self._pub = rospy.Publisher(
+            ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
+        )
+
+        self.robot_state.joints_changed.append(self.publish_joints)
+
+    def publish_joints(self):
+        self._pub.publish(self.robot_state.joint_state)

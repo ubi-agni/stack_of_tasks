@@ -4,8 +4,9 @@ import numpy as np
 from numpy.typing import NDArray
 from typing_extensions import Self
 
-from . import HasJacobian, HasTransform, Transform, Jacobian
+from stack_of_tasks.utils import Callback
 
+from . import HasJacobian, HasTransform, Jacobian, Transform
 from .frames import RefFrame
 
 
@@ -20,22 +21,25 @@ class OffsetRefFrame(HasTransform):
 
     def __init__(self, frame: RefFrame, offset: NDArray = None) -> None:
         self.frame = frame
+        self.callback = Callback()
+
         if offset is None:
-            self.offset = np.identity(4)
+            self._offset = np.identity(4)
         else:
-            self.offset = offset
+            self._offset = offset
 
     @property
-    def T_offset(self):
-        return self.offset
+    def offset(self):
+        return self._offset
 
-    @T_offset.setter
-    def T_offset(self, offset: Transform):
-        self.T_offset = offset
+    @offset.setter
+    def offset(self, offset: Transform):
+        self._offset = offset
+        self.callback(self._offset)
 
     @property
     def T(self):
-        return self.frame.T.dot(self.offset)
+        return self.frame.T.dot(self._offset)
 
     @overload
     def translate(self, /, x: float) -> Self:

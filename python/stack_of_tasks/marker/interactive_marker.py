@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, abstractmethod
 
 import numpy
@@ -8,6 +9,8 @@ from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 
+from stack_of_tasks.ref_frame.frames import RefFrame, Transform, World
+from stack_of_tasks.ref_frame.offset import OffsetRefFrame
 from stack_of_tasks.utils import create_pose, pose_to_matrix
 
 
@@ -16,17 +19,15 @@ class IAMarker(ABC):
         self,
         server: InteractiveMarkerServer,
         name: str,
-        pose,
-        scale: float,
         callback=None,
         **kwargs,
     ) -> None:
 
         self.server = None
         self.name = name
-        self.data_callbacks = [callback] if callback else []
+        self.data_callbacks = [callback] if callback is not None else []
 
-        self._setup_server = lambda: self._setup_marker(name, pose, scale, **kwargs)
+        self._setup_server = lambda: self._setup_marker(name, **kwargs)
         if self.server:
             self.init_server(server)
 
@@ -37,10 +38,10 @@ class IAMarker(ABC):
             del self._setup_server
             self.server.applyChanges()
         else:
-            pass  # Warning, server already set
+            warnings.warn(f"Server of marker {self.name} was already set!", RuntimeWarning)
 
     @abstractmethod
-    def _setup_marker(self, name, pose, scale, **kwargs):
+    def _setup_marker(self, name, /, **kwargs):
         pass
 
     @abstractmethod
@@ -64,6 +65,7 @@ class IAMarker(ABC):
     @staticmethod
     def _create_interactive_marker(server, name, scale, pose, callback=None):
         im = InteractiveMarker(name=name)
+
         if isinstance(pose, PoseStamped):
             im.header.frame_id = pose.header.frame_id
             im.pose = pose.pose
@@ -221,30 +223,33 @@ class IAMarker(ABC):
 class ConeMarker(IAMarker):
     def __init__(
         self,
-        server: InteractiveMarkerServer,
-        pose,
+        server: InteractiveMarkerServer = None,
         name: str = "Cone",
+        frame: RefFrame = World(),
+        offset: Transform = None,
         scale: float = 1,
         angle=0.4,
         mode=InteractiveMarkerControl.ROTATE_3D,
     ) -> None:
-        super().__init__(server, pose=pose, name=name, scale=scale, angle=angle, mode=mode)
-
-    def _setup_marker(self, name, pose, scale, angle, mode):
         self._angle = angle
         self._scale = scale
+        super().__init__(server, name=name, frame=frame, offset=offset, mode=mode)
 
-        loc_marker = self._create_interactive_marker(
+    def _setup_marker(self, name, frame, offset, mode):
+        self.ref_frame = OffsetRefFrame(frame, offset)
+        self.ref_frame.callback.append(self._set_marker_pose)
+
+        self.loc_marker = self._create_interactive_marker(
             self.server,
             f"{self.name}_Pos",
-            pose=pose,
+            pose=self.ref_frame.offset,
             scale=0.1,
             callback=self._callback_pose,
         )
 
-        # self._add_display_marker(loc_marker, "", cone(self._angle, self._scale))
-        self._add_movement_control(loc_marker, "", InteractiveMarkerControl.MOVE_AXIS)
-        self._add_movement_control(loc_marker, "", InteractiveMarkerControl.ROTATE_AXIS)
+        self._add_display_marker(self.loc_marker, "", self.cone(self._angle, self._scale))
+        self._add_movement_control(self.loc_marker, "", InteractiveMarkerControl.MOVE_AXIS)
+        self._add_movement_control(self.loc_marker, "", InteractiveMarkerControl.ROTATE_AXIS)
 
         handle_marker = self._create_interactive_marker(
             self.server,
@@ -253,6 +258,7 @@ class ConeMarker(IAMarker):
             callback=self._callback_angle,
             pose=tf.translation_matrix([0, 0, 0]),
         )
+
         self._add_movement_marker(
             handle_marker, "", InteractiveMarkerControl.MOVE_PLANE, marker=self.sphere()
         )
@@ -262,9 +268,11 @@ class ConeMarker(IAMarker):
         self._add_movement_control(
             handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="y"
         )
+        self.server.applyChanges()
 
+        self._calc_handle_pose(self.ref_frame.offset)
         self._data_callback(f"{self.name}_angle", self._angle)
-        self._data_callback(f"{self.name}_pose", pose)
+        self.server.applyChanges()
 
     def provided_targets(self):
         return ["{self.name}_Pos", "{self.name}_Handle"]
@@ -280,24 +288,29 @@ class ConeMarker(IAMarker):
         )
         self.server.setPose(f"{self.name}_Handle", create_pose(T_root.dot(handle_pose)))
 
+    def _set_marker_pose(self, transform):
+        self.loc_marker.pose = create_pose(transform)
+        self._calc_handle_pose(transform)
+        self.server.applyChanges()
+
     def _callback_pose(self, feedback):
-        T = pose_to_matrix(feedback.pose)
-        self._calc_handle_pose(T)
-        self._data_callback(f"{self.name}_pose", T)
+        self.ref_frame.offset = pose_to_matrix(feedback.pose)
+
+        self._calc_handle_pose(pose_to_matrix(feedback.pose))
         self.server.applyChanges()
 
     def _callback_angle(self, feedback):
         T_marker = pose_to_matrix(feedback.pose)
         coneM = self._get_marker(f"{self.name}_Pos")
-        T_cone = pose_to_matrix(coneM.pose)
 
         # vector from cone's origin to marker
-        v = T_marker[0:3, 3] - T_cone[0:3, 3]
+        v = T_marker[0:3, 3] - self.ref_frame.offset[0:3, 3]
         self._scale = numpy.linalg.norm(v)
-        self._angle = numpy.arccos(numpy.maximum(0, T_cone[0:3, 2].dot(v) / self._scale))
+        self._angle = numpy.arccos(
+            numpy.maximum(0, self.ref_frame.offset[0:3, 2].dot(v) / self._scale)
+        )
 
-        self._calc_handle_pose(T_cone)
-        # coneM.controls[0].markers[0].points = cone(self._angle, self._scale).points
+        coneM.controls[0].markers[0].points = self.cone(self._angle, self._scale).points
         self._update_marker(coneM)
         self._data_callback(f"{self.name}_angle", self._angle)
         self.server.applyChanges()

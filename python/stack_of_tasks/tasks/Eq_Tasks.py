@@ -24,7 +24,6 @@ class OrientationTask(RelativeTask, EqTask):
     def _compute(self):
 
         self.A = self.J()[3:]
-        print(self.A)
         tA = self.frameA.T
         delta = np.identity(4)
         delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.frameB.T[0:3, 0:3])

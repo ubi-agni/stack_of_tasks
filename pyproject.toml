@@ -2,6 +2,7 @@
 line-length = 94
 
 [tool.pylint.'MESSAGES CONTROL']
+init-hook = 'import sys; sys.path.append("python")'
 max-line-length = 94
 disable = [
     "C0103", # (invalid-name)

@@ -6,7 +6,7 @@ This module contains different Joint and RobotModel representation with an forwa
 
 
 from enum import Enum
-from typing import Dict
+from typing import Dict, Tuple
 from xml.dom import Node, minidom
 
 import numpy
@@ -281,7 +281,7 @@ class RobotState:
 
         self.joints_changed = Callback()
         # cache mapping joint -> (T, J)
-        self._fk_cache: Dict[Joint, numpy.ndarray, numpy.ndarray] = {}
+        self._fk_cache: Dict[Joint, Tuple[numpy.ndarray, numpy.ndarray]] = {}
 
         if init_joint_values is not None:
             self.init_values = init_joint_values

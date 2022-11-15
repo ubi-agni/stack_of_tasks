@@ -4,14 +4,18 @@
 This module contains different Joint and RobotModel representation with an forward kinematic.
 """
 
+
 from enum import Enum
-from typing import List
+from typing import Dict, Tuple
 from xml.dom import Node, minidom
 
 import numpy
 
 import rospy
 from tf import transformations as tf
+from sensor_msgs.msg import JointState
+
+from stack_of_tasks.utils import Callback
 
 
 def hat(w):
@@ -137,25 +141,14 @@ class ActiveJoint(Joint):
 
         if self.jtype is JointType.revolute:
             self.twist = numpy.block([numpy.zeros(3), self.axis])
+            self._motion = lambda q: tf.rotation_matrix(angle=q, direction=self.axis)
 
         elif self.jtype is JointType.prismatic:
             self.twist = numpy.block([self.axis, numpy.zeros(3)])
+            self._motion = lambda q: tf.translation_matrix(q * self.axis)
 
     def T_motion(self, joint_angle):
-        """Returns transformmatrix for this joints motion, given a joint angle
-
-        Args:
-            joint_angle (float): Current joint angle
-
-        Returns:
-            Any: Transform matrix
-        """
-        if self.jtype is JointType.revolute:
-            return tf.quaternion_matrix(
-                tf.quaternion_about_axis(angle=joint_angle, axis=self.axis)
-            )
-        elif self.jtype is JointType.prismatic:
-            return tf.translation_matrix(joint_angle * self.axis)
+        return self._motion(joint_angle)
 
 
 class MimicJoint(ActiveJoint):
@@ -182,13 +175,18 @@ class MimicJoint(ActiveJoint):
         self.offset = offset
         self.twist *= self.multiplier
 
+    def T_motion(self, joint_angle):
+        return super().T_motion(joint_angle * self.multiplier + self.offset)
+
 
 class RobotModel:
     def __init__(self, param="robot_description"):
-        self.joints = {}  # map joint name to joint instance
+
+        self.joints: Dict[str, Joint] = {}  # map joint name to joint instance
         self.links = {}  # map link name to driving joint instance
         self.active_joints = []  # active joints
 
+        # load model
         description = rospy.get_param(param)
         doc = minidom.parseString(description)
         robot = next(getElementsByTag(doc, "robot"))
@@ -200,8 +198,9 @@ class RobotModel:
         for joint, parent in unlinked.items():  # find parent for all not yet linked joints
             joint.parent = self.links.get(parent, None)
 
-        # store list of active joints
-        self.active_joints = [j for j in self.joints.values() if type(j) == ActiveJoint]
+        # store list of active joints. Attention: Mimic joints are no true active joints!
+        self.active_joints = [j for j in self.joints.values() if type(j) is ActiveJoint]
+
         for idx, joint in enumerate(self.active_joints):
             joint.idx = idx
 
@@ -209,6 +208,12 @@ class RobotModel:
         for joint in self.joints.values():
             if isinstance(joint, MimicJoint):
                 joint.idx = joint.base.idx
+
+        # infos derived from model
+
+        self.N = len(self.active_joints)
+        self.mins = numpy.array([j.min for j in self.active_joints])
+        self.maxs = numpy.array([j.max for j in self.active_joints])
 
     def _mimic_base(self, name: str, multiplier: float, offset: float):
         "recursively resolve MimicJoint to its base"
@@ -258,52 +263,110 @@ class RobotModel:
     def _add_joint(self, joint: Joint, parent: str, child: str):
         self.joints[joint.name] = joint
         self.links[child] = joint
+
         joint.parent = self.links.get(parent, None)
+
         return dict([(joint, parent)]) if joint.parent is None else dict()
 
-    def fk(self, target_joint_name: str, joint_values: List[float]):
-        """Calculates forward kinematric for all joints up to ``target_joint_name``
 
+class RobotState:
+    def __init__(
+        self, model: RobotModel, ns_prefix: str = "", init_joint_values=None
+    ) -> None:
+        self.robot_model = model
 
-        Args:
-            target_joint_name (str): Name of target joint
-            joint_values (Dict[str, float]): current joint values
+        # store joint positions
+        self.joint_state = JointState()
+        self.joint_state.name = [j.name for j in self.robot_model.active_joints]
 
-        Returns:
-            (NDArray, NDArray): Return Transformation T and Jacobi matrix
+        self.joints_changed = Callback()
+        # cache mapping joint -> (T, J)
+        self._fk_cache: Dict[Joint, Tuple[numpy.ndarray, numpy.ndarray]] = {}
+
+        if init_joint_values is not None:
+            self.init_values = init_joint_values
+        elif rospy.has_param(ns_prefix + "initial_joints"):
+
+            self.joint_state.position = numpy.empty((self.robot_model.N))
+            init_pos = rospy.get_param(ns_prefix + "initial_joints")
+
+            if isinstance(init_pos, dict):
+                self.init_values = [
+                    init_pos[joint.name] for joint in self.robot_model.active_joints
+                ]
+            else:
+                self.init_values = init_pos
+        else:
+            self.init_values = 0.5 * (self.robot_model.mins + self.robot_model.maxs)
+
+        self.joint_state.position = self.init_values
+
+    @property
+    def joint_values(self):
+        return self.joint_state.position
+
+    @joint_values.setter
+    def joint_values(self, joint_position):
+        self.joint_state.position = joint_position
+        self.clear_cache()
+        self.joints_changed()
+
+    def reset(self):
+        self.joint_values = self.init_values
+
+    def clear_cache(self):
+        self._fk_cache.clear()
+
+    def set_random_joints(self, randomness=0):
+        width = 0.5 * (self.robot_model.maxs - self.robot_model.mins) * randomness
+        self.joint_values = self.init_values + width * (
+            numpy.random.random_sample(width.shape) - 0.5
+        )
+
+    def actuate(self, joint_position_delta):
+        self.joint_values += joint_position_delta
+
+    def _fk(self, joint):
+        """Recursively compute forward kinematics and Jacobian (w.r.t. base) for joint"""
+        if joint is None:
+            return numpy.identity(4), numpy.zeros((6, self.robot_model.N))
+
+        if joint in self._fk_cache:
+            return self._fk_cache[joint]
+
+        T, J = self._fk(joint.parent)
+
+        if isinstance(joint, ActiveJoint):
+            T = T @ joint.T @ joint.T_motion(self.joint_values[joint.idx])
+            J[:, joint.idx] += adjoint(T).dot(joint.twist)
+        else:
+            T = T @ joint.T
+
+        self._fk_cache[joint] = result = T, J
+        return result
+
+    def fk(self, target_joint_name: str):
         """
+        Compute FK and Jacobian for joint.
+        Jacobian uses standard robotics frame:
+        - orientation: base frame
+        - origin: end-effector frame
+        """
+        T, J = self._fk(self.robot_model.joints[target_joint_name])
+        # shift reference point of J into origin of frame T
+        return T, adjoint(T[:3, 3], inverse=True).dot(J)
 
-        T = numpy.identity(4)
-        J = numpy.zeros((6, len(self.active_joints)))
-        joint = self.links.get(target_joint_name, None) or self.joints[target_joint_name]
 
-        while joint is not None:
-            T_offset = joint.T  # fixed transform from parent to joint frame
+class JointStatePublisher:
+    def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
+        self.robot_state = robot_state
+        self.ns_prefix = ns_prefix
 
-            if isinstance(joint, ActiveJoint):
-                if isinstance(joint, MimicJoint):
-                    value = joint_values[joint.idx] * joint.multiplier + joint.offset
-                else:
-                    value = joint_values[joint.idx]
+        self._pub = rospy.Publisher(
+            ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
+        )
 
-                # transform twist from current joint frame (joint.axis) into eef frame (via T^-1)
-                twist = adjoint(T, inverse=True).dot(joint.twist)
-                T_motion = joint.T_motion(value)
-                # post-multiply joint's motion transform (rotation / translation along joint axis)
-                T_offset = T_offset.dot(T_motion)
+        self.robot_state.joints_changed.append(self.publish_joints)
 
-                # update the Jacobian
-                J[:, joint.idx] += twist  # add twist contribution
-
-            # pre-multiply joint transform with T (because traversing from eef to root)
-            T = T_offset.dot(T)  # T' = joint.T * T_motion * T
-            # climb upwards to parent joint
-            joint = joint.parent
-
-        # As we climbed the kinematic tree from end-effector to base frame, we have
-        # represented all Jacobian twists w.r.t. the end-effector frame.
-        # Now transform all twists into the orientation of the base frame
-        R = T[0:3, 0:3]
-        Ad_R = numpy.zeros((6, 6))
-        Ad_R[:3, :3] = Ad_R[3:, 3:] = R
-        return T, Ad_R.dot(J)
+    def publish_joints(self):
+        self._pub.publish(self.robot_state.joint_state)

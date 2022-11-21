@@ -22,15 +22,19 @@ class OffsetTransform:
             self.offset = offset
 
 
-def create_pose(T: NDArray) -> Pose:
+def create_pose(T: NDArray, frame_id=None) -> Pose:
     if T.shape != (4, 4):  # if not 4x4 matrix: assume position vector
         Tnew = np.identity(4)
         Tnew[0:3, 3] = T
         T = Tnew
 
-    return Pose(
-        position=Point(*T[0:3, 3]), orientation=Quaternion(*tf.quaternion_from_matrix(T))
+    p = Pose(
+        position=Point(*T[0:3, 3]),
+        orientation=Quaternion(
+            *tf.quaternion_from_matrix(T),
+        ),
     )
+    return p
 
 
 def pose_to_matrix(pose: Pose) -> NDArray:

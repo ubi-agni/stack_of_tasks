@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 This module contains different Joint and RobotModel representation with an forward kinematic.
 """

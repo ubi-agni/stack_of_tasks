@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-
-
 from random import getrandbits
 from time import time
 from typing import List
@@ -50,22 +47,3 @@ class PlotPublisher:
             d.samples.append(self._create_data_msg(i, timestamp, v))
 
         self.data_publisher.publish(d)
-
-
-if __name__ == "__main__":
-    from math import cos, sin
-
-    import rospy
-
-    rospy.init_node("plot_publisher")
-
-    p = PlotPublisher()
-    p.add_plot("plot", ["a/a", "a/b", "a/c"])
-    rospy.sleep(0.1)
-    t = 0.0
-    rate = rospy.Rate(100)
-
-    while not rospy.is_shutdown():
-        p.plot("plot", [cos(t), sin(t), 2 * cos(t)], t)
-        t += 0.01
-        rate.sleep()

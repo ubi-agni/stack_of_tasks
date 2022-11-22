@@ -11,7 +11,7 @@ class InverseJacobianSolver(Solver):
     def __init__(
         self, number_of_joints, stack_of_tasks: List[List[EqTask]], **options
     ) -> None:
-        super().__init__(number_of_joints, **options)
+        super().__init__(number_of_joints, stack_of_tasks, **options)
         self.threshold = options.get("threshold", 0.01)
 
     def stack_changed(self):
@@ -26,7 +26,7 @@ class InverseJacobianSolver(Solver):
         qdot = np.zeros(self.N)
 
         residuals = []
-        for task_level in self._stack_of_tasks:
+        for task_level in self._stack_of_tasks.hierarchy:
 
             # combine tasks of this level into one
             J = np.concatenate([task.A for task in task_level], axis=0)
@@ -61,4 +61,4 @@ class InverseJacobianSolver(Solver):
         scales = np.maximum(qdot / lower_dq, qdot / upper_dq)
         scales[np.logical_not(np.isfinite(scales))] = 1.0
         qdot /= np.maximum(1.0, np.max(scales))
-        return qdot, residuals
+        return qdot

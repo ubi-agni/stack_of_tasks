@@ -3,7 +3,6 @@ from .Task import Task, TaskHierarchyType
 
 class TaskHierarchy:
     def __init__(self) -> None:
-
         self.hierarchy: TaskHierarchyType = []
 
     @property
@@ -23,7 +22,7 @@ class TaskHierarchy:
         if (l := self.depth) < 0:
             self.add_task_lower(task)
         else:
-            self.hierarchy[l].append(task)
+            self.add_task_at(task, l)
 
     def remove_level(self, level):
         pass

@@ -352,7 +352,7 @@ class RobotState:
         - orientation: base frame
         - origin: end-effector frame
         """
-        T, J = self._fk(self.robot_model.joints[target_joint_name])
+        T, J = self._fk(self.robot_model.links[target_joint_name])
         # shift reference point of J into origin of frame T
         return T, adjoint(T[:3, 3], inverse=True).dot(J)
 

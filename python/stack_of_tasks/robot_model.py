@@ -16,51 +16,7 @@ from tf import transformations as tf
 from sensor_msgs.msg import JointState
 
 from stack_of_tasks.utils import Callback
-
-
-def hat(w):
-    """
-    Generates skew-symmetric matrix.
-    Usefull for cross product as matrix operation.
-
-    Args:
-        w (NDArray): Left side vector of cross product
-
-    Returns:
-        NDArray: Matrix
-    """
-    return numpy.array([[0, -w[2], w[1]], [w[2], 0, -w[0]], [-w[1], w[0], 0]])
-
-
-def adjoint(T, inverse=False):
-    """
-    Generates the adjoint matrix for given Transform T.
-
-    Args:
-        T (NDArray): Transform matrix.
-        inverse (bool, optional): Inverse adjoint. Defaults to False.
-
-    Returns:
-        NDArray: Adjoint matrix
-    """
-    if T.shape == (4, 4):
-        R = T[0:3, 0:3]
-        p = T[0:3, 3]
-    elif T.shape == (3, 3):
-        R = T
-        p = numpy.zeros(3)
-    else:
-        R = numpy.identity(3)
-        p = T
-    r = numpy.zeros((6, 6))
-    if inverse:
-        r[:3, :3] = r[3:, 3:] = R.T
-        r[:3, 3:] = R.T.dot(hat(-p))
-    else:
-        r[:3, :3] = r[3:, 3:] = R
-        r[:3, 3:] = hat(p).dot(R)
-
-    return r
+from stack_of_tasks.utils.transform_math import adjoint
 
 
 def getElementsByTag(elem, name):

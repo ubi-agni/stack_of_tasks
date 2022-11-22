@@ -15,6 +15,8 @@ class InverseJacobianSolver(Solver):
         self.threshold = options.get("threshold", 0.01)
 
     def stack_changed(self):
+        # TODO check if stack consists of only EQ-Tasks, Warn if task is not Hard (type will be ignored in this solver)
+        # count task-sizes, error larger than self.N (can not be solved by this solver)
         pass
 
     def _invert_smooth_clip(self, s):
@@ -23,9 +25,11 @@ class InverseJacobianSolver(Solver):
     def solve(self, lower_dq, upper_dq, **options):
         N = np.identity(self.N)  # nullspace projector of previous tasks
         JA = np.zeros((0, self.N))  # accumulated Jacobians
+
         qdot = np.zeros(self.N)
 
         residuals = []
+
         for task_level in self._stack_of_tasks.hierarchy:
 
             # combine tasks of this level into one
@@ -55,10 +59,17 @@ class InverseJacobianSolver(Solver):
             VN = Vt[accepted_singular_values:].T
             N = VN.dot(VN.T)
 
-        self.nullspace = VN  # remember nullspace basis
+        # self.nullspace = VN  # remember nullspace basis
 
         # uniformly scale qdot if any limit is exceeded
         scales = np.maximum(qdot / lower_dq, qdot / upper_dq)
         scales[np.logical_not(np.isfinite(scales))] = 1.0
         qdot /= np.maximum(1.0, np.max(scales))
+
+        for l in self._stack_of_tasks.hierarchy:
+            for t in l:
+                t: EqTask
+                t.residual = (t.A @ qdot) - t.bound
+                t.violation = np.allclose(t.residual, 0)
+
         return qdot

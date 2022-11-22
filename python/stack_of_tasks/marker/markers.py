@@ -11,7 +11,7 @@ from visualization_msgs.msg import InteractiveMarkerControl
 
 from stack_of_tasks.ref_frame.frames import RefFrame, Transform, World
 from stack_of_tasks.ref_frame.offset import OffsetRefFrame
-from stack_of_tasks.utils import create_pose, pose_to_matrix
+from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 
 from .interactive_marker import IAMarker
 
@@ -71,7 +71,7 @@ class ControlMarker(IAMarker, ABC):
         # )
 
     def _set_marker_pose(self, transform):
-        self.marker.pose = create_pose(transform)
+        self.marker.pose = matrix_to_pose(transform)
         self.server.applyChanges()
 
     def delete(self):
@@ -203,10 +203,10 @@ class ConeMarker(IAMarker):
             handle_marker, "", InteractiveMarkerControl.MOVE_PLANE, marker=self.sphere()
         )
         self._add_movement_control(
-            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="z"
+            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directions="z"
         )
         self._add_movement_control(
-            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="y"
+            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directions="y"
         )
         self.server.applyChanges()
         self._calc_handle_pose(pose)
@@ -226,7 +226,7 @@ class ConeMarker(IAMarker):
         handle_pose = tf.rotation_matrix(self._angle, [1, 0, 0]).dot(
             tf.translation_matrix([0, 0, self._scale])
         )
-        self.server.setPose(f"{self.name}_Handle", create_pose(T_root.dot(handle_pose)))
+        self.server.setPose(f"{self.name}_Handle", matrix_to_pose(T_root.dot(handle_pose)))
         self.server.applyChanges()
 
     def _callback_pose(self, feedback):

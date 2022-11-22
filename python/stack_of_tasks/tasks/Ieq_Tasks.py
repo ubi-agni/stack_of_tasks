@@ -1,6 +1,6 @@
 import numpy as np
 
-from stack_of_tasks.utils import skew
+from stack_of_tasks.utils.transform_math import skew
 
 from .Task import IeqTask, RelativeTask
 

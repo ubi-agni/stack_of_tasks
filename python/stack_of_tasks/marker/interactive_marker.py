@@ -11,7 +11,7 @@ from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, 
 
 from stack_of_tasks.ref_frame.frames import RefFrame, Transform, World
 from stack_of_tasks.ref_frame.offset import OffsetRefFrame
-from stack_of_tasks.utils import create_pose, pose_to_matrix
+from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 
 
 class IAMarker(ABC):
@@ -71,7 +71,7 @@ class IAMarker(ABC):
             im.pose = pose.pose
         else:
             im.header.frame_id = "world"
-            im.pose = pose if isinstance(pose, Pose) else create_pose(pose)
+            im.pose = pose if isinstance(pose, Pose) else matrix_to_pose(pose)
         im.scale = scale
 
         server.insert(im, callback)
@@ -104,9 +104,9 @@ class IAMarker(ABC):
 
     @staticmethod
     def _add_movement_control(
-        im, name, mode, directoins="xyz", or_mode=None, marker=None, markers=None
+        im, name, mode, directions="xyz", or_mode=None, marker=None, markers=None
     ):
-        for d in directoins:
+        for d in directions:
             control = InteractiveMarkerControl()
             control.name = f"{name}_{d}"
             control.interaction_mode = mode
@@ -266,10 +266,10 @@ class ConeMarker(IAMarker):
             handle_marker, "", InteractiveMarkerControl.MOVE_PLANE, marker=self.sphere()
         )
         self._add_movement_control(
-            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="z"
+            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directions="z"
         )
         self._add_movement_control(
-            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directoins="y"
+            handle_marker, "", InteractiveMarkerControl.MOVE_AXIS, directions="y"
         )
         self.server.applyChanges()
 
@@ -286,13 +286,14 @@ class ConeMarker(IAMarker):
         self.server.applyChanges()
 
     def _calc_handle_pose(self, T_root):
-        handle_pose = tf.rotation_matrix(self._angle, [1, 0, 0]).dot(
-            tf.translation_matrix([0, 0, self._scale])
+        handle_pose = tf.rotation_matrix(self._angle, [1, 0, 0]) @ tf.translation_matrix(
+            [0, 0, self._scale]
         )
-        self.server.setPose(f"{self.name}_Handle", create_pose(T_root.dot(handle_pose)))
+
+        self.server.setPose(f"{self.name}_Handle", matrix_to_pose(T_root @ (handle_pose)))
 
     def _set_marker_pose(self, transform):
-        self.loc_marker.pose = create_pose(transform)
+        self.loc_marker.pose = matrix_to_pose(transform)
         self._calc_handle_pose(transform)
         self.server.applyChanges()
 

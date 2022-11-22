@@ -1,17 +1,12 @@
 import numpy as np
 
-import rospy
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
-from tf import transformations as tf
 
 from stack_of_tasks.marker.interactive_marker import IAMarker
-from stack_of_tasks.robot_model import JointStatePublisher, RobotModel, RobotState
+from stack_of_tasks.robot_model import RobotModel, RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
-from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.utils import Callback
-
-# random.seed(1)
 
 
 class Controller(object):

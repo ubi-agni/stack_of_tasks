@@ -3,7 +3,7 @@ import numpy as np
 from tf.transformations import rotation_from_matrix
 
 from stack_of_tasks.tasks.Task import EqTask, RelativeTask
-from stack_of_tasks.utils import skew
+from stack_of_tasks.utils.transform_math import skew
 
 
 class PositionTask(RelativeTask, EqTask):

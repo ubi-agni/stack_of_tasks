@@ -17,8 +17,8 @@ class Solver(ABC):
 
     @abstractmethod
     def stack_changed(self):
-        pass
+        ...
 
     @abstractmethod
     def solve(self, lower_dq, upper_dq, **options):
-        pass
+        ...

@@ -12,9 +12,13 @@ def pose_to_matrix(pose: Pose) -> NDArray:
     return T
 
 
-def matrix_to_pose(p: NDArray = None, R: NDArray = None, T: NDArray = None) -> Pose:
-    if (p is None and R is None) or T is None:
+def matrix_to_pose(T: NDArray = None, p: NDArray = None, R: NDArray = None) -> Pose:
+
+    if (T is None and p is None and R is None) or (
+        T is not None and (p is not None or R is not None)
+    ):
         raise AttributeError()
+
     pose = Pose()
     if T is not None:
         pose.position = Point(*T[0:3, 3])

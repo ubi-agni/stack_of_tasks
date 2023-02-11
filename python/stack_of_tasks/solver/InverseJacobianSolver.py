@@ -3,14 +3,13 @@ from typing import List
 import numpy as np
 
 from stack_of_tasks.tasks.Task import EqTask
+from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 
 from .AbstractSolver import Solver
 
 
 class InverseJacobianSolver(Solver):
-    def __init__(
-        self, number_of_joints, stack_of_tasks: List[List[EqTask]], **options
-    ) -> None:
+    def __init__(self, number_of_joints, stack_of_tasks: TaskHierarchy, **options) -> None:
         super().__init__(number_of_joints, stack_of_tasks, **options)
         self.threshold = options.get("threshold", 0.01)
 
@@ -30,7 +29,7 @@ class InverseJacobianSolver(Solver):
 
         residuals = []
 
-        for task_level in self._stack_of_tasks.hierarchy:
+        for task_level in self._stack_of_tasks:
 
             # combine tasks of this level into one
             J = np.concatenate([task.A for task in task_level], axis=0)
@@ -66,7 +65,7 @@ class InverseJacobianSolver(Solver):
         scales[np.logical_not(np.isfinite(scales))] = 1.0
         qdot /= np.maximum(1.0, np.max(scales))
 
-        for l in self._stack_of_tasks.hierarchy:
+        for l in self._stack_of_tasks:
             for t in l:
                 t: EqTask
                 t.residual = (t.A @ qdot) - t.bound

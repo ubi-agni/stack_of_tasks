@@ -29,7 +29,7 @@ def setup(controller: Controller, mc):
         weight=0,
     )
 
-    controller.task_hierarchy.add_task_lower(pos)
+    controller.task_hierarchy.append_task(pos)
     controller.solver.stack_changed()
 
 
@@ -44,7 +44,7 @@ def main():
     mc = MarkerControl()
     mc.marker_data_callback.append(set_target)
 
-    controller = Controller(solver_class=InverseJacobianSolver, rho=0.01)
+    controller = Controller(solver_class=OSQPSolver, rho=0.01)
     _ = JointStatePublisher(controller.robot_state)
     setup(controller, mc)
 

@@ -29,7 +29,7 @@ class OSQPSolver(HqpSolver):
 
         dq = solution.x[: self.N]
 
-        for task in self._stack_of_tasks.hierarchy[level_index]:
+        for task in self._stack_of_tasks[level_index]:
             b = task.A.dot(dq)
             if isinstance(task, EqTask):
 

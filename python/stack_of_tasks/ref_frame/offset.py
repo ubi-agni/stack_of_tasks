@@ -1,25 +1,23 @@
-from typing import List, Union, overload
+from typing import Optional, overload
+from typing_extensions import Self
 
 import numpy as np
-from numpy.typing import NDArray
-from typing_extensions import Self
 
 from stack_of_tasks.utils import Callback
 
-from . import HasJacobian, HasTransform, Jacobian, Transform
-from .frames import RefFrame
+from . import HasJacobian, HasTransform, Jacobian, Transform, Transformable
 
 
-class OffsetRefFrame(HasTransform):
+class Offset(HasTransform, Transformable):
     @overload
-    def __init__(self, frame: RefFrame):
+    def __init__(self, frame: HasTransform):
         ...
 
     @overload
-    def __init__(self, frame: RefFrame, offset: Transform):
+    def __init__(self, frame: HasTransform, offset: Transform):
         ...
 
-    def __init__(self, frame: RefFrame, offset: NDArray = None) -> None:
+    def __init__(self, frame: HasTransform, offset: Optional[Transform] = None) -> None:
         self.frame = frame
         self.callback = Callback()
 
@@ -34,76 +32,24 @@ class OffsetRefFrame(HasTransform):
 
     @offset.setter
     def offset(self, offset: Transform):
-        self._offset = offset
+        self._offset[:] = offset
         self.callback(self._offset)
 
     @property
     def T(self):
         return self.frame.T.dot(self._offset)
 
-    @overload
-    def translate(self, /, x: float) -> Self:
-        pass
-
-    @overload
-    def translate(self, /, y: float) -> Self:
-        pass
-
-    @overload
-    def translate(self, /, z: float) -> Self:
-        pass
-
-    @overload
-    def translate(self, /, x: float, y: float) -> Self:
-        pass
-
-    @overload
-    def translate(self, /, x: float, z: float) -> Self:
-        pass
-
-    @overload
-    def translate(self, /, y: float, z: float) -> Self:
-        pass
-
-    @overload
-    def translate(self, /, x: float, y: float, z: float) -> Self:
-        pass
-
-    @overload
-    def translate(self, /, vector: List[float]) -> Self:
-        pass
-
-    def translate(
-        self,
-        /,
-        x: float = None,
-        y: float = None,
-        z: float = None,
-        vector: Union[NDArray, List[float]] = None,
-    ) -> Self:
-        t = np.identity(4)
-        if vector is not None:
-            t[:3, 3] = vector
-
-        if x is not None:
-            t[0, 3] = x
-
-        if y is not None:
-            t[1, 3] = y
-
-        if z is not None:
-            t[2, 3] = z
-
-        self.offset = self.offset.dot(t)
-
-        return self
-
-    def transform(self, matrix: Transform) -> Self:
+    def transform(self: Self, matrix: Transform) -> Self:
         self.offset = self.offset.dot(matrix)
         return self
 
 
-class OffsetJointFrame(OffsetRefFrame, HasJacobian):
+class OffsetWithJacobian(Offset, HasJacobian):
+    def __init__(self, frame, offset: Optional[Transform] = None):
+        assert isinstance(frame, HasTransform) and isinstance(frame, HasJacobian)
+        super().__init__(frame, offset)
+        self.frame: HasJacobian
+
     @property
     def J(self) -> Jacobian:
         return self.frame.J

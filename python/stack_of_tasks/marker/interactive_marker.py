@@ -9,8 +9,9 @@ from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 
-from stack_of_tasks.ref_frame.frames import RefFrame, Transform, World
-from stack_of_tasks.ref_frame.offset import OffsetRefFrame
+from stack_of_tasks.ref_frame.frames import RefFrame, World
+from stack_of_tasks.ref_frame import Transform
+
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 
 
@@ -238,8 +239,8 @@ class ConeMarker(IAMarker):
         self._scale = scale
         super().__init__(server, name=name, frame=frame, offset=offset, mode=mode)
 
-    def _setup_marker(self, name, frame, offset, mode):
-        self.ref_frame = OffsetRefFrame(frame, offset)
+    def _setup_marker(self, name, frame: RefFrame, offset, mode):
+        self.ref_frame = frame.transform(offset)
         self.ref_frame.callback.append(self._set_marker_pose)
 
         self.loc_marker = self._create_interactive_marker(

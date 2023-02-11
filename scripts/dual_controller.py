@@ -7,7 +7,7 @@ import tf.transformations as tf
 from stack_of_tasks.controller import Controller, MarkerControl
 from stack_of_tasks.marker.markers import SixDOFMarker
 from stack_of_tasks.ref_frame.frames import JointFrame
-from stack_of_tasks.ref_frame.offset import OffsetJointFrame
+from stack_of_tasks.ref_frame.offset import OffsetWithJacobian
 from stack_of_tasks.robot_model import JointStatePublisher
 from stack_of_tasks.solver.CVXOPTSolver import CVXOPTSolver
 from stack_of_tasks.solver.OSQPSolver import OSQPSolver
@@ -39,15 +39,15 @@ def setup(controller: Controller, mc):
 
     orientation = OrientationTask(
         frame_left,
-        OffsetJointFrame(frame_right, tf.quaternion_matrix([0.5, 0.5, 0, 0])),
+        OffsetWithJacobian(frame_right, tf.quaternion_matrix([0.5, 0.5, 0, 0])),
         TaskSoftnessType.linear,
         PositionTask.RelativeType.RELATIVE,
         weight=0,
     )
 
-    controller.task_hierarchy.add_task_lower(pos)
-    controller.task_hierarchy.add_task_lower(relative)
-    controller.task_hierarchy.add_task_same(orientation)
+    controller.task_hierarchy.append_task(pos)
+    controller.task_hierarchy.append_task(relative)
+    controller.task_hierarchy[1].append(orientation)
     controller.solver.stack_changed()
 
 

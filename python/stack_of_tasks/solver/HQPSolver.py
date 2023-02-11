@@ -105,7 +105,7 @@ class HqpSolver(Solver):
         self.m_ns = 0
 
         # find number of slacks
-        for level in self._stack_of_tasks.hierarchy:
+        for level in self._stack_of_tasks:
             level_slacks = level_ieq_r = level_sieq_r = level_eq_r = 0
 
             for task in level:
@@ -174,7 +174,7 @@ class HqpSolver(Solver):
         self.sieq_rows = 0
         self.slacks = 0
 
-        for task in self._stack_of_tasks.hierarchy[level_index]:
+        for task in self._stack_of_tasks[level_index]:
             if task.is_task_type(TaskTypes.HARD_EQ):
 
                 self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
@@ -228,6 +228,7 @@ class HqpSolver(Solver):
                     self.N + self.slacks : self.N + self.slacks + task.task_size
                 ] = np.inf
 
+                print(self.sieq_rows, self.sieq_bound.shape)
                 self.sieq_bound[self.sieq_rows : self.sieq_rows + task.task_size] = (
                     task.bound if isinstance(task, EqTask) else task.lower_bound
                 )
@@ -274,7 +275,7 @@ class HqpSolver(Solver):
         self._set_bounds(lower_dq, upper_dq)
         dq_warmstart = options.pop("warmstart")
 
-        for level_index, _ in enumerate(self._stack_of_tasks.hierarchy):
+        for level_index, _ in enumerate(self._stack_of_tasks):
             # prepare matrices
 
             self._prepare_level(level_index)

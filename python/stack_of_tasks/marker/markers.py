@@ -9,8 +9,9 @@ from interactive_markers.interactive_marker_server import (
 )
 from visualization_msgs.msg import InteractiveMarkerControl
 
-from stack_of_tasks.ref_frame.frames import RefFrame, Transform, World
-from stack_of_tasks.ref_frame.offset import OffsetRefFrame
+from stack_of_tasks.ref_frame import Transform
+from stack_of_tasks.ref_frame.frames import RefFrame, World
+from stack_of_tasks.ref_frame.offset import Offset
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 
 from .interactive_marker import IAMarker
@@ -47,7 +48,10 @@ class ControlMarker(IAMarker, ABC):
         additional_marker=None,
     ):
 
-        self.ref_frame = OffsetRefFrame(frame, offset)
+        if isinstance(frame, Offset):
+            self.ref_frame = frame
+        else:
+            self.ref_frame = Offset(frame, offset)
 
         self.marker = self._create_interactive_marker(
             self.server,

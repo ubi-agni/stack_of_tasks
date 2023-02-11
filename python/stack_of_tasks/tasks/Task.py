@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from inspect import signature
+
+from numpy.typing import ArrayLike, NDArray
 from typing import Any, List, NoReturn, Optional, Tuple, Union, overload
 
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
 
 from stack_of_tasks.ref_frame import HasJacobian, HasTransform
 from stack_of_tasks.ref_frame.frames import JointFrame, RefFrame
-from stack_of_tasks.ref_frame.offset import OffsetJointFrame, OffsetRefFrame
+from stack_of_tasks.ref_frame.offset import Offset, OffsetWithJacobian
 from stack_of_tasks.robot_model import RobotModel
 
 
@@ -109,8 +110,8 @@ class RelativeTask(Task):
     @overload
     def __init__(
         self,
-        frameA: Union[JointFrame, OffsetJointFrame],
-        frameB: Union[JointFrame, OffsetJointFrame],
+        frameA: Union[JointFrame, OffsetWithJacobian],
+        frameB: Union[JointFrame, OffsetWithJacobian],
         softness: TaskSoftnessType,
         relType: RelativeType,
         weight: float = ...,
@@ -120,8 +121,8 @@ class RelativeTask(Task):
     @overload
     def __init__(
         self,
-        frameA: Union[JointFrame, OffsetJointFrame],
-        frameB: Union[RefFrame, OffsetRefFrame],
+        frameA: Union[JointFrame, OffsetWithJacobian],
+        frameB: Union[RefFrame, Offset],
         softness: TaskSoftnessType,
         weight: float = ...,
     ):
@@ -129,8 +130,8 @@ class RelativeTask(Task):
 
     def __init__(
         self,
-        frameA: Union[RefFrame, OffsetRefFrame],
-        frameB: Union[JointFrame, OffsetJointFrame],
+        frameA: Union[RefFrame, Offset, JointFrame, OffsetWithJacobian],
+        frameB: Union[RefFrame, Offset, JointFrame, OffsetWithJacobian],
         softness: TaskSoftnessType = TaskSoftnessType.linear,
         relType: Optional[RelativeType] = None,
         weight: float = 1.0,
@@ -155,11 +156,9 @@ class RelativeTask(Task):
                 self.J = lambda: self.frameA.J - self.frameB.J
 
         elif isinstance(self.frameA, HasJacobian):
-            print("FrameA")
             self.J = lambda: self.frameA.J
 
         elif isinstance(self.frameB, HasJacobian):
-            print("FrameB")
             self.J = lambda: -self.frameB.J
 
         else:

@@ -1,6 +1,9 @@
 [tool.black]
 line-length = 94
 
+[tool.pylint]
+extension-pkg-whitelist = "PyQt5"
+
 [tool.pylint.'MESSAGES CONTROL']
 init-hook = 'import sys; sys.path.append("python")'
 max-line-length = 94
@@ -17,5 +20,6 @@ line_length = 94
 known_msgs = "std_msgs,sensor_msgs,geometry_msgs,visualization_msgs"
 known_ros = "rospy,tf,interactive_markers"
 known_first_party = "stack_of_tasks"
-sections = "FUTURE,STDLIB,THIRDPARTY,ROS,MSGS,FIRSTPARTY,LOCALFOLDER"
+known_typing = "typing, typing_extensions, numpy.typing"
+sections = "FUTURE,STDLIB,TYPING,THIRDPARTY,ROS,MSGS,FIRSTPARTY,LOCALFOLDER"
 no_lines_before = "MSGS"

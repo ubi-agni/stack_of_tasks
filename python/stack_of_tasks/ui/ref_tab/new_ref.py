@@ -3,28 +3,13 @@ from __future__ import annotations
 from enum import Enum
 
 import typing
-from typing import List
 
-import numpy as np
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
-    QFormLayout,
-    QListView,
-    QPushButton,
-    QStyledItemDelegate,
-    QTreeView,
-    QWidget,
-)
+from PyQt5.QtWidgets import QWidget
 
-from stack_of_tasks.ref_frame.frames import JointFrame, RefFrame, World
 from stack_of_tasks.ref_frame.offset import HasJacobian, Offset, OffsetWithJacobian
 from stack_of_tasks.ui.ButtonDialog import ButtonDialog
-from stack_of_tasks.ui.generated.NewRefDialog import Ui_NewRefDialog
-from stack_of_tasks.ui.model import RawDataRole
 from stack_of_tasks.ui.model.enum_model import EnumModel, RawDataRole
-
-from .ref_details import Ref_Details
+from stack_of_tasks.ui.ref_tab.ref_details import Ref_Details
 
 
 class RefTypes(Enum):

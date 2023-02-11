@@ -1,18 +1,5 @@
-from typing import Optional
-
-from PyQt5.QtCore import QAbstractListModel, QModelIndex, QSize, Qt, pyqtSignal
-from PyQt5.QtWidgets import (
-    QComboBox,
-    QCompleter,
-    QItemDelegate,
-    QSizePolicy,
-    QTreeView,
-    QWidget,
-)
-
-from stack_of_tasks.tasks.Task import RelativeTask, Task, TaskSoftnessType
+from stack_of_tasks.tasks.Task import RelativeTask, TaskSoftnessType
 from stack_of_tasks.ui.data_input import DataInput
-from stack_of_tasks.ui.generated.TaskDetails import Ui_TaskDetails
 from stack_of_tasks.ui.model.enum_model import EnumModel, RawDataRole
 
 

@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import numpy as np
-from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt, pyqtSignal
-from PyQt5.QtWidgets import QTreeView, QWidget
-
 from stack_of_tasks.ref_frame.frames import RefFrame
 from stack_of_tasks.ref_frame.offset import Offset
 from stack_of_tasks.ui.data_input import DataInput
 from stack_of_tasks.ui.matrix_view import NumpyTableModel
-from stack_of_tasks.ui.model.av_ref import AvailableRefModel, RawDataRole
+from stack_of_tasks.ui.model.av_ref import AvailableRefModel
 
 
 class Ref_Details(DataInput):

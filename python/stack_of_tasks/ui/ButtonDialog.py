@@ -1,7 +1,4 @@
-from PyQt5.QtCore import QAbstractListModel, QModelIndex, QSize, Qt, pyqtSignal
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout
-
-from stack_of_tasks.ui.data_input import DataInput
 
 
 class ButtonDialog(QDialog):

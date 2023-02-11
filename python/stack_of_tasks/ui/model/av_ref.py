@@ -1,5 +1,5 @@
 import typing
-from typing import Dict, List
+from typing import Dict
 
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
 

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from functools import partial
-
 from typing import Optional
 
 from PyQt5 import QtWidgets
 
-from stack_of_tasks.tasks.Task import RelativeTask, Task
+from stack_of_tasks.tasks.Task import RelativeTask
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy, TaskItem
 from stack_of_tasks.ui.generated.TaskHierachy import Ui_TaskHierarchy
 from stack_of_tasks.ui.model.task_hierarchy import TaskHierarchyModel

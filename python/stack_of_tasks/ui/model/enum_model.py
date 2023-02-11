@@ -1,5 +1,7 @@
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex
 from enum import Enum
+
+from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
+
 from . import RawDataRole
 
 

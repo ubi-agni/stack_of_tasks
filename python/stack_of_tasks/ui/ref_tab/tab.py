@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from typing import List
-
-import numpy as np
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QListView
 
 from stack_of_tasks.ref_frame.offset import Offset
 from stack_of_tasks.ui.generated.Refs import Ui_Refs

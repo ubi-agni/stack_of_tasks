@@ -1,8 +1,7 @@
-from distutils import version
 from sys import version_info as vi
 
 from PyQt5 import Qt, QtWidgets
-from PyQt5.QtWidgets import QAction, QPushButton
+from PyQt5.QtWidgets import QPushButton
 
 from .generated.MainWindow import Ui_MainWindow
 

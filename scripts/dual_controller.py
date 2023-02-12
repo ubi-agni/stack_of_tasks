@@ -11,7 +11,7 @@ from stack_of_tasks.ref_frame.offset import OffsetWithJacobian
 from stack_of_tasks.robot_model import JointStatePublisher
 from stack_of_tasks.solver.CVXOPTSolver import CVXOPTSolver
 from stack_of_tasks.solver.OSQPSolver import OSQPSolver
-from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, PositionTask
+from stack_of_tasks.tasks import OrientationTask, PositionTask
 from stack_of_tasks.tasks.Task import TaskSoftnessType
 
 np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")

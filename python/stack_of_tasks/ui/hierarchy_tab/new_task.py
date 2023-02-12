@@ -2,14 +2,7 @@ import typing
 
 from PyQt5 import QtWidgets
 
-from stack_of_tasks.tasks.Eq_Tasks import (
-    DistanceTask,
-    OrientationTask,
-    ParallelTask,
-    PlaneTask,
-    PositionTask,
-)
-from stack_of_tasks.tasks.Ieq_Tasks import ConeTask
+from stack_of_tasks.tasks import *
 from stack_of_tasks.ui.ButtonDialog import ButtonDialog
 from stack_of_tasks.ui.hierarchy_tab.task_details import TaskDetails
 from stack_of_tasks.ui.model import RawDataRole

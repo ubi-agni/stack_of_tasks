@@ -9,7 +9,7 @@ from stack_of_tasks.ref_frame.frames import JointFrame
 from stack_of_tasks.robot_model import JointStatePublisher
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.solver.OSQPSolver import OSQPSolver
-from stack_of_tasks.tasks.Eq_Tasks import PositionTask
+from stack_of_tasks.tasks import PositionTask
 from stack_of_tasks.tasks.Task import TaskSoftnessType
 
 np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")

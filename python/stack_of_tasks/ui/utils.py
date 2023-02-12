@@ -1,15 +1,5 @@
+from stack_of_tasks import tasks
 from stack_of_tasks.marker.markers import OrientationMarker, PositionMarker, SixDOFMarker
-from stack_of_tasks.tasks.Tasks import (
-    ConeTask,
-    ConstantSpeed,
-    DistanceTask,
-    JointPos,
-    OrientationTask,
-    ParallelTask,
-    PlaneTask,
-    PositionTask,
-    PreventJointBounds,
-)
 
 TASK_MIME_FOTMAT_NAME = "application/sot-task"
 TASK_INSTANCE_MIME_FOTMAT_NAME = "application/sot-task-instanstance"
@@ -18,15 +8,12 @@ TASK_INSTANCE_MIME_FOTMAT_NAME = "application/sot-task-instanstance"
 # Task - class mapping
 
 TASK_CLASSES = [
-    PlaneTask,
-    PositionTask,
-    OrientationTask,
-    JointPos,
-    PreventJointBounds,
-    ConeTask,
-    ParallelTask,
-    DistanceTask,
-    ConstantSpeed,
+    tasks.PlaneTask,
+    tasks.PositionTask,
+    tasks.OrientationTask,
+    tasks.ConeTask,
+    tasks.ParallelTask,
+    tasks.DistanceTask,
 ]
 
 TASKS = {}

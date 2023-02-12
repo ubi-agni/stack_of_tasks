@@ -81,7 +81,7 @@ class Ui_Controller(QObject):
                 f = jf
             self.ref_model.add_ref(jf, n)
 
-        from stack_of_tasks.tasks.Eq_Tasks import PositionTask
+        from stack_of_tasks.tasks import PositionTask
         from stack_of_tasks.tasks.Task import TaskSoftnessType
 
         print(x, f)

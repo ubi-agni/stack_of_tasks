@@ -1,5 +1,6 @@
 from random import getrandbits
 from time import time
+
 from typing import List
 
 from plotjuggler_msgs.msg import DataPoint, DataPoints, Dictionary

@@ -1,8 +1,9 @@
 from abc import abstractmethod
+
+from numpy.typing import NDArray
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
 
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks.Task import EqTask, TaskSoftnessType, TaskTypes

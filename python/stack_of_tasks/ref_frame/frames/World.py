@@ -1,8 +1,8 @@
 import numpy as np
 
 from stack_of_tasks.ref_frame import Transform
-from stack_of_tasks.ref_frame.offset import Offset
 from stack_of_tasks.ref_frame.frames import RefFrame
+from stack_of_tasks.ref_frame.offset import Offset
 
 
 class World(RefFrame):

@@ -9,9 +9,8 @@ from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion, Vector3
 from std_msgs.msg import ColorRGBA, Header
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, Marker
 
-from stack_of_tasks.ref_frame.frames import RefFrame, World
 from stack_of_tasks.ref_frame import Transform
-
+from stack_of_tasks.ref_frame.frames import RefFrame, World
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 
 

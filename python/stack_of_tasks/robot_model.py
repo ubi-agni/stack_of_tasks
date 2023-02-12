@@ -4,8 +4,9 @@ This module contains different Joint and RobotModel representation with an forwa
 
 
 from enum import Enum
-from typing import Dict, Tuple
 from xml.dom import Node, minidom
+
+from typing import Dict, Tuple
 
 import numpy
 

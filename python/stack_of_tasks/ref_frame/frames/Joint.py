@@ -1,8 +1,7 @@
-from stack_of_tasks.robot_model import RobotState
-
 from stack_of_tasks.ref_frame import HasJacobian, Jacobian, Transform
-from stack_of_tasks.ref_frame.offset import OffsetWithJacobian
 from stack_of_tasks.ref_frame.frames import RefFrame
+from stack_of_tasks.ref_frame.offset import OffsetWithJacobian
+from stack_of_tasks.robot_model import RobotState
 
 
 class JointFrame(RefFrame, HasJacobian):

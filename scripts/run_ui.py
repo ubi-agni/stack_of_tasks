@@ -82,6 +82,9 @@ class SolverWorker(QThread):
         self.controller = controller
         self._rate = rate
         self._last_dq = None
+        self._joint_values = controller.robot_state.joint_values
+        self._mins = 0.95 * self.controller.robot_model.mins
+        self._maxs = 0.95 * self.controller.robot_model.maxs
 
     def stop(self):
         self.running = False
@@ -97,23 +100,8 @@ class SolverWorker(QThread):
         print("stopped run")
 
     def control_step(self):
-        lb = np.maximum(
-            -0.01,
-            (
-                self.controller.robot_model.mins * 0.95
-                - self.controller.robot_state.joint_values
-            )
-            / self._rate,
-        )
-
-        ub = np.minimum(
-            0.01,
-            (
-                self.controller.robot_model.maxs * 0.95
-                - self.controller.robot_state.joint_values
-            )
-            / self._rate,
-        )
+        lb = np.maximum(-0.01, (self._mins - self._joint_values) / self._rate)
+        ub = np.minimum(+0.01, (self._maxs - self._joint_values) / self._rate)
 
         self.controller.hierarchy.compute({})
 

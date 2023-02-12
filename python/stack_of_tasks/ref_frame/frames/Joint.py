@@ -1,5 +1,3 @@
-from typing_extensions import Self
-
 from stack_of_tasks.robot_model import RobotState
 
 from stack_of_tasks.ref_frame import HasJacobian, Jacobian, Transform
@@ -23,5 +21,5 @@ class JointFrame(RefFrame, HasJacobian):
         T, _ = self.robot_state.fk(self.joint)
         return T
 
-    def transform(self: Self, matrix: Transform) -> OffsetWithJacobian:
+    def transform(self, matrix: Transform) -> OffsetWithJacobian:
         return OffsetWithJacobian(self).transform(matrix)

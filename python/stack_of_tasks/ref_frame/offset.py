@@ -1,5 +1,4 @@
 from typing import Optional, overload
-from typing_extensions import Self
 
 import numpy as np
 
@@ -39,7 +38,7 @@ class Offset(HasTransform, Transformable):
     def T(self):
         return self.frame.T.dot(self._offset)
 
-    def transform(self: Self, matrix: Transform) -> Self:
+    def transform(self, matrix: Transform):
         self.offset = self.offset.dot(matrix)
         return self
 

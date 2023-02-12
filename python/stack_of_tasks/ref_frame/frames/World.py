@@ -1,5 +1,4 @@
 import numpy as np
-from typing_extensions import Self
 
 from stack_of_tasks.ref_frame import Transform
 from stack_of_tasks.ref_frame.offset import Offset
@@ -21,5 +20,5 @@ class World(RefFrame):
     def T(self) -> Transform:
         return self.__origin
 
-    def transform(self: Self, matrix: Transform) -> Offset:
+    def transform(self, matrix: Transform) -> Offset:
         return Offset(self).transform(matrix)

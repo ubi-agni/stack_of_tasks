@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Sequence, overload
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import Protocol, Self, runtime_checkable
+from typing_extensions import Protocol, runtime_checkable
 
 from tf.transformations import quaternion_matrix
 from abc import abstractmethod
@@ -35,7 +35,7 @@ class Transformable(Protocol):
         pass
 
     @overload
-    def transform(self: Self, matrix: Transform) -> Transformable:
+    def transform(self, matrix: Transform) -> Transformable:
         pass
 
     @overload

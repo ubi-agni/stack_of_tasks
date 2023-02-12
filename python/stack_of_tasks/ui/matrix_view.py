@@ -24,6 +24,16 @@ from PyQt5.QtWidgets import (
 
 FloatDataRole = Qt.UserRole + 1
 
+if not hasattr(QSize, "grownBy"):
+
+    def grownBy(self: QSize, margins: QMargins):
+        return QSize(
+            self.width() + margins.left() + margins.right(),
+            self.height() + margins.top() + margins.bottom(),
+        )
+
+    setattr(QSize, "grownBy", grownBy)
+
 
 class NumpyTableModel(QAbstractTableModel):
     def __init__(self, parent=None) -> None:

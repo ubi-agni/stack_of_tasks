@@ -37,17 +37,10 @@ class Ui_Controller(QObject):
         self._init_data()
 
         self.solver = OSQPSolver(self.robot_model.N, self.hierarchy, rho=0.01)
-
-        self._solver_thread = QThread(self)
-        self._solver_thread.setObjectName("main")
-        self._solver_thread.start()
-
         self._solver_worker = SolverWorker(self, 50)
-        self._solver_worker.moveToThread(self._solver_thread)
 
         self.ui = Ui(self.ref_model, self.hierarchy)
         self.ui.run_Button.clicked.connect(self.run_triggered)
-        self.ui.destroyed.connect(self._solver_thread.terminate)
 
         self.ui.show()
 
@@ -74,40 +67,27 @@ class Ui_Controller(QObject):
         if self._solver_worker.running:
             self._solver_worker.stop()
         else:
-            QMetaObject.invokeMethod(self._solver_worker, "start")
+            self._solver_worker.start()
 
     @pyqtSlot()
     def save_exit(self):
         self._solver_worker.stop()
-        self._solver_thread.quit()
+        self._solver_worker.wait(1000)  # wait for thread to actually finish
 
 
-class SolverWorker(QObject):
-
-    finished = pyqtSignal()
-    step_update = pyqtSignal()
-
-    def __init__(self, controller, rate: int) -> None:
+class SolverWorker(QThread):
+    def __init__(self, controller: Ui_Controller, rate: int) -> None:
         super().__init__()
         self.running = False
-
-        self.controller: Ui_Controller = controller
-
+        self.controller = controller
         self._rate = rate
         self._last_dq = None
-
-    def moveToThread(self, thread: QThread) -> None:
-        super().moveToThread(thread)
-
-    @pyqtSlot()
-    def start(self):
-        self.running = True
-        self.run()
 
     def stop(self):
         self.running = False
 
     def run(self):
+        self.running = True
         rt = rospy.Rate(self._rate)
         self.controller.solver.stack_changed()
         while self.running:

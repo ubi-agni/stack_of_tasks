@@ -21,24 +21,9 @@ from stack_of_tasks.ui.mainwindow import Ui
 from stack_of_tasks.ui.model.av_ref import AvailableRefModel
 
 
-class MarkerController:
-    def __init__(self) -> None:
-        self.marker_server = InteractiveMarkerServer("controller")
-        self.maker = []
-
-
 class Ui_Controller(QObject):
-
-    instance = None
-
-    @staticmethod
-    def get_instance():
-        return Ui_Controller.instance
-
     def __init__(self) -> None:
         super().__init__()
-
-        Ui_Controller.instance = self
 
         self.mc = MarkerControl()
 
@@ -68,25 +53,22 @@ class Ui_Controller(QObject):
 
     def _init_data(self):
         self.ref_model.add_ref(World(), "World")
-        x = Offset(World()).rotate(x=0, y=-0.383, z=0, w=0.924).translate(x=0.5, z=0.5)
-        self.ref_model.add_ref(x, "Target")
+        for name in self.robot_model.links.keys():
+            self.ref_model.add_ref(JointFrame(self.robot_state, name), name)
 
-        self.s = SixDOFMarker(frame=x, scale=0.25)
-        self.mc.add_marker(self.s, "")
-
-        f = None
-        for n in self.robot_model.links.keys():
-            jf = JointFrame(self.robot_state, n)
-            if n == "panda_hand_tcp":
-                f = jf
-            self.ref_model.add_ref(jf, n)
-
+    def init_controller(self, eef: str):
         from stack_of_tasks.tasks import PositionTask
         from stack_of_tasks.tasks.Task import TaskSoftnessType
 
-        print(x, f)
-        t = PositionTask(x, f, softness=TaskSoftnessType.linear, weight=1)
-        self.hierarchy.append_task(t)
+        target = Offset(World()).rotate(x=0, y=-0.383, z=0, w=0.924).translate(x=0.5, z=0.5)
+        self.ref_model.add_ref(target, "Target")
+
+        m = SixDOFMarker(frame=target, scale=0.25)
+        self.mc.add_marker(m, "target")
+
+        frame = JointFrame(self.robot_state, eef)
+        task = PositionTask(target, frame, softness=TaskSoftnessType.linear, weight=1)
+        self.hierarchy.append_task(task)
 
     def run_triggered(self):
         if self._solver_worker.running:
@@ -116,7 +98,6 @@ class SolverWorker(QObject):
 
     def moveToThread(self, thread: QThread) -> None:
         super().moveToThread(thread)
-        print(self.thread().objectName())
 
     @pyqtSlot()
     def start(self):
@@ -125,7 +106,6 @@ class SolverWorker(QObject):
 
     def stop(self):
         self.running = False
-        print("stopped")
 
     def run(self):
         rt = rospy.Rate(self._rate)
@@ -134,7 +114,7 @@ class SolverWorker(QObject):
             self.control_step()
             rt.sleep()
 
-        print("stopped_run")
+        print("stopped run")
 
     def control_step(self):
         lb = np.maximum(
@@ -174,6 +154,7 @@ def main():
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon("./python/stack_of_tasks/ui/assets/icon.png"))
     uic = Ui_Controller()
+    uic.init_controller("panda_hand_tcp")
     app.aboutToQuit.connect(uic.save_exit)
     app.exec()
 

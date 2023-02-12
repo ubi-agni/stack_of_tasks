@@ -57,6 +57,15 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        panda_hand_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        panda_hand_tcp:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: true
         panda_leftfinger:
           Alpha: 1
           Show Axes: false
@@ -67,7 +76,17 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        panda_link0_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         panda_link1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        panda_link1_sc:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -77,7 +96,17 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        panda_link2_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         panda_link3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        panda_link3_sc:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -87,7 +116,17 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        panda_link4_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         panda_link5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        panda_link5_sc:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -97,7 +136,17 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        panda_link6_sc:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         panda_link7:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        panda_link7_sc:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -105,7 +154,7 @@ Visualization Manager:
         panda_link8:
           Alpha: 1
           Show Axes: false
-          Show Trail: true
+          Show Trail: false
         panda_rightfinger:
           Alpha: 1
           Show Axes: false
@@ -159,9 +208,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.24479727447032928
+      Pitch: 0.3447971045970917
       Target Frame: base_link
-      Yaw: 1.2218022346496582
+      Yaw: 1.4368020296096802
     Saved: ~
 Window Geometry:
   Displays:
@@ -177,5 +226,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1460
-  X: 2064
-  Y: 45
+  X: 2560
+  Y: 26

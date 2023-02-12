@@ -6,7 +6,7 @@ This module contains different Joint and RobotModel representation with an forwa
 from enum import Enum
 from xml.dom import Node, minidom
 
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy
 
@@ -223,6 +223,13 @@ class RobotModel:
 
         return dict([(joint, parent)]) if joint.parent is None else dict()
 
+    def isEEF(self, link: str):
+        joint = self.links[link]
+        return not any([joint is j.parent for j in self.joints.values()])
+
+    def getEEFs(self) -> List[str]:
+        return {link for link in self.links if self.isEEF(link)}
+
 
 class RobotState:
     def __init__(
@@ -300,14 +307,14 @@ class RobotState:
         self._fk_cache[joint] = result = T, J
         return result
 
-    def fk(self, target_joint_name: str):
+    def fk(self, link: str):
         """
-        Compute FK and Jacobian for joint.
+        Compute FK and Jacobian for given link frame
         Jacobian uses standard robotics frame:
         - orientation: base frame
-        - origin: end-effector frame
+        - origin: link frame
         """
-        T, J = self._fk(self.robot_model.links[target_joint_name])
+        T, J = self._fk(self.robot_model.links[link])
         # shift reference point of J into origin of frame T
         return T, adjoint(T[:3, 3], inverse=True).dot(J)
 

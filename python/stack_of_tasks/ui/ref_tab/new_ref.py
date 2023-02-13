@@ -32,6 +32,6 @@ class AddRef(ButtonDialog):
         self._vl.insertWidget(0, self.data)
 
     def generate_ref(self):
-        root = self.data.rootRefComboBox.currentData(RawDataRole)
+        root = self.data._root.widget.currentData(RawDataRole)
         cls = OffsetWithJacobian if isinstance(root, HasJacobian) else Offset
-        return cls(root, self.data.v._data), self.data.nameLineEdit.text()
+        return cls(root, self.data._matrix_model._matrix), self.data._name.widget.text()

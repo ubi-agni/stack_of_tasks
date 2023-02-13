@@ -87,17 +87,21 @@ class AvailableRefModel(QAbstractItemModel):
                 self.dataChanged.emit(index, index)
 
     def add_ref(self, ref, name):
-        self.beginInsertRows(QModelIndex(), len(self._refs), len(self._refs))
         x = {"name": name, "obj": ref}
         section = self._data_to_section(ref)
 
         if section in self._sections:
+            first = len(self._refs[section])
+            parent = self.index(self._sections.index(section), 0)
+            self.beginInsertRows(parent, first, first + 1)
             self._refs[section].append(x)
+            self.endInsertRows()
         else:
+            first = len(self._sections)
+            self.beginInsertRows(QModelIndex(), first, first + 1)
             self._sections.append(section)
             self._refs[section] = [x]
-
-        self.endInsertRows()
+            self.endInsertRows()
 
     def ref(self, name):
         """Return reference with given name"""

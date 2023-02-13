@@ -39,13 +39,13 @@ class NumpyTableModel(QAbstractTableModel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-        self._matrix: np.ndarray = np.random.random((4, 4))
+        self._matrix: np.ndarray = np.identity(4)
 
     def rowCount(self, parent: QModelIndex = None) -> int:
-        return 4
+        return self._matrix.shape[0]
 
     def columnCount(self, parent: QModelIndex = None) -> int:
-        return 4
+        return self._matrix.shape[1]
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         return super().flags(index) | Qt.ItemIsEditable

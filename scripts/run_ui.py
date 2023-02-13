@@ -2,6 +2,7 @@
 
 import sys
 
+import debugpy
 import numpy as np
 from PyQt5.QtCore import QMetaObject, QObject, QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QIcon
@@ -89,6 +90,7 @@ class SolverWorker(QThread):
         self.running = False
 
     def run(self):
+        debugpy.debug_this_thread()
         self.running = True
         rt = rospy.Rate(self._rate)
         self.controller.solver.stack_changed()

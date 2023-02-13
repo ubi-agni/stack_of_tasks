@@ -59,8 +59,7 @@ class Ui_Controller(QObject):
         m = SixDOFMarker(frame=target, scale=0.25)
         self.mc.add_marker(m, "target")
 
-        frame = JointFrame(self.robot_state, eef)
-        task = PositionTask(target, frame, softness=TaskSoftnessType.linear, weight=1)
+        task = PositionTask(target, self.ref_model.ref(eef), softness=TaskSoftnessType.linear)
         self.hierarchy.append_task(task)
 
     def run_triggered(self):

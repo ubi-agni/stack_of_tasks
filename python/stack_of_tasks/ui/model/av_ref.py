@@ -1,9 +1,9 @@
 import typing
-from typing import Dict
+from typing import Dict, List
 
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
 
-from stack_of_tasks.ref_frame.frames import JointFrame
+from stack_of_tasks.ref_frame.frames import JointFrame, RefFrame
 
 from . import RawDataRole
 
@@ -11,11 +11,8 @@ from . import RawDataRole
 class AvailableRefModel(QAbstractItemModel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-
-        self._additional_data = []
-
         self._sections = []
-        self._refs: Dict = {}
+        self._refs: Dict[List[RefFrame]] = {}
 
     def _data_to_section(self, data) -> str:
         if isinstance(data, JointFrame):
@@ -25,10 +22,8 @@ class AvailableRefModel(QAbstractItemModel):
 
     def rowCount(self, parent=None) -> int:
         if (item := parent.internalPointer()) is None:
-            # print("index", item, len(self._sections))
             return len(self._sections)
         elif isinstance(item, str):
-            # print("index", item, len(self._refs[item]))
             return len(self._refs[item])
         return 0
 
@@ -103,3 +98,10 @@ class AvailableRefModel(QAbstractItemModel):
             self._refs[section] = [x]
 
         self.endInsertRows()
+
+    def ref(self, name):
+        """Return reference with given name"""
+        for section in self._sections:
+            for x in self._refs[section]:
+                if x["name"] == name:
+                    return x["obj"]

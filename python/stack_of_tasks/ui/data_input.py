@@ -103,6 +103,7 @@ class DataInput(Generic[PropType], QWidget):
         w.setMinimum(min)
         w.setMaximum(max)
         w.setSingleStep(step)
+        w.setValue(default)
         return self._add_prop(label, w, row)
 
     def add_string_row(self, label, placeholder=None, row: int = None) -> Prop[QLineEdit]:

@@ -18,7 +18,7 @@ from stack_of_tasks.robot_model import JointStatePublisher, RobotModel, RobotSta
 from stack_of_tasks.solver.OSQPSolver import OSQPSolver
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui.mainwindow import Ui
-from stack_of_tasks.ui.model.av_ref import AvailableRefModel
+from stack_of_tasks.ui.models import RefFramesModel
 
 
 class Ui_Controller(QObject):
@@ -33,7 +33,7 @@ class Ui_Controller(QObject):
 
         self.jsp = JointStatePublisher(self.robot_state)
 
-        self.ref_model = AvailableRefModel()
+        self.ref_model = RefFramesModel()
         self._init_data()
 
         self.solver = OSQPSolver(self.robot_model.N, self.hierarchy, rho=0.01)

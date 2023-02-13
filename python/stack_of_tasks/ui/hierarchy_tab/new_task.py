@@ -3,9 +3,9 @@ import typing
 from PyQt5 import QtWidgets
 
 from stack_of_tasks.tasks import *
-from stack_of_tasks.ui.ButtonDialog import ButtonDialog
 from stack_of_tasks.ui.hierarchy_tab.task_details import TaskDetails
-from stack_of_tasks.ui.model import RawDataRole
+from stack_of_tasks.ui.models import RawDataRole
+from stack_of_tasks.ui.widgets import ButtonDialog
 
 tasks = [PositionTask, ParallelTask, DistanceTask, OrientationTask, PlaneTask, ConeTask]
 

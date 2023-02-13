@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from stack_of_tasks.ref_frame.offset import Offset
 from stack_of_tasks.ui.generated.Refs import Ui_Refs
-from stack_of_tasks.ui.model.av_ref import AvailableRefModel, RawDataRole
+from stack_of_tasks.ui.models import RawDataRole, RefFramesModel
 from stack_of_tasks.ui.ref_tab.new_ref import AddRef
 
 
@@ -16,7 +16,7 @@ class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
         super().__init__()
         self.setupUi(self)
 
-        self.av_refs: AvailableRefModel = None
+        self.av_refs: RefFramesModel = None
         self.selected_ref = None
 
         self.new_ref.setDefaultAction(self.actionadd_ref)

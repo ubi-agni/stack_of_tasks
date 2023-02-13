@@ -1,6 +1,6 @@
 from stack_of_tasks.tasks.Task import RelativeTask, TaskSoftnessType
 from stack_of_tasks.ui.data_input import DataInput
-from stack_of_tasks.ui.model.enum_model import EnumModel, RawDataRole
+from stack_of_tasks.ui.models import EnumModel, RawDataRole
 
 
 class TaskDetails(DataInput):

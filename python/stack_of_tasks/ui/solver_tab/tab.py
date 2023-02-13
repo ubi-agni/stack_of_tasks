@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QDoubleSpinBox, QWidget
 
 from stack_of_tasks.solver import InverseJacobianSolver, OSQPSolver
 from stack_of_tasks.ui.generated.SolverSettings import Ui_SolverSettings
-from stack_of_tasks.ui.model.object_model import ObjectModel, RawDataRole
+from stack_of_tasks.ui.models import ObjectModel, RawDataRole
 
 
 class SolverTab(QWidget, Ui_SolverSettings):

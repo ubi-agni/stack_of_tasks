@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import typing
 from typing import List, Tuple
@@ -17,9 +18,9 @@ class AvailableRefModel(QAbstractItemModel):
         super().__init__(parent)
         self._refs: List[Tuple[RefFrame]] = []
 
-        path = os.path.join(rospkg.RosPack().get_path("rviz"), "icons", "classes")
-        self.target_icon = QIcon(os.path.join(path, "Axes.png"))
-        self.link_icon = QIcon(os.path.join(path, "RobotLink.png"))
+        icon_path = Path(rospkg.RosPack().get_path("rviz")) / "icons" / "classes"
+        self.target_icon = QIcon(str(icon_path / "Axes.png"))
+        self.link_icon = QIcon(str(icon_path / "RobotLink.png"))
 
     def rowCount(self, parent: QModelIndex) -> int:
         return 0 if parent.isValid() else len(self._refs)

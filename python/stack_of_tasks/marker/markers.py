@@ -61,8 +61,6 @@ class ControlMarker(IAMarker, ABC):
             callback=self._callback,
         )
 
-        self.ref_frame.callback.append(self._set_marker_pose)
-
         if additional_marker:
             if isinstance(additional_marker, list):
                 for x in additional_marker:
@@ -70,13 +68,12 @@ class ControlMarker(IAMarker, ABC):
             else:
                 self._add_display_marker(self.marker, "", additional_marker)
 
-        # self._data_callback(
-        #    self.name, OffsetTransform(self.marker.header.frame_id, self.marker.pose)
-        # )
+        # update marker pose on ref_frame updates
+        def _set_marker_pose(transform):
+            self.marker.pose = matrix_to_pose(transform)
+            self.server.applyChanges()
 
-    def _set_marker_pose(self, transform):
-        self.marker.pose = matrix_to_pose(transform)
-        self.server.applyChanges()
+        self.ref_frame.callback.append(_set_marker_pose)
 
     def delete(self):
         self.server.erase(self.name)
@@ -86,8 +83,9 @@ class ControlMarker(IAMarker, ABC):
         return []
 
     def _callback(self, fb: InteractiveMarkerFeedback):
-        self.ref_frame.offset = pose_to_matrix(fb.pose)
-        self.server.applyChanges()
+        """function called on any update from interactive marker"""
+        self.marker.pose = fb.pose
+        self.ref_frame._offset[:] = pose_to_matrix(fb.pose)
 
 
 class PositionMarker(ControlMarker):

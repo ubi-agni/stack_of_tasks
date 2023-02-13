@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 import sys
-import threading
 
 import numpy as np
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QMetaObject, QObject, QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
 import rospy
+from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 
 from stack_of_tasks.controller import MarkerControl
 from stack_of_tasks.marker.markers import SixDOFMarker
@@ -37,7 +37,7 @@ class Ui_Controller(QObject):
         self._init_data()
 
         self.solver = OSQPSolver(self.robot_model.N, self.hierarchy, rho=0.01)
-        self._solver_worker = None
+        self._solver_worker = SolverWorker(self, 50)
 
         self.ui = Ui(self.ref_model, self.hierarchy)
         self.ui.run_Button.clicked.connect(self.run_triggered)
@@ -63,23 +63,20 @@ class Ui_Controller(QObject):
         self.hierarchy.append_task(task)
 
     def run_triggered(self):
-        if self._solver_worker is not None and self._solver_worker.running:
+        if self._solver_worker.running:
             self._solver_worker.stop()
         else:
-            self._solver_worker = SolverWorker(self, 50)
             self._solver_worker.start()
 
     @pyqtSlot()
     def save_exit(self):
-        if self._solver_worker is not None:
-            self._solver_worker.stop()
-            self._solver_worker.join(1.0)  # wait for thread to actually finish
+        self._solver_worker.stop()
+        self._solver_worker.wait(1000)  # wait for thread to actually finish
 
 
-class SolverWorker(threading.Thread):
+class SolverWorker(QThread):
     def __init__(self, controller: Ui_Controller, rate: int) -> None:
         super().__init__()
-        self.name = "SolverWorker"
         self.running = False
         self.controller = controller
         self._rate = rate

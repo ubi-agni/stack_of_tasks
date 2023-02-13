@@ -5,6 +5,7 @@ from stack_of_tasks.ref_frame.offset import Offset
 from stack_of_tasks.ui.data_input import DataInput
 from stack_of_tasks.ui.matrix_view import NumpyTableModel
 from stack_of_tasks.ui.model.av_ref import AvailableRefModel
+from stack_of_tasks.ui.model.enum_model import RawDataRole
 
 
 class Ref_Details(DataInput):
@@ -15,7 +16,7 @@ class Ref_Details(DataInput):
         self._matrix_model = NumpyTableModel()
 
         self._name = self.add_string_row("Name")
-        self._root = self.add_combo_row("Parent", treeView=True)
+        self._root = self.add_combo_row("Parent")
 
         self._transform = self.add_matrix_row("T", model=self._matrix_model)
 
@@ -41,5 +42,7 @@ class Ref_Details(DataInput):
             self._matrix_model.setMatrix(ref.offset.view())
             self._transform.label.setText("Offset")
 
-            self._root.widget.setTreeIndex(self._root.widget.findIndexOfObject(ref.frame))
+            self._root.widget.setCurrentIndex(
+                self._root.widget.findData(ref.frame, RawDataRole)
+            )
             self._root.setVisible(True)

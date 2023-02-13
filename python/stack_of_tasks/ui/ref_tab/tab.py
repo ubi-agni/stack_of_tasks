@@ -40,7 +40,6 @@ class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
             self.av_refs.add_ref(ref, name)
 
     def _name_changed(self):
-        print()
         if self.selected_ref is not None:
             self.av_refs.update_name(self.selected_ref, self.ref_details._name.widget.text())
 

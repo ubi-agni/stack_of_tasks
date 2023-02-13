@@ -1,7 +1,11 @@
-import typing
-from typing import Dict, List
+import os
 
+import typing
+from typing import List, Tuple
+
+import rospkg
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PyQt5.QtGui import QIcon
 
 from stack_of_tasks.ref_frame.frames import JointFrame, RefFrame
 
@@ -11,101 +15,68 @@ from . import RawDataRole
 class AvailableRefModel(QAbstractItemModel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self._sections = []
-        self._refs: Dict[List[RefFrame]] = {}
+        self._refs: List[Tuple[RefFrame]] = []
 
-    def _data_to_section(self, data) -> str:
-        if isinstance(data, JointFrame):
-            return "Joint Frames"
-        else:
-            return "Other"
+        path = os.path.join(rospkg.RosPack().get_path("rviz"), "icons", "classes")
+        self.target_icon = QIcon(os.path.join(path, "Axes.png"))
+        self.link_icon = QIcon(os.path.join(path, "RobotLink.png"))
 
-    def rowCount(self, parent=None) -> int:
-        if (item := parent.internalPointer()) is None:
-            return len(self._sections)
-        elif isinstance(item, str):
-            return len(self._refs[item])
-        return 0
+    def rowCount(self, parent: QModelIndex) -> int:
+        return 0 if parent.isValid() else len(self._refs)
 
-    def columnCount(self, parent: QModelIndex = ...) -> int:
+    def columnCount(self, parent: QModelIndex) -> int:
         return 1
 
     def parent(self, child: QModelIndex) -> QModelIndex:
-        if (valid := child.isValid()) and (item := child.internalPointer()) is not None:
-
-            if isinstance(item, dict):
-                parent = None
-                for k, v in self._refs.items():
-                    if item in v:
-                        parent = k
-                        break
-
-                if parent is not None:
-                    return self.createIndex(self._sections.index(parent), 0, parent)
-
         return QModelIndex()
 
-    def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
-        p = None
-        if parent is not None and parent.isValid():
-            p = parent.internalPointer()
-
-        if p is None and row < len(self._sections):
-            return self.createIndex(row, 0, self._sections[row])
-
-        elif isinstance(p, str):
-            return self.createIndex(row, 0, self._refs[p][row])
-
-        return QModelIndex()
+    def index(self, row: int, column: int, parent: QModelIndex) -> QModelIndex:
+        return QModelIndex() if parent.isValid() else self.createIndex(row, column, None)
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        item = index.internalPointer()
-        flags = Qt.ItemIsEnabled
-        if isinstance(item, dict):
-            flags |= Qt.ItemIsSelectable
+        flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return flags
 
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> typing.Any:
-        item = index.internalPointer()
+        assert index.isValid()
+        name, ref = self._refs[index.row()]
         if role == Qt.DisplayRole:
-            if isinstance(item, str):
-                return item
-            else:
-                return item["name"]
-
+            return name
         elif role == RawDataRole:
-            if isinstance(item, dict):
-                return item["obj"]
+            return ref
+        elif role == Qt.DecorationRole:
+            if isinstance(ref, JointFrame):
+                return self.link_icon
+            else:
+                return self.target_icon
+
+    def setData(self, index: QModelIndex, value: typing.Any, role: int) -> bool:
+        row = index.row()
+        name, ref = self._refs[row]
+        if role == Qt.EditRole:
+            self._refs[row] = (value, ref)
+        elif role == RawDataRole:
+            self._refs[row] = (name, value)
+        self.dataChanged.emit(index, index)
 
     def update_name(self, ref, name):
-        section = self._data_to_section(ref)
-
-        for i, x in enumerate(self._refs[section]):
-            if x["obj"] is ref:
-                index = self.index(i, 0, self.index(self._sections.index(section), 0))
-                x["name"] = name
-                self.dataChanged.emit(index, index)
+        row = self._find(ref)
+        self.setData(self.createIndex(row, 0, None), name, Qt.EditRole)
 
     def add_ref(self, ref, name):
-        x = {"name": name, "obj": ref}
-        section = self._data_to_section(ref)
+        first = len(self._refs)
+        self.beginInsertRows(QModelIndex(), first, first + 1)
+        self._refs.append((name, ref))
+        self.endInsertRows()
 
-        if section in self._sections:
-            first = len(self._refs[section])
-            parent = self.index(self._sections.index(section), 0)
-            self.beginInsertRows(parent, first, first + 1)
-            self._refs[section].append(x)
-            self.endInsertRows()
-        else:
-            first = len(self._sections)
-            self.beginInsertRows(QModelIndex(), first, first + 1)
-            self._sections.append(section)
-            self._refs[section] = [x]
-            self.endInsertRows()
-
-    def ref(self, name):
+    def ref(self, name: str) -> RefFrame:
         """Return reference with given name"""
-        for section in self._sections:
-            for x in self._refs[section]:
-                if x["name"] == name:
-                    return x["obj"]
+        for n, ref in self._refs:
+            if n == name:
+                return ref
+
+    def _find(self, ref: RefFrame) -> int:
+        for i, (_, r) in enumerate(self._refs):
+            if r is ref:
+                return i
+        return -1

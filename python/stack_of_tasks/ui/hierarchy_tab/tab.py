@@ -7,7 +7,7 @@ from PyQt5 import QtWidgets
 from stack_of_tasks.tasks.Task import RelativeTask
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy, TaskItem
 from stack_of_tasks.ui.generated.TaskHierachy import Ui_TaskHierarchy
-from stack_of_tasks.ui.model.task_hierarchy import TaskHierarchyModel
+from stack_of_tasks.ui.models import TaskHierarchyModel
 
 from .new_task import NewTask
 

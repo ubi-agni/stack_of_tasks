@@ -13,7 +13,7 @@ from stack_of_tasks.ref_frame.frames import JointFrame, RefFrame
 from . import RawDataRole
 
 
-class AvailableRefModel(QAbstractItemModel):
+class RefFramesModel(QAbstractItemModel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._refs: List[Tuple[RefFrame]] = []

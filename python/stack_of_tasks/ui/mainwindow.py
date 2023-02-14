@@ -1,11 +1,13 @@
 from sys import version_info as vi
 
+from typing import Iterable
+
 from PyQt5 import Qt, QtCore, QtWidgets
 from PyQt5.QtWidgets import QPushButton
 
 from stack_of_tasks.ref_frame import JointFrame, Offset
 from stack_of_tasks.tasks.Task import RelativeTask
-from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy, TaskLevel
+from stack_of_tasks.tasks.TaskHierarchy import Task, TaskHierarchy
 
 from .generated.MainWindow import Ui_MainWindow
 from .models import RefFramesModel
@@ -47,7 +49,7 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         self.status_bar.addPermanentWidget(self.run_Button)
         self.show()
 
-    def update_refs_from_tasks(self, tasks: TaskLevel):
+    def update_refs_from_tasks(self, tasks: Iterable[Task]):
         def add_ref(ref, name):
             if isinstance(ref, Offset):
                 self._ref_model.add_ref(ref, name)

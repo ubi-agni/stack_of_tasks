@@ -1,6 +1,7 @@
 from stack_of_tasks.tasks.Task import RelativeTask, TaskSoftnessType
 from stack_of_tasks.ui.data_input import DataInput
 from stack_of_tasks.ui.models import EnumModel, RawDataRole
+from stack_of_tasks.ui.widgets import RefComboBox
 
 
 class TaskDetails(DataInput):
@@ -10,9 +11,9 @@ class TaskDetails(DataInput):
         self._name = self.add_string_row("Name")
         self._soft_type = self.add_combo_row("Softness type", EnumModel(TaskSoftnessType))
 
-        self._refA = self.add_combo_row("Ref A")
+        self._refA = self.add_combo_row("Ref A", combo=RefComboBox())
 
-        self._refB = self.add_combo_row("Ref B")
+        self._refB = self.add_combo_row("Ref B", combo=RefComboBox())
 
         self._rel_type = self.add_combo_row("Relation", EnumModel(RelativeTask.RelativeType))
 

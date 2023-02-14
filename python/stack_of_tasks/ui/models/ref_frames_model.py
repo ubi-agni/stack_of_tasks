@@ -5,17 +5,19 @@ import typing
 from typing import List, Tuple
 
 import rospkg
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QStringListModel, Qt
 from PyQt5.QtGui import QIcon
 
 from stack_of_tasks.ref_frame.frames import JointFrame, RefFrame
+from stack_of_tasks.robot_model import RobotState
 
 from . import RawDataRole
 
 
 class RefFramesModel(QAbstractItemModel):
-    def __init__(self, parent=None) -> None:
+    def __init__(self, robot_state: RobotState, parent=None) -> None:
         super().__init__(parent)
+        self._robot_state = robot_state
         self._refs: List[Tuple[RefFrame]] = []
 
         icon_path = Path(rospkg.RosPack().get_path("rviz")) / "icons" / "classes"
@@ -39,7 +41,9 @@ class RefFramesModel(QAbstractItemModel):
         return flags
 
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> typing.Any:
-        assert index.isValid()
+        if not index.isValid():
+            return
+
         name, ref = self._refs[index.row()]
         if role == Qt.DisplayRole:
             return name
@@ -65,6 +69,8 @@ class RefFramesModel(QAbstractItemModel):
         self.setData(self.createIndex(row, 0, None), name, Qt.EditRole)
 
     def add_ref(self, ref, name):
+        if self._find(ref) >= 0:
+            return  # already have this ref
         first = len(self._refs)
         self.beginInsertRows(QModelIndex(), first, first + 1)
         self._refs.append((name, ref))
@@ -75,6 +81,11 @@ class RefFramesModel(QAbstractItemModel):
         for n, ref in self._refs:
             if n == name:
                 return ref
+
+    def allRefs(self) -> QStringListModel:
+        frames = set([name for name, _ in self._refs])
+        frames.update(self._robot_state.robot_model.links.keys())
+        return QStringListModel(sorted(frames))
 
     def _find(self, ref: RefFrame) -> int:
         for i, (_, r) in enumerate(self._refs):

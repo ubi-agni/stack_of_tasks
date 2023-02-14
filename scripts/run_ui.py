@@ -31,11 +31,10 @@ class Ui_Controller(QObject):
         self.hierarchy = TaskHierarchy()
         self.robot_model = RobotModel()
         self.robot_state = RobotState(self.robot_model)
-
         self.jsp = JointStatePublisher(self.robot_state)
 
-        self.ref_model = RefFramesModel()
-        self._init_data()
+        self.ref_model = RefFramesModel(self.robot_state)
+        self.ref_model.add_ref(World(), "ROOT")
 
         self.solver = OSQPSolver(self.robot_model.N, self.hierarchy, rho=0.01)
         self._solver_worker = SolverWorker(self, 50)
@@ -45,23 +44,24 @@ class Ui_Controller(QObject):
 
         self.ui.show()
 
-    def _init_data(self):
-        self.ref_model.add_ref(World(), "World")
-        for name in self.robot_model.links.keys():
-            self.ref_model.add_ref(JointFrame(self.robot_state, name), name)
-
     def init_controller(self, eef: str):
         from stack_of_tasks.tasks import PositionTask
         from stack_of_tasks.tasks.Task import TaskSoftnessType
 
         target = Offset(World()).rotate(x=0, y=-0.383, z=0, w=0.924).translate(x=0.5, z=0.5)
-        self.ref_model.add_ref(target, "Target")
+        eef = JointFrame(self.robot_state, eef)
 
         m = SixDOFMarker(frame=target, scale=0.25)
-        self.mc.add_marker(m, "target")
+        self.mc.add_marker(m, "Target")
+        self.ref_model.add_ref(target, "Target")
 
-        task = PositionTask(target, self.ref_model.ref(eef), softness=TaskSoftnessType.linear)
+        task = PositionTask(target, eef, softness=TaskSoftnessType.linear)
         self.hierarchy.append_task(task)
+
+        # Load all refs from existing tasks
+        # TODO: Shouldn't hierarchy.append_task() trigger updates of the model?
+        for tasks in self.hierarchy:
+            self.ui.update_refs_from_tasks(tasks)
 
     def run_triggered(self):
         if self._solver_worker.running:

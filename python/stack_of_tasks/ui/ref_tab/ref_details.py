@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from PyQt5.QtWidgets import QCompleter
+
 from stack_of_tasks.ref_frame import JointFrame, Offset, RefFrame, World
 from stack_of_tasks.ui.data_input import DataInput
 from stack_of_tasks.ui.models import NumpyTableModel, RawDataRole, RefFramesModel
@@ -14,13 +16,18 @@ class Ref_Details(DataInput):
         self._matrix_model = NumpyTableModel()
 
         self._name = self.add_string_row("Name")
-        self._root = self.add_combo_row("Parent", combo=RefComboBox())
+        self._root = self.add_combo_row("Parent")
+        c = self._root.widget
+        c.setEditable(True)
+        c.setInsertPolicy(RefComboBox.NoInsert)
 
         self._transform = self.add_matrix_row("T", model=self._matrix_model)
 
     def set_model(self, model: RefFramesModel):
         self._refs_model = model
         self._root.widget.setModel(self._refs_model)
+        # BUG: setModel will make the completer unused!
+        self._root.widget.completer().setModel(model.allRefs())
 
     def _set_selection(self, obj):
         for i in range(self._refs_model.rowCount()):

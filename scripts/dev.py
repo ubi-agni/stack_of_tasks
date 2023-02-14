@@ -1,157 +1,72 @@
-#!/usr/bin/env python3
-from __future__ import annotations
+import random
+import sys
 
-import typing
+from PyQt5 import QtGui
+from PyQt5.QtCore import QModelIndex, QStringListModel, Qt, pyqtSlot
+from PyQt5.QtWidgets import QApplication, QComboBox, QDialog, QLineEdit, QVBoxLayout
 
-import numpy as np
-from PyQt5.QtCore import (
-    QAbstractTableModel,
-    QMargins,
-    QModelIndex,
-    QObject,
-    QRectF,
-    QSize,
-    Qt,
-)
-from PyQt5.QtGui import QPainter, QTextOption
-from PyQt5.QtWidgets import (
-    QApplication,
-    QDoubleSpinBox,
-    QHeaderView,
-    QMainWindow,
-    QStyledItemDelegate,
-    QStyleOptionViewItem,
-    QTableView,
-    QVBoxLayout,
-    QWidget,
-)
-
-FloatDataRole = Qt.UserRole + 1
+from stack_of_tasks.ref_frame import JointFrame, World
+from stack_of_tasks.robot_model import RobotModel, RobotState
+from stack_of_tasks.ui.models import RefFramesModel
 
 
-class NumpyTableModel(QAbstractTableModel):
-    def __init__(self, parent=None) -> None:
+class ComboBox(QComboBox):
+    other = ["Germany", "USA", "France"]
+
+    def __init__(self, model: QStringListModel, editable=True, parent=None) -> None:
         super().__init__(parent)
+        self.setEditable(editable)
+        self.setInsertPolicy(QComboBox.NoInsert)
+        if model is not None:
+            self.setModel(model)
 
-        self._matrix: np.ndarray = np.random.random((4, 4))
+    def focusInEvent(self, e: QtGui.QFocusEvent) -> None:
+        self.update_completer_model()  # update completer model when entering
+        super().focusInEvent(e)
 
-    def rowCount(self, parent: QModelIndex = None) -> int:
-        return 4
-
-    def columnCount(self, parent: QModelIndex = None) -> int:
-        return 4
-
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        return super().flags(index) | Qt.ItemIsEditable
-
-    def data(self, index: QModelIndex, role: int = ...) -> typing.Any:
-        if index.isValid():
-            if role == Qt.DisplayRole:
-                return str(self._matrix[index.row(), index.column()])
-
-            elif role == FloatDataRole:
-                return self._matrix[index.row(), index.column()]
-
-    def setData(self, index: QModelIndex, value: typing.Any, role: int = ...) -> bool:
-        self._matrix[index.row(), index.column()] = value
-        self.dataChanged.emit(index, index)
-        return True
-
-    def setMatrix(self, matrix):
-        self.beginResetModel()
-        self._matrix = matrix
-        self.endResetModel()
+    @pyqtSlot()
+    def update_completer_model(self):
+        completer = self.completer()
+        if completer is not None:
+            root = QModelIndex()
+            m = self.model()
+            m = QStringListModel(
+                [m.index(r, 0, root).data(Qt.DisplayRole) for r in range(m.rowCount(root))]
+                + self.other
+                + [f"#{100*(i+1) + random.randint(0, 99)}" for i in range(3)]
+            )
+            completer.setModel(m)
 
 
-class MatrixItemDelegate(QStyledItemDelegate):
-    def __init__(self, parent: typing.Optional[QObject] = None) -> None:
-        super().__init__(parent)
+class Window(QDialog):
+    def __init__(self):
+        super().__init__()
+        robot_state = RobotState(RobotModel())
+        self.model = RefFramesModel(robot_state)
+        self.model.add_ref(World(), "ROOT")
+        self.model.add_ref(JointFrame(robot_state, "panda_hand_tcp"), "eef")
 
-        self._editor_widget = QDoubleSpinBox()
-        self._editor_index = {}
+        # QStringListModel works!
+        # self.model = QStringListModel(["Berlin", "Tokyo", "New York"])
+        self.combo = ComboBox(self.model)
 
-        self._editor_widget.setFocusPolicy(Qt.StrongFocus)
-        self._editor_widget.setDecimals(10)
-        self._editor_widget.setAutoFillBackground(True)
+        lineedit = QLineEdit()
+        lineedit.setCompleter(self.combo.completer())
 
-    def _format_index(self, index: QModelIndex):
-        s = ""
-        if index.isValid() and (f := index.data(FloatDataRole)) is not None:
-            s = f"{f:.2f}"
-        return s
+        lineedit.textChanged.connect(self.update_combo)
 
-    def createEditor(
-        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> QWidget:
-        self._editor_widget.setParent(parent)
-        self._editor_index[index] = option.widget
-        option.widget.resizeColumnToContents(index.column())
-        return self._editor_widget
-
-    def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
-        f = index.data(FloatDataRole)
-        self._editor_widget.setValue(f)
-
-    def updateEditorGeometry(
-        self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> None:
-        editor.move(option.rect.topLeft())
-
-    def destroyEditor(self, editor: QWidget, index: QModelIndex) -> None:
-        i = self._editor_index.pop(index, None)
-        if i is not None:
-            i.resizeColumnToContents(index.column())
-        self._editor_widget.hide()
-
-    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        if index in self._editor_index:
-            return self._editor_widget.sizeHint()
-        else:
-            size = option.fontMetrics.size(0, self._format_index(index))
-            return size.grownBy(QMargins(3, 3, 3, 3))
-
-    def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> None:
-        painter.save()
-        r = QRectF(option.rect)
-        painter.drawText(
-            r,
-            self._format_index(index),
-            QTextOption(Qt.AlignCenter),
-        )
-        painter.restore()
-
-
-class MatrixView(QTableView):
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self.setItemDelegate(MatrixItemDelegate())
-        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.verticalHeader().setMinimumSectionSize(0)
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.horizontalHeader().setMinimumSectionSize(0)
-
-
-class MW(QMainWindow):
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-
-        self.l = QVBoxLayout()
-        self.w = QWidget()
-        self.w.setLayout(self.l)
-        self.setCentralWidget(self.w)
-
-        self.m = MatrixView()
-
-        self.l.addWidget(self.m)
-
+        l = QVBoxLayout()
+        self.setLayout(l)
+        l.addWidget(lineedit)
+        l.addWidget(self.combo)
         self.show()
 
+    @pyqtSlot(str)
+    def update_combo(self, text: str):
+        idx = self.combo.findData(text, Qt.DisplayRole)
+        self.combo.setCurrentIndex(idx)
 
-if __name__ == "__main__":
-    from sys import argv
 
-    app = QApplication(argv)
-    m = MW()
-    app.exec()
+app = QApplication(sys.argv)
+window = Window()
+sys.exit(app.exec())

@@ -3,7 +3,14 @@ import sys
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import QModelIndex, QStringListModel, Qt, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QComboBox, QLineEdit, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QCompleter,
+    QLineEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from stack_of_tasks.ref_frame import JointFrame, World
 from stack_of_tasks.robot_model import RobotModel, RobotState
@@ -23,6 +30,7 @@ class Window(QWidget):
 
         lineedit = QLineEdit()
         lineedit.setCompleter(self.combo.completer())
+        self.combo.completer().setCompletionMode(QCompleter.PopupCompletion)
 
         lineedit.textChanged.connect(self.update_combo)
 

@@ -13,23 +13,28 @@ class RefComboBox(QComboBox):
         # TODO: Insertion requires RefFramesModel.insertRows() to be implemented!
         self.setInsertPolicy(QComboBox.NoInsert)
         if editable:
-            self.currentIndexChanged.connect(self.update_line_edit_text)
+            self.currentIndexChanged.connect(self.update_current_text)
         if model is not None:
             self.setModel(model)
 
     def setCurrentIndex(self, row: int) -> None:
         super().setCurrentIndex(row)
-        if lineedit := self.lineEdit():
-            self.update_line_edit_text(row)
+        if self.isEditable():  # sync currentText with currentIndex
+            self.update_current_text(row)
 
     @QtCore.pyqtSlot(int)
-    def update_line_edit_text(self, row: int):
+    def update_current_text(self, row: int):
         index = self.model().index(row, 0, QtCore.QModelIndex())
-        self.lineEdit().setText(index.data())
+        self.setCurrentText(index.data())
 
     def focusInEvent(self, e: QtGui.QFocusEvent) -> None:
-        self.update_completer_model()
-        return super().focusInEvent(e)
+        self.update_completer_model()  # update completer model when entering
+        super().focusInEvent(e)
+
+    def focusOutEvent(self, e: QtGui.QFocusEvent) -> None:
+        super().focusOutEvent(e)
+        # bugfix: currentText is erased when leaving
+        self.update_current_text(self.currentIndex())
 
     @QtCore.pyqtSlot()
     def update_completer_model(self):

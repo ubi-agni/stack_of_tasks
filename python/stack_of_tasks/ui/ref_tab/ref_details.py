@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from stack_of_tasks.ref_frame.frames import RefFrame
-from stack_of_tasks.ref_frame.offset import Offset
+from stack_of_tasks.ref_frame import Offset, RefFrame
 from stack_of_tasks.ui.data_input import DataInput
 from stack_of_tasks.ui.models import NumpyTableModel, RawDataRole, RefFramesModel
+from stack_of_tasks.ui.widgets import RefComboBox
 
 
 class Ref_Details(DataInput):
@@ -14,7 +14,7 @@ class Ref_Details(DataInput):
         self._matrix_model = NumpyTableModel()
 
         self._name = self.add_string_row("Name")
-        self._root = self.add_combo_row("Parent")
+        self._root = self.add_combo_row("Parent", combo=RefComboBox())
 
         self._transform = self.add_matrix_row("T", model=self._matrix_model)
 

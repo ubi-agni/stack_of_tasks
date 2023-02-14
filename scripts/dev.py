@@ -3,42 +3,15 @@ import sys
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import QModelIndex, QStringListModel, Qt, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QComboBox, QDialog, QLineEdit, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QComboBox, QLineEdit, QVBoxLayout, QWidget
 
 from stack_of_tasks.ref_frame import JointFrame, World
 from stack_of_tasks.robot_model import RobotModel, RobotState
 from stack_of_tasks.ui.models import RefFramesModel
+from stack_of_tasks.ui.widgets import RefComboBox
 
 
-class ComboBox(QComboBox):
-    other = ["Germany", "USA", "France"]
-
-    def __init__(self, model: QStringListModel, editable=True, parent=None) -> None:
-        super().__init__(parent)
-        self.setEditable(editable)
-        self.setInsertPolicy(QComboBox.NoInsert)
-        if model is not None:
-            self.setModel(model)
-
-    def focusInEvent(self, e: QtGui.QFocusEvent) -> None:
-        self.update_completer_model()  # update completer model when entering
-        super().focusInEvent(e)
-
-    @pyqtSlot()
-    def update_completer_model(self):
-        completer = self.completer()
-        if completer is not None:
-            root = QModelIndex()
-            m = self.model()
-            m = QStringListModel(
-                [m.index(r, 0, root).data(Qt.DisplayRole) for r in range(m.rowCount(root))]
-                + self.other
-                + [f"#{100*(i+1) + random.randint(0, 99)}" for i in range(3)]
-            )
-            completer.setModel(m)
-
-
-class Window(QDialog):
+class Window(QWidget):
     def __init__(self):
         super().__init__()
         robot_state = RobotState(RobotModel())
@@ -46,9 +19,7 @@ class Window(QDialog):
         self.model.add_ref(World(), "ROOT")
         self.model.add_ref(JointFrame(robot_state, "panda_hand_tcp"), "eef")
 
-        # QStringListModel works!
-        # self.model = QStringListModel(["Berlin", "Tokyo", "New York"])
-        self.combo = ComboBox(self.model)
+        self.combo = RefComboBox()
 
         lineedit = QLineEdit()
         lineedit.setCompleter(self.combo.completer())
@@ -60,6 +31,9 @@ class Window(QDialog):
         l.addWidget(lineedit)
         l.addWidget(self.combo)
         self.show()
+
+        self.combo.setModel(self.model)
+        self.combo.setCurrentIndex(self.combo.findData("ROOT", Qt.DisplayRole))
 
     @pyqtSlot(str)
     def update_combo(self, text: str):

@@ -43,7 +43,6 @@ class Ref_Details(DataInput):
             self._transform.label.setText("Offset")
             self._transform.widget.setEnabled(True)
 
-            self._root.widget.setCurrentIndex(
-                self._root.widget.findData(ref.frame, RawDataRole)
-            )
+            idx = self._root.widget.findData(ref.frame, RawDataRole)
+            self._root.widget.setCurrentIndex(idx)
             self._root.setVisible(True)

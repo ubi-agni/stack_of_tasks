@@ -14,18 +14,12 @@ class Ref_Details(DataInput):
         self._matrix_model = NumpyTableModel()
 
         self._name = self.add_string_row("Name")
-        self._root = self.add_combo_row("Parent", combo=RefComboBox())
-
+        self._root = self.add_combo_row("Parent", combo=RefComboBox(editable=True))
         self._transform = self.add_matrix_row("T", model=self._matrix_model)
 
     def set_model(self, model: RefFramesModel):
         self._refs_model = model
         self._root.widget.setModel(self._refs_model)
-
-    def _set_selection(self, obj):
-        for i in range(self._refs_model.rowCount()):
-            ind = self._refs_model.index(i)
-            print(ind.data())
 
     def set_values_from_ref(self, ref: RefFrame | Offset, name: str):
         self._name.widget.setText(name)
@@ -43,7 +37,6 @@ class Ref_Details(DataInput):
             self._transform.label.setText("Offset")
             self._transform.widget.setEnabled(True)
 
-            self._root.widget.setCurrentIndex(
-                self._root.widget.findData(ref.frame, RawDataRole)
-            )
+            idx = self._root.widget.findData(ref.frame, RawDataRole)
+            self._root.widget.setCurrentIndex(idx)
             self._root.setVisible(True)

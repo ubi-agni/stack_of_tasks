@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from stack_of_tasks.ref_frame import Offset, RefFrame
+from stack_of_tasks.ref_frame import JointFrame, Offset, RefFrame, World
 from stack_of_tasks.ui.data_input import DataInput
 from stack_of_tasks.ui.models import NumpyTableModel, RawDataRole, RefFramesModel
 from stack_of_tasks.ui.widgets import RefComboBox
@@ -31,11 +31,13 @@ class Ref_Details(DataInput):
         self._name.widget.setText(name)
 
         if isinstance(ref, RefFrame):
+            self._name.widget.setReadOnly(isinstance(ref, (World, JointFrame)))
             self._matrix_model.setMatrix(ref.T.view())
             self._transform.label.setText("T")
             self._transform.widget.setEnabled(False)
             self._root.setVisible(False)
         else:
+            self._name.widget.setReadOnly(False)
             ref.callback.append(lambda _: self._matrix_model.valuesChanged())
             self._matrix_model.setMatrix(ref.offset.view())
             self._transform.label.setText("Offset")

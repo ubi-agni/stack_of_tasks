@@ -120,7 +120,7 @@ class MainWindow(QMainWindow):
         self.show()
 
     def _r_trait(self):
-        self.task.trait_set(weight=uniform(0.001, 100))
+        self.task.weight = uniform(0.001, 100)
         print(
             "Info - produces two change events, because the spinbox rounds the data on setting, producing a new value.\n"
         )

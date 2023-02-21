@@ -97,16 +97,16 @@ class RangeTraitSpinBox(QDoubleSpinBox):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, data, parent=None) -> None:
+    def __init__(self, task, parent=None) -> None:
         super().__init__(parent)
 
-        self.data = data
+        self.task = task
 
-        self.spin_box = RangeTraitSpinBox(data, "weight")
+        self.spin_box = RangeTraitSpinBox(task, "weight")
         button1 = QPushButton("randomize trait")
         button2 = QPushButton("randomize widget")
-        button1.clicked.connect(self._r_data)
-        button2.clicked.connect(self._r_box)
+        button1.clicked.connect(self._r_trait)
+        button2.clicked.connect(self._r_ui)
 
         l = QVBoxLayout()
         l.addWidget(self.spin_box)
@@ -119,25 +119,22 @@ class MainWindow(QMainWindow):
 
         self.show()
 
-    def _r_data(self):
-        self.data.trait_set(weight=uniform(0.001, 100))
+    def _r_trait(self):
+        self.task.trait_set(weight=uniform(0.001, 100))
         print(
             "Info - produces two change events, because the spinbox rounds the data on setting, producing a new value.\n"
         )
 
-    def _r_box(self):
+    def _r_ui(self):
         self.spin_box.setValue(uniform(0.001, 100))
-
-    def _trait_changed(self, val):
-        self.w.setValue(val.new)
 
 
 if __name__ == "__main__":
     a = QApplication([])
 
-    data = ToyTask()
-    data.observe(print, "weight")
+    task = ToyTask()
+    task.observe(print, "weight")
 
-    x = MainWindow(data)
+    x = MainWindow(task)
 
     a.exec()

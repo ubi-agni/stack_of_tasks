@@ -56,7 +56,7 @@ class DevMainWindow(Composite):
         button1 = QPushButton("randomize trait")
         button2 = QPushButton("randomize widget")
         button1.clicked.connect(self._r_data)
-        button2.clicked.connect(self._r_box)
+        button2.clicked.connect(self._r_ui)
 
         w = QWidget()
         l = QVBoxLayout()
@@ -86,7 +86,7 @@ class DevMainWindow(Composite):
     def _r_data(self):
         self.data.trait_set(weight=uniform(0.001, 100))
 
-    def _r_box(self):
+    def _r_ui(self):
         self.spin_box.setValue(uniform(0.001, 100))
 
 

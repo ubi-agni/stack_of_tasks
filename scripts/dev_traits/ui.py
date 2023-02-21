@@ -1,8 +1,7 @@
+from enum import Enum
 from random import uniform
 
-import typing
-
-from PyQt5.QtCore import QLocale
+from PyQt5.QtCore import QLocale, QStringListModel
 from PyQt5.QtGui import QValidator
 from PyQt5.QtWidgets import (
     QApplication,
@@ -12,124 +11,83 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from traits.api import HasTraits, Range, TraitError
-from traits.observation.events import TraitChangeEvent
+from qt_binder.raw_widgets import DoubleSpinBox
+from qt_binder.widgets import Composite, EnumDropDown, LineEdit, List, on_trait_change
+from traits.api import HasTraits, Instance, Range
+
+
+class MyEnum(Enum):
+    """Docstring for MyEnum."""
+
+    FIRST_ENUM = "some_value"
+    SECOND_ENUM = "some_other_value"
 
 
 class ToyTask(HasTraits):
-    weight = Range(
-        low=0.0,
-        value=1.0,
-        exclude_low=True,
-        desc="Tasks weight on its level of hierarchy.",
-    )
+    weight = Range(low=0.0, value=1.0, exclude_low=True)
+
+    softness = List([(e, e.name) for e in MyEnum])
 
 
-class RangeTraitSpinBox(QDoubleSpinBox):
-    def __init__(self, object, trait, parent=None) -> None:
+class RangeTraitSpinBox(DoubleSpinBox):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
-
-        self.set_trait(object, trait)
-
-        self.setSingleStep(0.01)
-        self._step_enables = self.StepNone
-        self._check_step_enabled()
-
-    def set_trait(self, object: HasTraits, name: str):
-        self._obj: HasTraits = object
-        self._trait_name = name
-
-        trait: Range = self._obj.trait(self._trait_name).handler
-
-        if (l := trait._low) is not None:
-            self.setMinimum(l)
-        else:
-            self.setMinimum(-10e10)
-
-        if (h := trait._high) is not None:
-            self.setMinimum(h)
-        else:
-            self.setMaximum(10e10)
-
-        self.setValue(getattr(self._obj, self._trait_name))
-
-        self._obj.observe(self._trait_changed_event, self._trait_name)
-        self.valueChanged.connect(lambda val: setattr(self._obj, self._trait_name, val))
-
-        self.exclude_high = trait._exclude_high
-        self.exclude_low = trait._exclude_low
-
-    def _trait_changed_event(self, evt: TraitChangeEvent):
-        self.setValue(evt.new)
-
-    def stepEnabled(self) -> QDoubleSpinBox.StepEnabled:
-        return self._step_enables
-
-    def _is_valid_value(self, value):
-        try:
-            self._obj.validate_trait(self._trait_name, value)
-        except TraitError:
-            return False
-        else:
-            return True
-
-    def _check_step_enabled(self):
-        self._step_enables = self.StepNone
-
-        if self._is_valid_value(self.value() - self.singleStep()):
-            self._step_enables |= self.StepDownEnabled
-        if self._is_valid_value(self.value() + self.singleStep()):
-            self._step_enables |= self.StepUpEnabled
-
-    def stepBy(self, steps: int) -> None:
-        if self._is_valid_value(v := self.value() + self.singleStep() * steps):
-            self.setValue(v)
-        self._check_step_enabled()
-
-    def validate(self, input: str, pos: int) -> typing.Tuple[QValidator.State, str, int]:
-        if len(input) > 0:
-            val, converted = QLocale().toDouble(input)
-
-            if converted and self._is_valid_value(val):
-                return QValidator.Acceptable, input, pos
-
-        return QValidator.Intermediate, input, pos
+        self.singleStep = 0.01
 
 
-class MainWindow(QMainWindow):
-    def __init__(self, data, parent=None) -> None:
-        super().__init__(parent)
+class DevMainWindow(Composite):
+    qclass = QMainWindow
 
-        self.data = data
+    spin_box = Instance(RangeTraitSpinBox, args=())
+    drop_down = Instance(EnumDropDown, args=())
+    selection = Instance(LineEdit, args=())
 
-        self.spin_box = RangeTraitSpinBox(data, "weight")
+    data = Instance(ToyTask)
+
+    def construct(self, *args, **kwds):
+        print("construct")
+        self.spin_box.construct()
+        self.drop_down.construct()
+        self.selection.construct()
+
+        super(DevMainWindow, self).construct()
+        self.qobj.setProperty("binder_class", "RangeSlider")
+
         button1 = QPushButton("randomize trait")
         button2 = QPushButton("randomize widget")
         button1.clicked.connect(self._r_data)
         button2.clicked.connect(self._r_box)
 
+        w = QWidget()
         l = QVBoxLayout()
-        l.addWidget(self.spin_box)
+        w.setLayout(l)
+        l.addWidget(self.spin_box.qobj)
+        l.addWidget(self.drop_down.qobj)
+        l.addWidget(self.selection.qobj)
         l.addWidget(button1)
         l.addWidget(button2)
 
-        w = QWidget()
-        w.setLayout(l)
-        self.setCentralWidget(w)
-
+        self.centralWidget = w
         self.show()
+
+    def configure(self):
+        super().configure()
+        self.selection.readOnly = True
+
+    @on_trait_change("data")
+    def _data_changed(self):
+        self.data.sync_trait("softness", self.drop_down, "values")
+        self.data.sync_trait("weight", self.spin_box, "value")
+
+    @on_trait_change("drop_down.value")
+    def _dropdown_selection_changed(self):
+        self.selection.text = self.drop_down.value.value
 
     def _r_data(self):
         self.data.trait_set(weight=uniform(0.001, 100))
-        print(
-            "Info - produces two change events, because the spinbox rounds the data on setting, producing a new value.\n"
-        )
 
     def _r_box(self):
         self.spin_box.setValue(uniform(0.001, 100))
-
-    def _trait_changed(self, val):
-        self.w.setValue(val.new)
 
 
 if __name__ == "__main__":
@@ -137,7 +95,10 @@ if __name__ == "__main__":
 
     data = ToyTask()
     data.observe(print, "weight")
-
-    x = MainWindow(data)
+    x = DevMainWindow()
+    x.construct()
+    x.configure()
+    x.data = data
+    print(x.child_binders)
 
     a.exec()

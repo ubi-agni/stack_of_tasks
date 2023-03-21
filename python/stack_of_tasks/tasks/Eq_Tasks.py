@@ -1,8 +1,9 @@
 import numpy as np
+import traits.api as ta
 
 from tf.transformations import rotation_from_matrix
 
-from stack_of_tasks.tasks.Task import EqTask, RelativeTask
+from stack_of_tasks.tasks.Task import A, Bound, EqTask, RelativeTask, Tuple
 from stack_of_tasks.utils.transform_math import skew
 
 
@@ -10,25 +11,20 @@ class PositionTask(RelativeTask, EqTask):
     name = "Position"
     task_size: int = 3
 
-    def _compute(self):
-        self.A = self.J()[:3]
-        self.bound = self.frameB.T[:3, 3] - self.frameA.T[:3, 3]
+    def compute(self) -> Tuple[A, Bound]:
+        return self._J[:3], self.refA.T[:3, 3] - self.refB.T[:3, 3]
 
 
-#
-class OrientationTask(RelativeTask, EqTask):
-
+class OrientationTask(EqTask, RelativeTask):
     name = "Orientation"
     task_size: int = 3
 
-    def _compute(self):
-
-        self.A = self.J()[3:]
-        tA = self.frameA.T
+    def compute(self) -> Tuple[A, Bound]:
+        tA = self.refA.T
         delta = np.identity(4)
-        delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.frameB.T[0:3, 0:3])
+        delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.refB.T[0:3, 0:3])
         angle, axis, _ = rotation_from_matrix(delta)
-        self.bound = tA[0:3, 0:3].dot(angle * axis)
+        return self._J[3:], tA[0:3, 0:3].dot(angle * axis)
 
 
 class DistanceTask(RelativeTask, EqTask):
@@ -37,43 +33,47 @@ class DistanceTask(RelativeTask, EqTask):
     name = "Distance"
     task_size: int = 1
 
-    def _compute(self, distance: float):
+    distance = ta.Range(0.0, value=1.0, exclude_low=True)
 
-        delta = self.frameA.T[0:3, 3] - self.frameB.T[0:3, 3]
+    # TODO add parameter to recalc fire list
 
-        self.A = np.array([delta.T.dot(self.J()[:3])])
-        self.bound = distance - np.linalg.norm(delta)
+    def compute(self) -> Tuple[A, Bound]:
+        delta = self.refA.T[0:3, 3] - self.refB.T[0:3, 3]
+
+        return np.array([delta.T.dot(self._J[:3])]), self.distance - np.linalg.norm(delta)
 
 
 class PlaneTask(RelativeTask, EqTask):
     name = "Plane"
     task_size: int = 1
 
-    def _compute(self):
+    def compute(self) -> Tuple[A, Bound]:
         """Move eef within plane given by normal vector and distance to origin"""
-        Tc = self.frameA.T
-        Tt = self.frameB.T
+        Tc = self.refA.T
+        Tt = self.refB.T
 
         normal = Tt[0:3, 2]
         dist = normal.dot(Tt[0:3, 3])
 
-        self.A = np.array([normal.T.dot(self.J()[:3])])
-        self.bound = np.array([-(normal.dot(Tc[0:3, 3]) - dist)])
+        return np.array([normal.T.dot(self._J[:3])]), np.array(
+            [-(normal.dot(Tc[0:3, 3]) - dist)]
+        )
 
 
 class ParallelTask(RelativeTask, EqTask):
     name = "Parallel"
     task_size: int = 3
 
-    def _compute(self, robot_axis, target_axis):
+    robot_axis = ta.Array(shape=(1, 3))
+    target_axis = ta.Array(shape=(1, 3))
+
+    def compute(self) -> Tuple[A, Bound]:
         """Align axis in eef frame to be parallel to reference axis in base frame"""
 
         # transform axis from eef frame to base frame
-        axis = self.frameA.T[0:3, 0:3].dot(robot_axis)
-        ref = self.frameB.T[0:3, 0:3].dot(target_axis)
-        self.A = (skew(ref).dot(skew(axis))).dot(self.J()[3:])
-        print(self.A.shape, self.bound.shape)
-        self.bound = np.cross(ref, axis)
+        axis = self.refA.T[0:3, 0:3].dot(self.robot_axis)
+        ref = self.refB.T[0:3, 0:3].dot(self.target_axis)
+        return (skew(ref).dot(skew(axis))).dot(self._J[3:]), np.cross(ref, axis)
 
 
 #

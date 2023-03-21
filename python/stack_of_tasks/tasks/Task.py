@@ -1,30 +1,30 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from enum import Enum, auto
-from inspect import signature
+from enum import Enum
 
-from numpy.typing import ArrayLike, NDArray
-from typing import Any, List, NoReturn, Optional, Tuple, Union, overload
+from numpy.typing import NDArray
+from typing import Tuple
 
-import numpy as np
+import traits.api as ta
+import traits.observation.expression as te
 
-from stack_of_tasks.ref_frame import HasJacobian, HasTransform
-from stack_of_tasks.ref_frame.frames import JointFrame, RefFrame
-from stack_of_tasks.ref_frame.offset import Offset, OffsetWithJacobian
-from stack_of_tasks.robot_model import RobotModel
+from stack_of_tasks.ref_frame import HasJacobian, Jacobian
+from stack_of_tasks.ref_frame.frames import RefFrame
+
+UpperBound = NDArray
+LowerBound = NDArray
+Bound = NDArray
+A = NDArray
 
 
-class TaskTypes(Enum):
-    HARD = auto()
-    HARD_EQ = auto()
-    HARD_IEQ = auto()
+def maybe_child(parent, name):
+    return te.trait(parent).match(lambda n, _: n == name)
 
-    LINEAR = auto()
-    LINEAR_EQ = auto()
-    LINEAR_IEQ = auto()
 
-    QUADRATIC = auto()
-    QUADRATIC_EQ = auto()
-    QUADRATIC_IEQ = auto()
+def maybe_trait(name):
+    return te.match(lambda n, _: n == name)
 
 
 class TaskSoftnessType(Enum):
@@ -33,170 +33,121 @@ class TaskSoftnessType(Enum):
     quadratic = 3
 
 
-class Task(ABC):
-    name: str
-    task_size: int
+class RelativeType(Enum):
+    A_FIXED = 0
+    B_FIXED = 1
+    RELATIVE = 2
 
-    def __init__(self, softnessType: TaskSoftnessType, weight: float) -> None:
-        args = {p.name for p in signature(self._compute).parameters.values()}
-        # initialize argmap as i -> i
 
-        self.argmap = dict([(i, i) for i in args])
-        # extract arguments of _compute() method
+class Task(ta.ABCHasTraits):
+    # Task Constants
+    name = "BaseClass"
+    task_size = -1
 
-        self.weight = weight
-        self.softnessType = softnessType
+    # universal task properties
+    softness_type = ta.Enum(TaskSoftnessType)
+    weight = ta.Range(
+        0.0, value=1.0, exclude_low=True, desc="The weight of this task in its task-level."
+    )
 
-        self.residual = None
-        self.violation = None
-        self.importance = None
+    A: A = ta.Property(observe="_compute_val")
 
-        self.A: NDArray = np.zeros((0, self.task_size))
+    def _get_A(self):
+        return self._compute_val[0]
 
-    def set_argument_mapping(self, argument: str, mapping_name: str) -> Optional[NoReturn]:
-        if argument not in self.argmap.keys():
-            args = ", ".join(self.argmap.keys())
-            raise LookupError(
-                f"No argument '{argument}' in task '{self.__class__.name}'.\n"
-                f"Possible values are: {args}"
-            )
+    # TODO task optimization info
+    residual = None
+    violation = None
+    importance = None
 
-        self.argmap[argument] = mapping_name
+    def __init__(self, softnessType: TaskSoftnessType, weight: float = 1.0, **traits) -> None:
+        super().__init__(softness_type=softnessType, weight=weight, **traits)
+        self.observe(
+            self._trigger_recompute, "weight"
+        )  # what properties should trigger recomputation
 
-    def _map_args(self, data: dict):
-        return {k: data.get(v) for k, v in self.argmap.items()}
+    # (re)computation mechanism
+    _recompute = ta.Event()
+
+    # function to trigger computation
+    def _trigger_recompute(self, event_data=None):
+        self._recompute = event_data
+
+    _compute_val = ta.Property(observe="_recompute")
+
+    @ta.cached_property  # cache the compute property
+    def _get__compute_val(self):
+        return self.compute()
 
     @abstractmethod
-    def _compute(self):
+    def compute(self) -> Tuple[A, ...]:
         pass
 
-    def compute(self, data) -> Any:
-        mapped = self._map_args(data)
-        self._compute(**mapped)
 
-    def is_task_type(self, taskType: TaskTypes) -> bool:
-        if taskType is TaskTypes.HARD:
-            return self.softnessType is TaskSoftnessType.hard
-        elif taskType is TaskTypes.HARD_EQ:
-            return self.softnessType is TaskSoftnessType.hard and isinstance(self, EqTask)
-        elif taskType is TaskTypes.HARD_IEQ:
-            return self.softnessType is TaskSoftnessType.hard and isinstance(self, IeqTask)
+class RelativeTask(Task, ABC):
+    relType: RelativeType = ta.Enum(RelativeType, default=0)
 
-        elif taskType is TaskTypes.LINEAR:
-            return self.softnessType is TaskSoftnessType.linear
-        elif taskType is TaskTypes.LINEAR_EQ:
-            return self.softnessType is TaskSoftnessType.linear and isinstance(self, EqTask)
-        elif taskType is TaskTypes.LINEAR_IEQ:
-            return self.softnessType is TaskSoftnessType.linear and isinstance(self, IeqTask)
-
-        elif taskType is TaskTypes.QUADRATIC:
-            return self.softnessType is TaskSoftnessType.quadratic
-        elif taskType is TaskTypes.QUADRATIC_EQ:
-            return self.softnessType is TaskSoftnessType.quadratic and isinstance(
-                self, EqTask
-            )
-        elif taskType is TaskTypes.QUADRATIC_IEQ:
-            return self.softnessType is TaskSoftnessType.quadratic and isinstance(
-                self, IeqTask
-            )
-
-
-class RelativeTask(Task):
-    class RelativeType(Enum):
-        A_FIXED = 0
-        B_FIXED = 1
-        RELATIVE = 2
-
-    @overload
-    def __init__(
-        self,
-        frameA: Union[JointFrame, OffsetWithJacobian],
-        frameB: Union[JointFrame, OffsetWithJacobian],
-        softness: TaskSoftnessType,
-        relType: RelativeType,
-        weight: float = ...,
-    ):
-        ...
-
-    @overload
-    def __init__(
-        self,
-        frameA: Union[JointFrame, OffsetWithJacobian],
-        frameB: Union[RefFrame, Offset],
-        softness: TaskSoftnessType,
-        weight: float = ...,
-    ):
-        ...
+    refA: RefFrame = ta.Instance(RefFrame)
+    refB: RefFrame = ta.Instance(RefFrame)
 
     def __init__(
         self,
-        frameA: Union[RefFrame, Offset, JointFrame, OffsetWithJacobian],
-        frameB: Union[RefFrame, Offset, JointFrame, OffsetWithJacobian],
-        softness: TaskSoftnessType = TaskSoftnessType.linear,
-        relType: Optional[RelativeType] = None,
-        weight: float = 1.0,
+        refA: RefFrame,
+        refB: RefFrame,
+        softnessType: TaskSoftnessType,
+        weight: float = 1,
     ) -> None:
+        super().__init__(softnessType, weight, refA=refA, refB=refB)
+        self.observe(self._trigger_recompute, "refA:T, refB:T, _J")
 
-        super(RelativeTask, self).__init__(softness, weight)
+    _J: Jacobian = ta.Property(
+        observe=(maybe_child("refA", "J") | maybe_child("refB", "J") | te.trait("relType"))
+    )
 
-        assert isinstance(frameA, HasTransform) and isinstance(frameB, HasTransform)
-
-        self.frameA = frameA
-        self.frameB = frameB
-        self.relType = relType
-
-        if isinstance(self.frameA, HasJacobian) and isinstance(self.frameB, HasJacobian):
-            assert relType is not None
-
-            if relType is RelativeTask.RelativeType.A_FIXED:
-                self.J = lambda: -self.frameB.J
-            elif relType is RelativeTask.RelativeType.B_FIXED:
-                self.J = lambda: self.frameA.J
+    @ta.cached_property
+    def _get__J(self):
+        # TODO can be optimized.
+        if isinstance(self.refA, HasJacobian) and isinstance(self.refB, HasJacobian):
+            if self.relType is RelativeType.A_FIXED:
+                J = -self.refB.J
+            elif self.relType is RelativeType.B_FIXED:
+                J = self.refA.J
             else:
-                self.J = lambda: self.frameA.J - self.frameB.J
+                J = self.refA.J - self.relType.J
 
-        elif isinstance(self.frameA, HasJacobian):
-            self.J = lambda: self.frameA.J
+        elif isinstance(self.refA, HasJacobian):
+            J = self.refA.J
 
-        elif isinstance(self.frameB, HasJacobian):
-            self.J = lambda: -self.frameB.J
+        elif isinstance(self.refA, HasJacobian):
+            J = -self.refB.J
 
-        else:
-            raise ValueError("Either frameA or frameB has to be a JointOffsetTransform!")
-
-
-class JointTask:
-    def __init__(
-        self,
-        robot_model: RobotModel,
-    ) -> None:
-        pass
-        # self.task_size = len(robot_model.active_joints)
-        # self.A = np.identity(self.task_size)
-        # self.bound = np.zeros((1, self.task_size))
+        return J
 
 
-#
+class EqTask(Task, ABC):
+    bound = ta.Property(observe="_compute_val")
+
+    def _get_bound(self):
+        return self._compute_val[1]
+
+    @abstractmethod
+    def compute(self) -> Tuple[A, Bound]:
+        return super().compute()
 
 
-class EqTask(Task):
-    def __init_subclass__(cls) -> None:
-        cls.bound = np.zeros((1, cls.task_size))
+class IeqTask(Task, ABC):
+    upper_bound = ta.Property(observe="_compute_val")
+    lower_bound = ta.Property(observe="_compute_val")
 
-    def compute(self, data) -> Tuple[ArrayLike, ArrayLike]:
-        super().compute(data)
-        return self.A, self.bound
+    def _get_bound(self):
+        return self._compute_val[1]
 
+    def _get_bound(self):
+        return self._compute_val[2]
 
-class IeqTask(Task):
-    def __init_subclass__(cls) -> None:
-        cls.lower_bound = np.zeros((1, cls.task_size))
-        cls.upper_bound = np.zeros((1, cls.task_size))
-
-    def compute(self, data) -> Tuple[ArrayLike, ArrayLike, ArrayLike]:
-        super().compute(data)
-        return self.A, self.lower_bound, self.upper_bound
+    @abstractmethod
+    def compute(self) -> Tuple[A, LowerBound, UpperBound]:
+        return super().compute()
 
 
-TaskType = Union[EqTask, IeqTask]
-TaskHierarchyType = List[List[TaskType]]
+# TODO Joint-Task

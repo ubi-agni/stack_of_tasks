@@ -1,54 +1,23 @@
-from typing import Optional, overload
+from __future__ import annotations
 
 import numpy as np
+import traits.api as ta
 
-from stack_of_tasks.utils import Callback
-
-from . import HasJacobian, HasTransform, Jacobian, Transform, Transformable
-
-
-class Offset(HasTransform, Transformable):
-    @overload
-    def __init__(self, frame: HasTransform):
-        ...
-
-    @overload
-    def __init__(self, frame: HasTransform, offset: Transform):
-        ...
-
-    def __init__(self, frame: HasTransform, offset: Optional[Transform] = None) -> None:
-        self.frame = frame
-        self.callback = Callback()
-
-        if offset is None:
-            self._offset = np.identity(4)
-        else:
-            self._offset = offset
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, offset: Transform):
-        self._offset[:] = offset
-        self.callback(self._offset)
-
-    @property
-    def T(self):
-        return self.frame.T.dot(self._offset)
-
-    def transform(self, matrix: Transform):
-        self.offset = self.offset.dot(matrix)
-        return self
+from . import HasJacobian, HasTransform, Transform
+from .frames import RefFrame
 
 
-class OffsetWithJacobian(Offset, HasJacobian):
-    def __init__(self, frame, offset: Optional[Transform] = None):
-        assert isinstance(frame, HasTransform) and isinstance(frame, HasJacobian)
-        super().__init__(frame, offset)
-        self.frame: HasJacobian
+class Offset(RefFrame):
+    offset: Transform = ta.Array(dtype="float")
+    frame: RefFrame = ta.Instance(RefFrame)  # should be readonly.
+    T: Transform = ta.Property(ta.Array)
 
-    @property
-    def J(self) -> Jacobian:
-        return self.frame.J
+    def __init__(self, frame: HasTransform) -> None:
+        super(Offset, self).__init__(frame=frame, offset=np.identity(4))
+
+        if isinstance(self.frame, HasJacobian):
+            self.add_trait("J", ta.Delegate("frame"))
+
+    @ta.property_depends_on("frame.T, offset")
+    def _get_T(self):
+        return self.offset @ self.frame.T

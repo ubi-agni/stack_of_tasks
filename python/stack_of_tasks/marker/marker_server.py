@@ -27,7 +27,6 @@ class MarkerServer(HasTraits):
 
     @observe("marker.items:sync")
     def _sync(self, evt: TraitChangeEvent):
-        print(evt)
         # self._ims.setPose()
         for marker in self.marker[evt.new].markers:
             self._ims.setPose(marker.name, marker.pose)

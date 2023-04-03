@@ -6,6 +6,7 @@ import traits.api as ta
 import rospy
 from sensor_msgs.msg import JointState
 
+from stack_of_tasks.utils.traits import matrix_edit
 from stack_of_tasks.utils.transform_math import adjoint
 
 from .robot_model import ActiveJoint, Joint, RobotModel
@@ -16,7 +17,7 @@ class RobotState(ta.HasTraits):
 
     joint_state_msg: JointState = ta.Instance(JointState)
 
-    joint_values = ta.ListFloat()
+    joint_values = ta.Array()
 
     def __init__(
         self, model: RobotModel, ns_prefix: str = "", init_joint_values=None
@@ -42,15 +43,19 @@ class RobotState(ta.HasTraits):
         else:
             self.init_values = 0.5 * (self.robot_model.mins + self.robot_model.maxs)
 
-        self.joint_values = self.init_values
+        self.joint_values = numpy.array(self.init_values)
 
-    @ta.observe("joint_values, joint_values.items")
+    @ta.observe("joint_values")
     def _jv_change(self, evt):
         self.joint_state_msg.position = self.joint_values
         self.clear_cache()
 
     def reset(self):
         self.joint_values = self.init_values
+
+    def actuate(self, delta):
+        with matrix_edit(self, "joint_values"):
+            self.joint_values += delta
 
     def clear_cache(self):
         self._fk_cache.clear()

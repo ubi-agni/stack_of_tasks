@@ -6,12 +6,11 @@ from typing import Any
 import numpy as np
 
 from stack_of_tasks.solver.AbstractSolver import Solver
-from stack_of_tasks.tasks.Task import EqTask, TaskSoftnessType, TaskTypes
+from stack_of_tasks.tasks.Task import EqTask, IeqTask, TaskSoftnessType, task_kind_check
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 
 
 class HqpSolver(Solver):
-
     r"""The HQPSolver Base class.
                              P
                         ⎧rho
@@ -110,15 +109,14 @@ class HqpSolver(Solver):
             level_slacks = level_ieq_r = level_sieq_r = level_eq_r = 0
 
             for task in level:
-
-                if task.softnessType is TaskSoftnessType.quadratic:
+                if task_kind_check(task, TaskSoftnessType.quadratic):
                     level_slacks += task.task_size
                     level_sieq_r += 2 * task.task_size
                 else:
-                    if task.softnessType is TaskSoftnessType.linear:
+                    if task_kind_check(task, TaskSoftnessType.linear):
                         level_slacks += 1
 
-                    if isinstance(task, EqTask):
+                    if task_kind_check(task, EqTask):
                         level_eq_r += task.task_size
                     else:
                         level_ieq_r += task.task_size
@@ -176,15 +174,13 @@ class HqpSolver(Solver):
         self.slacks = 0
 
         for task in self._stack_of_tasks[level_index]:
-            if task.is_task_type(TaskTypes.HARD_EQ):
-
+            if task_kind_check(task, TaskSoftnessType.hard, EqTask):
                 self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
                 self.eq_matrix[
                     self.eq_rows : self.eq_rows + task.task_size, : self.N
                 ] = task.A
 
-            elif task.is_task_type(TaskTypes.HARD_IEQ):
-
+            elif task_kind_check(task, TaskSoftnessType.hard, IeqTask):
                 self.ieq_lower[
                     self.ieq_rows : self.ieq_rows + task.task_size
                 ] = task.lower_bound
@@ -199,7 +195,7 @@ class HqpSolver(Solver):
 
                 self.ieq_rows += task.task_size
 
-            elif task.is_task_type(TaskTypes.LINEAR_EQ):
+            elif task_kind_check(task, TaskSoftnessType.linear, EqTask):
                 # slack variables in linear eqs have bounds [0,1]
                 self.joints_slack_lower[self.N + self.slacks] = 0
                 self.joints_slack_upper[self.N + self.slacks] = 1
@@ -217,7 +213,7 @@ class HqpSolver(Solver):
                 self.slacks += 1
                 self.eq_rows += task.task_size
 
-            elif task.is_task_type(TaskTypes.QUADRATIC):
+            elif task_kind_check(task, TaskSoftnessType.quadratic):
                 # Quadratic (in) equalities are split into lower and upper bounds and are transferred
                 # to be only lower bounds.
 
@@ -229,7 +225,6 @@ class HqpSolver(Solver):
                     self.N + self.slacks : self.N + self.slacks + task.task_size
                 ] = np.inf
 
-                print(self.sieq_rows, self.sieq_bound.shape)
                 self.sieq_bound[self.sieq_rows : self.sieq_rows + task.task_size] = (
                     task.bound if isinstance(task, EqTask) else task.lower_bound
                 )

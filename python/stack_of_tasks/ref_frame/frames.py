@@ -3,13 +3,8 @@ from __future__ import annotations
 import numpy as np
 import traits.api as ta
 
+from stack_of_tasks.ref_frame import RefFrame, Transform
 from stack_of_tasks.robot_model.robot_state import RobotState
-
-from . import Transform
-
-
-class RefFrame(ta.ABCHasTraits):
-    T: Transform = ta.Any
 
 
 class Origin(RefFrame):
@@ -27,7 +22,7 @@ class RobotRefFrame(RefFrame):
     T = ta.Property(observe="_fk")
     J = ta.Property(observe="_fk")
 
-    _fk = ta.Property(observe="robot_state.joint_values.items")
+    _fk = ta.Property(observe="robot_state.joint_values")
 
     def __init__(self, state: RobotState, link: str) -> None:
         super().__init__(robot_state=state, link=link)

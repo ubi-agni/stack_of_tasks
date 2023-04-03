@@ -5,13 +5,13 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from numpy.typing import NDArray
-from typing import Tuple
+from typing import Any, Tuple
 
 import traits.api as ta
 import traits.observation.expression as te
 
 from stack_of_tasks.ref_frame import HasJacobian, Jacobian
-from stack_of_tasks.ref_frame.frames import RefFrame
+from stack_of_tasks.ref_frame.frames import RefFrame, RobotRefFrame
 
 UpperBound = NDArray
 LowerBound = NDArray
@@ -37,6 +37,15 @@ class RelativeType(Enum):
     A_FIXED = 0
     B_FIXED = 1
     RELATIVE = 2
+
+
+def task_kind_check(task: Task, *types):
+    for t in types:
+        if isinstance(t, TaskSoftnessType) and task.softness_type is not t:
+            return False
+        elif isinstance(t, type) and not isinstance(task, t):
+            return False
+    return True
 
 
 class Task(ta.ABCHasTraits):
@@ -96,8 +105,9 @@ class RelativeTask(Task, ABC):
         refB: RefFrame,
         softnessType: TaskSoftnessType,
         weight: float = 1,
+        **traits,
     ) -> None:
-        super().__init__(softnessType, weight, refA=refA, refB=refB)
+        super().__init__(softnessType, weight, refA=refA, refB=refB, **traits)
         self.observe(self._trigger_recompute, "refA:T, refB:T, _J")
 
     _J: Jacobian = ta.Property(
@@ -106,22 +116,40 @@ class RelativeTask(Task, ABC):
 
     @ta.cached_property
     def _get__J(self):
-        # TODO can be optimized.
-        if isinstance(self.refA, HasJacobian) and isinstance(self.refB, HasJacobian):
-            if self.relType is RelativeType.A_FIXED:
-                J = -self.refB.J
-            elif self.relType is RelativeType.B_FIXED:
-                J = self.refA.J
-            else:
-                J = self.refA.J - self.relType.J
+        a_is_J = isinstance(self.refA, HasJacobian)
+        b_is_J = isinstance(self.refB, HasJacobian)
 
-        elif isinstance(self.refA, HasJacobian):
+        if a_is_J and not b_is_J:
             J = self.refA.J
-
-        elif isinstance(self.refA, HasJacobian):
+        elif not a_is_J and b_is_J:
             J = -self.refB.J
 
+        elif a_is_J and b_is_J:
+            if self.relType is RelativeType.A_FIXED:
+                J = self.refB.J
+            elif self.relType is RelativeType.B_FIXED:
+                J = -self.refA.J
+            else:
+                J = self.refA.J - self.refA.J
+
         return J
+
+
+class TargetTask(Task, ABC):
+    target: RefFrame = ta.Instance(RefFrame)
+    robot: RobotRefFrame = ta.Instance(RobotRefFrame)
+
+    _J: Jacobian = ta.DelegatesTo("robot", "J")
+
+    def __init__(
+        self,
+        target: RefFrame,
+        robotFrame: RobotRefFrame,
+        softnessType: TaskSoftnessType,
+        weight: float = 1,
+    ) -> None:
+        super().__init__(softnessType, weight, target=target, robot=robotFrame)
+        self.observe(self._trigger_recompute, "target:T, robot:T, _J")
 
 
 class EqTask(Task, ABC):
@@ -132,22 +160,22 @@ class EqTask(Task, ABC):
 
     @abstractmethod
     def compute(self) -> Tuple[A, Bound]:
-        return super().compute()
+        pass
 
 
 class IeqTask(Task, ABC):
     upper_bound = ta.Property(observe="_compute_val")
     lower_bound = ta.Property(observe="_compute_val")
 
-    def _get_bound(self):
+    def _get_lower_bound(self) -> LowerBound:
         return self._compute_val[1]
 
-    def _get_bound(self):
+    def _get_upper_bound(self) -> UpperBound:
         return self._compute_val[2]
 
     @abstractmethod
     def compute(self) -> Tuple[A, LowerBound, UpperBound]:
-        return super().compute()
+        pass
 
 
 # TODO Joint-Task

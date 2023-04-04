@@ -1,112 +1,43 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, MutableSequence
+from contextlib import contextmanager
 
-from .Task import Task
+from typing import Iterator, List, Set
 
+import traits.api as ta
 
-class TaskItem:
-    def __init__(self, task: Task, parent: TaskLevel) -> None:
-        self.parent: TaskLevel = parent
-        self.task: Task = task
-        self.additional_data: Dict[str, Any] = {"name": ""}
-
-    @property
-    def row(self) -> int:
-        return self.parent.proxy.index(self)
+from stack_of_tasks.tasks.Task import Task
 
 
-class LevelProxy(MutableSequence[TaskItem]):
-    def __init__(self, level: TaskLevel) -> None:
-        super().__init__()
-        self._proxy: TaskLevel = level
-        self._plist = level._list
+class TaskHierarchy(ta.HasTraits):
+    levels: List[Set[Task]] = ta.List(trait=ta.Set(trait=ta.Instance(Task)), items=False)
 
-    def __getitem__(self, idx: int) -> TaskItem:
-        return self._plist[idx]
+    def __iter__(self) -> Iterator[Set[Task]]:
+        """Iterate over all levels in the hierarchy"""
+        yield from self.levels
 
-    def __setitem__(self, idx: int, value: TaskItem):
-        value.parent = self._proxy
-        self._plist[idx] = value
+    def __len__(self):
+        return len(self.levels)
 
-    def __delitem__(self, idx: int):
-        del self._plist[idx]
+    def __getitem__(self, index):
+        return self.levels[index]
 
-    def insert(self, index: int, value: TaskItem) -> None:
-        value.parent = self._proxy
-        return self._plist.insert(index, value)
+    stack_changed = ta.Event()
 
-    def __len__(self) -> int:
-        return len(self._plist)
+    @ta.observe("levels:items.items")
+    def _stack_changed(self, evt):
+        self.stack_changed = evt
 
+    @contextmanager
+    def new_level(self) -> Iterator[Set[Task]]:
+        """Context manager to get a new level witch can be filled with tasks,
+        before it is added to the stack.
 
-class TaskLevel(MutableSequence[Task]):
-    def __init__(self, parent: TaskHierarchy) -> None:
-        super().__init__()
+        Yields:
+            set: New Level, an empty set.
+        """
+        level: Set[Task] = set()
+        yield level
+        self.levels.append(level)
 
-        self.parent = parent
-        self._list: List[TaskItem] = []
-        self.proxy = LevelProxy(self)
-
-    @property
-    def row(self) -> int:
-        return self.parent.index(self)
-
-    def __getitem__(self, idx: int) -> Task:
-        return self._list[idx].task
-
-    def __setitem__(self, idx: int, value: Task):
-        self._list[idx].task = value
-
-    def __delitem__(self, idx: int):
-        del self._list[idx]
-
-    def __len__(self) -> int:
-        return len(self._list)
-
-    def insert(self, index: int, value: Task):
-        self._list.insert(index, TaskItem(value, self))
-
-
-class TaskHierarchy(MutableSequence[TaskLevel]):
-    def __init__(self) -> None:
-        super().__init__()
-        self._stack: List[TaskLevel] = []
-
-    def __getitem__(self, idx: int) -> TaskLevel:
-        return self._stack[idx]
-
-    def __setitem__(self, idx: int, value: TaskLevel):
-        self._stack[idx] = value
-
-    def __delitem__(self, idx: int):
-        del self._stack[idx]
-
-    def __len__(self) -> int:
-        return len(self._stack)
-
-    def insert(self, index: int, value: TaskLevel):
-        self._stack.insert(index, value)
-
-    depth = __len__
-
-    def append_task(self, value: Task | TaskItem):
-        l = TaskLevel(self)
-        if isinstance(value, Task):
-            l.append(value)
-        else:
-            l.proxy.append(value)
-        self.append(l)
-
-    def insert_task(self, idx: int, value: Task | TaskItem):
-        l = TaskLevel(self)
-        if isinstance(value, Task):
-            l.append(value)
-        else:
-            l.proxy.append(value)
-        self.insert(idx, l)
-
-    def compute(self, data):
-        for l in self:
-            for t in l:
-                t.compute(data)
+    # TODO more convenience functions

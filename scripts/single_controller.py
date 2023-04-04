@@ -1,59 +1,54 @@
 #!/usr/bin/env python3
 import numpy as np
+from app import Application
 
 import rospy
 
-from stack_of_tasks.controller import Controller, MarkerControl
-from stack_of_tasks.marker.markers import SixDOFMarker
-from stack_of_tasks.ref_frame.frames import JointFrame
-from stack_of_tasks.robot_model import JointStatePublisher
-from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
+from stack_of_tasks.marker.trait_marker import FullMovementMarker
+from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
 from stack_of_tasks.solver.OSQPSolver import OSQPSolver
-from stack_of_tasks.tasks import PositionTask
+from stack_of_tasks.tasks.Eq_Tasks import (
+    DistanceTask,
+    OrientationTask,
+    ParallelTask,
+    PlaneTask,
+    PositionTask,
+)
 from stack_of_tasks.tasks.Task import TaskSoftnessType
 
 np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")
 
 
-def setup(controller: Controller, mc):
-    marker = SixDOFMarker(name="pose", scale=0.1)
-    mc.add_marker(marker, marker.name)
-    marker.ref_frame.translate(x=0.3, z=0.5)
+def setup(app: Application):
+    marker = FullMovementMarker("marker")
+    app.marker_server.add_marker(marker)
 
-    frame_hand = JointFrame(controller.robot_state, "panda_hand_tcp")
-    pos = PositionTask(
-        frame_hand,
-        marker.ref_frame,
-        TaskSoftnessType.linear,
-        PositionTask.RelativeType.B_FIXED,
-        weight=0,
+    marker_frame = Origin().translate(0.5, 0, 0.5)
+    marker_frame.sync_trait("offset", marker, "transform")
+
+    robot_frame = RobotRefFrame(app.controller.robot_state, "panda_hand_tcp")
+
+    posTask = PositionTask(marker_frame, robot_frame, TaskSoftnessType.linear)
+    oriTask = OrientationTask(marker_frame, robot_frame, TaskSoftnessType.linear, weight=1)
+
+    planeTask = PlaneTask(marker_frame, robot_frame, TaskSoftnessType.linear)
+    distTask = DistanceTask(
+        marker_frame,
+        robot_frame,
+        softnessType=TaskSoftnessType.linear,
+        weight=0.1,
+        distance=0.2,
+    )
+    axis = np.array([0, 0, 1])
+    paraTask = ParallelTask(
+        marker_frame, robot_frame, TaskSoftnessType.linear, robot_axis=axis, target_axis=axis
     )
 
-    controller.task_hierarchy.append_task(pos)
-    controller.solver.stack_changed()
-
-
-def main():
-    rate = rospy.Rate(50)
-
-    targets = {}
-
-    def set_target(name, data):
-        targets[name] = data
-
-    mc = MarkerControl()
-    mc.marker_data_callback.append(set_target)
-
-    controller = Controller(solver_class=OSQPSolver, rho=0.01)
-    _ = JointStatePublisher(controller.robot_state)
-    setup(controller, mc)
-
-    while not rospy.is_shutdown():
-        controller.hierarchic_control(targets)
-        rate.sleep()
+    with app.task_hierarchy.new_level() as level:
+        level.add(posTask)
 
 
 if __name__ == "__main__":
-    rospy.init_node("ik")
-
-    main()
+    rospy.init_node("sot")
+    app = Application(setup, OSQPSolver, True, rho=0.1)
+    app.controller.control_loop(rospy.is_shutdown, 50, True)

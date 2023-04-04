@@ -1,78 +1,61 @@
 #!/usr/bin/env python3
 import numpy as np
+from app import Application
 
 import rospy
 import tf.transformations as tf
 
-from stack_of_tasks.controller import Controller, MarkerControl
-from stack_of_tasks.marker.markers import SixDOFMarker
-from stack_of_tasks.ref_frame.frames import JointFrame
-from stack_of_tasks.ref_frame.offset import OffsetWithJacobian
-from stack_of_tasks.robot_model import JointStatePublisher
-from stack_of_tasks.solver.CVXOPTSolver import CVXOPTSolver
+from stack_of_tasks.marker.trait_marker import FullMovementMarker
+from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
 from stack_of_tasks.solver.OSQPSolver import OSQPSolver
-from stack_of_tasks.tasks import OrientationTask, PositionTask
-from stack_of_tasks.tasks.Task import TaskSoftnessType
+from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, PositionTask
+from stack_of_tasks.tasks.Task import RelativeType, TaskSoftnessType
 
 np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")
+from pprint import pprint
 
 
-def setup(controller: Controller, mc):
-    marker = SixDOFMarker(name="pose", scale=0.1)
-    mc.add_marker(marker, marker.name)
-    marker.ref_frame.translate(z=1.5)
+def setup(app: Application):
+    marker = FullMovementMarker("marker")
+    app.marker_server.add_marker(marker)
 
-    frame_left = JointFrame(controller.robot_state, "left_hand_tcp")
-    frame_right = JointFrame(controller.robot_state, "right_hand_tcp")
+    marker_frame = Origin().translate(0, 0, 1.5)
+    marker_frame.sync_trait("offset", marker, "transform")
 
-    pos = PositionTask(
-        frame_left, marker.ref_frame, softness=TaskSoftnessType.linear, weight=0
-    )
+    frame_left = RobotRefFrame(app.controller.robot_state, "left_hand_tcp")
+    frame_right = RobotRefFrame(app.controller.robot_state, "right_hand_tcp")
+
+    pos = PositionTask(frame_left, marker_frame, TaskSoftnessType.linear, weight=1.0)
 
     relative = PositionTask(
-        frame_left,
+        frame_left.translate(z=0.1),
         frame_right,
         TaskSoftnessType.linear,
-        PositionTask.RelativeType.A_FIXED,
-        weight=0,
+        weight=1.0,
+        relType=RelativeType.A_FIXED,
     )
 
     orientation = OrientationTask(
         frame_left,
-        OffsetWithJacobian(frame_right, tf.quaternion_matrix([0.5, 0.5, 0, 0])),
+        frame_right.rotate_axis_angle(
+            axis=[0, 0.5, 0],
+            angle=1.5708 * 2,
+        ),
         TaskSoftnessType.linear,
-        PositionTask.RelativeType.RELATIVE,
-        weight=0,
+        weight=10,
+        relType=RelativeType.RELATIVE,
     )
 
-    controller.task_hierarchy.append_task(pos)
-    controller.task_hierarchy.append_task(relative)
-    controller.task_hierarchy[1].append(orientation)
-    controller.solver.stack_changed()
+    with app.task_hierarchy.new_level() as level:
+        level.add(pos)
+        level.add(relative)
 
-
-def main():
-    rate = rospy.Rate(50)
-
-    targets = {}
-
-    def set_target(name, data):
-        targets[name] = data
-
-    mc = MarkerControl()
-    mc.marker_data_callback.append(set_target)
-
-    controller = Controller(solver_class=CVXOPTSolver, rho=0.01)
-    _ = JointStatePublisher(controller.robot_state)
-
-    setup(controller, mc)
-
-    while not rospy.is_shutdown():
-        controller.hierarchic_control(targets)
-        rate.sleep()
+    with app.task_hierarchy.new_level() as level:
+        #
+        level.add(orientation)
 
 
 if __name__ == "__main__":
-    rospy.init_node("ik")
-
-    main()
+    rospy.init_node("sot")
+    app = Application(setup, OSQPSolver, True, rho=0.1)
+    app.controller.control_loop(rospy.is_shutdown, 50, True)

@@ -1,79 +1,63 @@
+from typing import Callable, Type
+
 import numpy as np
+import traits.api as ta
 
-from interactive_markers.interactive_marker_server import InteractiveMarkerServer
+import rospy
 
-from stack_of_tasks.marker.interactive_marker import IAMarker
-from stack_of_tasks.robot_model import RobotModel, RobotState
+from stack_of_tasks.robot_model.robot_model import RobotModel
+from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
-from stack_of_tasks.utils import Callback
 
 
-class Controller(object):
-    def __init__(
-        self,
-        solver_class: Solver,
-        rate=50,
-        robot_model=None,
-        ns_prefix="",
-        **solver_options,
-    ):
+class Controller(ta.HasTraits):
+    robot_model: RobotModel = ta.Instance(RobotModel)
+    robot_state: RobotState = ta.Instance(RobotState)
 
-        self.rate = rate
+    solver: Solver = ta.Instance(Solver)
+    hierarchy: TaskHierarchy = ta.Instance(TaskHierarchy)
 
-        self.joint_callback = Callback()
-        self.control_step_callback = Callback()
+    def __init__(self, solver: Type[Solver], **solver_args) -> None:
+        # robotmodel
+        self.robot_model = RobotModel()
 
-        if robot_model is None:
-            robot_model = RobotModel()
+        # robotstate
+        self.robot_state = RobotState(self.robot_model)
 
-        self.robot_model = robot_model
-        self.robot_state = RobotState(robot_model, ns_prefix=ns_prefix)
+        super().__init__()
 
-        self.task_hierarchy = TaskHierarchy()
-        self.solver = solver_class(self.robot_model.N, self.task_hierarchy, **solver_options)
+        # collection of tasks
+        self.hierarchy = TaskHierarchy()
+        self.solver = solver(self.robot_model.N, self.hierarchy, **solver_args)
 
-        self.last_dq = None
+    @ta.observe("hierarchy.stack_changed")
+    def _stack_change(self, evt):
+        self.solver.stack_changed()
 
-    def check_end(self):
-        pass
+    def control_loop(self, condition: Callable[[], bool], rate: int, invert_condition=False):
+        _condition = lambda: not condition() if invert_condition else condition
 
-    def hierarchic_control(self, targets):
+        rrate = rospy.Rate(rate)
+
+        warmstart_dq = None
+        while _condition():
+            warmstart_dq = self.control_step(rate, warmstart_dq)
+            rrate.sleep()
+
+    def control_step(self, rate, warmstart):
         lb = np.maximum(
-            -0.01, (self.robot_model.mins * 0.95 - self.robot_state.joint_values) / self.rate
+            -0.01, (self.robot_model.mins * 0.95 - self.robot_state.joint_values) / rate
         )
         ub = np.minimum(
-            0.01, (self.robot_model.maxs * 0.95 - self.robot_state.joint_values) / self.rate
+            0.01, (self.robot_model.maxs * 0.95 - self.robot_state.joint_values) / rate
         )
 
-        self.task_hierarchy.compute(targets)
+        dq = self.solver.solve(lb, ub, warmstart=warmstart)
 
-        dq = self.solver.solve(lb, ub, warmstart=self.last_dq)
-
-        self.last_dq = dq
         if dq is not None:
             self.robot_state.actuate(dq)
-            # return tcr[0] < 1e-12 or all(i < 1e-8 for i in tcr)
+        else:
+            print("dq is none")
 
-        self.control_step_callback()
-        return False
-
-
-class MarkerControl:
-    def __init__(self) -> None:
-        self.ims = InteractiveMarkerServer("controller")
-        self.marker = {}
-        self.marker_data_callback = Callback()
-
-    def add_marker(self, marker: IAMarker, name):
-        self.marker[name] = marker
-        marker.data_callbacks.append(self.marker_data_callback)
-        marker.init_server(self.ims)
-
-    def delete_marker(self, name):
-        self.marker[name].delete()
-        # t = self.marker[name].provided_targets()
-        # for x in t:
-        #    print(x)
-        #    del self.targets[x]
-        del self.marker[name]
+        return dq

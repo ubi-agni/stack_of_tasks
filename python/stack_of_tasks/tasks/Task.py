@@ -126,11 +126,11 @@ class RelativeTask(Task, ABC):
 
         elif a_is_J and b_is_J:
             if self.relType is RelativeType.A_FIXED:
-                J = self.refB.J
+                J = -self.refB.J
             elif self.relType is RelativeType.B_FIXED:
-                J = -self.refA.J
+                J = self.refA.J
             else:
-                J = self.refA.J - self.refA.J
+                J = self.refA.J - self.refB.J
 
         return J
 

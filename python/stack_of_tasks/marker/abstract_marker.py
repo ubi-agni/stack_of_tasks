@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from collections import defaultdict
 
 import numpy as np
-from traits.api import Array, Event, HasTraits, MetaHasTraits, Range, String, observe
+import traits.api as ta
 from traits.observation.events import TraitChangeEvent
 
 from tf import transformations as tf
@@ -51,19 +52,12 @@ class Guard(object):
         return items in self.locked_items
 
 
-from abc import ABC, ABCMeta, abstractmethod
+class IAMarker(ta.ABCHasTraits):
+    name = ta.Str(value="")
+    transform = ta.Array(shape=(4, 4), value=np.identity(4))
+    scale = ta.Range(low=0.0, value=0.25, exclude_low=True)
 
-
-class ABCTrait(ABCMeta, MetaHasTraits):
-    pass
-
-
-class IAMarker(ABC, HasTraits, metaclass=ABCTrait):
-    name = String(value="")
-    transform = Array(shape=(4, 4), value=np.identity(4))
-    scale = Range(low=0.0, value=0.25, exclude_low=True)
-
-    sync = Event()
+    sync = ta.Event()
 
     def __init__(self, name) -> None:
         super().__init__(name=name)
@@ -80,17 +74,17 @@ class IAMarker(ABC, HasTraits, metaclass=ABCTrait):
 
         self.markers.append(self.marker)
 
-    @observe("name")
+    @ta.observe("name")
     def _name_changed(self, evt: TraitChangeEvent):
         self.marker.name = self.name
 
-    @observe("transform")
+    @ta.observe("transform")
     def _transform_changed(self, evt: TraitChangeEvent):
         if "transform" not in self.lg:
             self.marker.pose = matrix_to_pose(self.transform)
             self.sync = self.name
 
-    @observe("scale")
+    @ta.observe("scale")
     def _scale_changed(self, evt: TraitChangeEvent):
         if "scale" not in self.lg:
             self.marker.scale = self.scale

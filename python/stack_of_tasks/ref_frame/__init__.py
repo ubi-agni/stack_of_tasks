@@ -70,7 +70,7 @@ class Offset(RefFrame):
 
     @ta.property_depends_on("frame.T, offset")
     def _get_T(self):
-        return self.offset @ self.frame.T
+        return self.frame.T @ self.offset
 
     def transform(self, T_matrix: Transform) -> Offset:
         with matrix_edit(self, "offset"):

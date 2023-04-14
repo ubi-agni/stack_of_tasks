@@ -24,9 +24,8 @@ class MoveMimeData(QMimeData):
 
 
 class TaskHierarchyModel(QAbstractItemModel):
-    def __init__(self, task_hierarchy: Optional[TaskHierarchy] = None) -> None:
+    def __init__(self, task_hierarchy: TaskHierarchy) -> None:
         super().__init__()
-
         self.task_hierarchy = task_hierarchy
 
     def set_hierarchy(self, hierarchy):
@@ -38,11 +37,8 @@ class TaskHierarchyModel(QAbstractItemModel):
     def rowCount(self, parent: QModelIndex = ...) -> int:
         if self.task_hierarchy is None:
             return 0
-        parent_item = self.task_hierarchy
 
-        if parent.isValid():
-            parent_item: HTypes = parent.internalPointer()
-
+        parent_item = parent.internalPointer() if parent.isValid() else self.task_hierarchy
         if isinstance(parent_item, TaskItem):
             return 0
 
@@ -52,11 +48,7 @@ class TaskHierarchyModel(QAbstractItemModel):
         return 1
 
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
-
-        parent_item: Sized = self.task_hierarchy
-
-        if parent.isValid():
-            parent_item = parent.internalPointer()
+        parent_item = parent.internalPointer() if parent.isValid() else self.task_hierarchy
 
         if (child := self._get_child(parent_item, row)) is not None:
             return self.createIndex(row, column, child)

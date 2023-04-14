@@ -45,7 +45,7 @@ class TaskHierarchyModel(QAbstractItemModel):
         return len(parent_item)
 
     def columnCount(self, parent: QModelIndex = None) -> int:
-        return 1
+        return 2
 
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
         parent_item = parent.internalPointer() if parent.isValid() else self.task_hierarchy
@@ -78,7 +78,9 @@ class TaskHierarchyModel(QAbstractItemModel):
 
     # data
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        flags = super().flags(index) | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+        flags = super().flags(index)
+        if index.column() == 0:
+            flags |= Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
         if not isinstance(index.internalPointer(), TaskItem):
             flags |= Qt.ItemIsDropEnabled
         return flags
@@ -87,15 +89,20 @@ class TaskHierarchyModel(QAbstractItemModel):
         # print("data", index.row(), index.column())
         if index.isValid():
             item = index.internalPointer()
-            if role == Qt.DisplayRole:
-                if isinstance(item, TaskLevel):
-                    return f"Level {item.row+1}"
+            if index.column() == 0:
+                if role == Qt.DisplayRole:
+                    if isinstance(item, TaskLevel):
+                        return f"Level {item.row+1}"
 
-                if isinstance(item, TaskItem):
-                    return f"{item.task.name} - {item.additional_data['name']}"
-            elif role == RawDataRole:
-                if isinstance(item, TaskItem):
-                    return item.task
+                    if isinstance(item, TaskItem):
+                        return f"{item.task.name} - {item.additional_data['name']}"
+                elif role == RawDataRole:
+                    if isinstance(item, TaskItem):
+                        return item.task
+            elif index.column() == 1:
+                if role == Qt.DisplayRole:
+                    if isinstance(item, TaskItem):
+                        return 0.0
 
     def supportedDropActions(self) -> Qt.DropActions:
         return Qt.MoveAction

@@ -24,6 +24,8 @@ class MoveMimeData(QMimeData):
 
 
 class TaskHierarchyModel(QAbstractItemModel):
+    _headers = ["Task", "Error"]
+
     def __init__(self, task_hierarchy: TaskHierarchy) -> None:
         super().__init__()
         self.task_hierarchy = task_hierarchy
@@ -46,6 +48,11 @@ class TaskHierarchyModel(QAbstractItemModel):
 
     def columnCount(self, parent: QModelIndex = None) -> int:
         return 2
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> Any:
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]
+        return super().headerData(section, orientation, role)
 
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
         parent_item = parent.internalPointer() if parent.isValid() else self.task_hierarchy

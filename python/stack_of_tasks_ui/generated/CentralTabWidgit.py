@@ -32,9 +32,15 @@ class Ui_TabWidget(object):
     def retranslateUi(self, TabWidget):
         _translate = QtCore.QCoreApplication.translate
         TabWidget.setWindowTitle(_translate("TabWidget", "TabWidget"))
-        TabWidget.setTabText(TabWidget.indexOf(self.solver), _translate("TabWidget", "Solver"))
-        TabWidget.setTabText(TabWidget.indexOf(self.hierarchy), _translate("TabWidget", "Hierarchy"))
+        TabWidget.setTabText(
+            TabWidget.indexOf(self.solver), _translate("TabWidget", "Solver")
+        )
+        TabWidget.setTabText(
+            TabWidget.indexOf(self.hierarchy), _translate("TabWidget", "Hierarchy")
+        )
         TabWidget.setTabText(TabWidget.indexOf(self.refs), _translate("TabWidget", "Refs"))
+
+
 from stack_of_tasks.ui.hierarchy_tab.tab import HierarchyTab
 from stack_of_tasks.ui.ref_tab.tab import Ref_Tab
 from stack_of_tasks.ui.solver_tab.tab import SolverTab

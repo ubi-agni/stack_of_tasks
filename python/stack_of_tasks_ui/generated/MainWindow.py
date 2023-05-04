@@ -37,4 +37,6 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Task hierarchy Editor"))
+
+
 from stack_of_tasks.ui.tab_widget import TabWidget

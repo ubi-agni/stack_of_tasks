@@ -47,4 +47,6 @@ class Ui_TaskHierarchy(object):
         self.edit_group.setTitle(_translate("TaskHierarchy", "Edit Task"))
         self.NoneSelected.setText(_translate("TaskHierarchy", "No Task Selected"))
         self.addTask.setText(_translate("TaskHierarchy", "add task"))
+
+
 from stack_of_tasks.ui.hierarchy_tab.task_details import TaskDetails

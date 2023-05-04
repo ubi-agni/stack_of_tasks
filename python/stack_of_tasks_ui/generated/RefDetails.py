@@ -18,7 +18,9 @@ class Ui_Form(object):
         self.formLayout = QtWidgets.QFormLayout(Form)
         self.formLayout.setObjectName("formLayout")
         self.nameLabel = QtWidgets.QLabel(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.nameLabel.sizePolicy().hasHeightForWidth())
@@ -26,7 +28,9 @@ class Ui_Form(object):
         self.nameLabel.setObjectName("nameLabel")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.nameLabel)
         self.nameLineEdit = QtWidgets.QLineEdit(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.nameLineEdit.sizePolicy().hasHeightForWidth())

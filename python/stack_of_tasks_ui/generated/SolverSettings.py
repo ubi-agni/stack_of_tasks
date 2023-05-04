@@ -23,7 +23,9 @@ class Ui_SolverSettings(object):
         self.form_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.solverClassLabel)
         self.solverClassComboBox = QtWidgets.QComboBox(SolverSettings)
         self.solverClassComboBox.setObjectName("solverClassComboBox")
-        self.form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.solverClassComboBox)
+        self.form_layout.setWidget(
+            0, QtWidgets.QFormLayout.FieldRole, self.solverClassComboBox
+        )
 
         self.retranslateUi(SolverSettings)
         QtCore.QMetaObject.connectSlotsByName(SolverSettings)

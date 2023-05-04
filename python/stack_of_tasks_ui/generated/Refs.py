@@ -37,7 +37,9 @@ class Ui_Refs(object):
         self.verticalLayout_2.addWidget(self.ref_details)
         self.verticalLayout_3.addWidget(self.edit_group)
         self.new_ref = QtWidgets.QToolButton(Refs)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.new_ref.sizePolicy().hasHeightForWidth())
@@ -60,4 +62,6 @@ class Ui_Refs(object):
         self.actionadd_ref.setText(_translate("Refs", "add ref"))
         self.actionadd_ref.setToolTip(_translate("Refs", "Add new (offset) refference frame"))
         self.actionadd_ref.setShortcut(_translate("Refs", "Ctrl+A"))
+
+
 from stack_of_tasks.ui.ref_tab.ref_details import Ref_Details

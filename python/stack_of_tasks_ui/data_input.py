@@ -10,9 +10,8 @@ from PyQt5.QtWidgets import (
     QTreeView,
     QWidget,
 )
-
-from stack_of_tasks.ui.matrix_view import MatrixView
-from stack_of_tasks.ui.model import RawDataRole
+from stack_of_tasks_ui.model import RawDataRole
+from stack_of_tasks_ui.traits_mapping.custom_widgets.matrix_view import MatrixView
 
 PropType = TypeVar("PropType", bound=QWidget)
 
@@ -39,7 +38,6 @@ class TreeComboBox(QComboBox):
         self._view.window().resize(sh)
 
     def findIndexOfObject(self, obj, role=RawDataRole):
-
         for i in range(self.model().rowCount(QModelIndex())):
             ii = self.model().index(i, 0, QModelIndex())
 

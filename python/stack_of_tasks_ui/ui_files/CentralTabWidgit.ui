@@ -36,19 +36,19 @@
   <customwidget>
    <class>Ref_Tab</class>
    <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.ref_tab.tab</header>
+   <header>stack_of_tasks_ui.ref_tab.tab</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>HierarchyTab</class>
    <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.hierarchy_tab.tab</header>
+   <header>stack_of_tasks_ui.hierarchy_tab.tab</header>
    <container>1</container>
   </customwidget>
   <customwidget>
    <class>SolverTab</class>
    <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.solver_tab.tab</header>
+   <header>stack_of_tasks_ui.solver_tab.tab</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

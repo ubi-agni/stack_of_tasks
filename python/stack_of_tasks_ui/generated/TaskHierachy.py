@@ -49,4 +49,4 @@ class Ui_TaskHierarchy(object):
         self.addTask.setText(_translate("TaskHierarchy", "add task"))
 
 
-from stack_of_tasks.ui.hierarchy_tab.task_details import TaskDetails
+from stack_of_tasks_ui.hierarchy_tab.task_details import TaskDetails

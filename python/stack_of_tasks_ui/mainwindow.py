@@ -7,7 +7,7 @@ from .generated.MainWindow import Ui_MainWindow
 
 
 class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
-    def __init__(self, ref_model, task_hierarchy):
+    def __init__(self):
         super(Ui, self).__init__()
         self.setupUi(self)
 
@@ -33,9 +33,9 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         infoMenu.addAction(info3)
 
         self.setCentralWidget(self.tab_widget)
-        self.tab_widget.hierarchy.set_ref_model(ref_model)
-        self.tab_widget.hierarchy.model.set_hierarchy(task_hierarchy)
-        self.tab_widget.refs.set_model(ref_model)
+        # self.tab_widget.hierarchy.set_ref_model(ref_model)
+        # self.tab_widget.hierarchy.model.set_hierarchy(task_hierarchy)
+        # self.tab_widget.refs.set_model(ref_model)
 
         self.run_Button = QPushButton("Start")
         self.status_bar.addPermanentWidget(self.run_Button)

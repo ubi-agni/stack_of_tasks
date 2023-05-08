@@ -61,12 +61,15 @@ class PlaneTask(TargetTask, EqTask):
         )
 
 
+RobotAxis = ta.Array(shape=(3, 1), value=np.array([[0], [0], [1]]))
+
+
 class ParallelTask(RelativeTask, EqTask):
     name = "Parallel"
     task_size: int = 3
 
-    robot_axis = ta.Array()
-    target_axis = ta.Array()
+    robot_axis = RobotAxis()
+    target_axis = RobotAxis()
 
     def compute(self) -> Tuple[A, Bound]:
         """Align axis in eef frame to be parallel to reference axis in base frame"""

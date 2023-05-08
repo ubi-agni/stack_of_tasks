@@ -5,11 +5,9 @@ from typing import Any, Iterable, List, Optional, Sized, Union
 from PyQt5.QtCore import QAbstractItemModel, QMimeData, QModelIndex, Qt
 
 from stack_of_tasks.tasks.Task import Task
-from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy, TaskItem, TaskLevel
+from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 
 from . import RawDataRole
-
-HTypes = Union[TaskHierarchy, TaskLevel, TaskItem]
 
 
 class MoveMimeData(QMimeData):
@@ -17,7 +15,7 @@ class MoveMimeData(QMimeData):
 
     def __init__(self, selected_indices) -> None:
         super().__init__()
-        self.selected_indices: List[HTypes] = selected_indices
+        self.selected_indices = selected_indices
 
     def formats(self) -> List[str]:
         return [MoveMimeData.mimeType]
@@ -38,21 +36,20 @@ class TaskHierarchyModel(QAbstractItemModel):
     def rowCount(self, parent: QModelIndex = ...) -> int:
         if self.task_hierarchy is None:
             return 0
+
         parent_item = self.task_hierarchy
 
         if parent.isValid():
-            parent_item: HTypes = parent.internalPointer()
+            parent_item = parent.internalPointer()
 
-        if isinstance(parent_item, TaskItem):
+        if isinstance(parent_item, Task):
             return 0
-
         return len(parent_item)
 
     def columnCount(self, parent: QModelIndex = None) -> int:
         return 1
 
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
-
         parent_item: Sized = self.task_hierarchy
 
         if parent.isValid():
@@ -63,47 +60,48 @@ class TaskHierarchyModel(QAbstractItemModel):
 
         return QModelIndex()
 
-    def _get_child(self, item: TaskHierarchy | TaskLevel, row: int) -> TaskLevel | TaskItem:
+    def _get_child(self, item, row: int):
         if row < len(item):
             if isinstance(item, TaskHierarchy):
+                return item.levels[row]
+            elif isinstance(item, list):
                 return item[row]
-            else:
-                return item.proxy[row]
 
         return None
 
     def parent(self, index: QModelIndex):
         if index.isValid():
-            item: TaskItem | TaskLevel | TaskHierarchy = index.internalPointer()
-            parent = item.parent
+            item = index.internalPointer()
 
-            if parent is self.task_hierarchy:
+            if item in self.task_hierarchy:
                 return QModelIndex()
 
-            return self.createIndex(parent.row, 0, parent)
+            for i, l in enumerate(self.task_hierarchy.levels):
+                if item in l:
+                    return self.createIndex(i, 0, l)
 
         return QModelIndex()
 
     # data
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        flags = super().flags(index) | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
-        if not isinstance(index.internalPointer(), TaskItem):
-            flags |= Qt.ItemIsDropEnabled
-        return flags
+        # flags = super().flags(index) | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+        # if not isinstance(index.internalPointer(), TaskItem):
+        #    flags |= Qt.ItemIsDropEnabled
+        return super().flags(index)
 
     def data(self, index: QModelIndex, role: int) -> Any:
-        # print("data", index.row(), index.column())
         if index.isValid():
             item = index.internalPointer()
             if role == Qt.DisplayRole:
-                if isinstance(item, TaskLevel):
-                    return f"Level {item.row+1}"
+                if isinstance(item, list):
+                    return f"Level {'x'}"
 
-                if isinstance(item, TaskItem):
-                    return f"{item.task.name} - {item.additional_data['name']}"
+                if isinstance(item, Task):
+                    return f"{item.name} - "
+
             elif role == RawDataRole:
-                if isinstance(item, TaskItem):
-                    return item.task
+                if isinstance(item, Task):
+                    return item
 
     def supportedDropActions(self) -> Qt.DropActions:
         return Qt.MoveAction
@@ -146,7 +144,6 @@ class TaskHierarchyModel(QAbstractItemModel):
         self.layoutAboutToBeChanged.emit()
 
         for source in data.selected_indices:
-
             if isinstance(target, TaskHierarchy) and isinstance(source, TaskLevel):
                 target.remove(source)
                 target.insert(row, source)

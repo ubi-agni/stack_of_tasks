@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing
 
 import numpy as np
+from PyQt5 import QtCore
 from PyQt5.QtCore import (
     QAbstractTableModel,
     QMargins,
@@ -137,15 +138,13 @@ class MatrixItemDelegate(QStyledItemDelegate):
 
 
 class MatrixView(QTableView):
-    def __init__(self, parent=None, model=None) -> None:
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        if model is not None:
-            self.setModel(model)
 
-        self.setItemDelegate(MatrixItemDelegate())
+    def setModel(self, model) -> None:
+        super().setModel(model)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.verticalHeader().setMinimumSectionSize(0)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setMinimumSectionSize(0)
-
-        self
+        self.setItemDelegate(MatrixItemDelegate())

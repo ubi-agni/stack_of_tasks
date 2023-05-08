@@ -38,7 +38,7 @@
   <customwidget>
    <class>TabWidget</class>
    <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.tab_widget</header>
+   <header>stack_of_tasks_ui.tab_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -79,7 +79,7 @@
   <customwidget>
    <class>Ref_Details</class>
    <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.ref_tab.ref_details</header>
+   <header>stack_of_tasks_ui.ref_tab.ref_details</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

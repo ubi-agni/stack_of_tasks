@@ -1,15 +1,17 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+
+import traits.api as ta
 
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 
 
-class Solver(ABC):
+class Solver(ta.ABCHasTraits):
     def __init__(
         self, number_of_joints: int, stack_of_tasks: TaskHierarchy, **options
     ) -> None:
+        super().__init__(**options)
         self.N = number_of_joints
         self._stack_of_tasks = stack_of_tasks
-        self._options = options
 
     def set_stack_of_tasks(self, stack_of_tasks: TaskHierarchy):
         self._stack_of_tasks = stack_of_tasks

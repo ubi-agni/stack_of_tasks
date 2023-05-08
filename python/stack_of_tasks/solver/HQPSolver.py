@@ -4,6 +4,7 @@ from numpy.typing import NDArray
 from typing import Any
 
 import numpy as np
+import traits.api as ta
 
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks.Task import EqTask, IeqTask, TaskSoftnessType, task_kind_check
@@ -39,6 +40,8 @@ class HqpSolver(Solver):
     quad task ub        {   -J       0 ⋯ I ⋯ 0       -ub         ∅    -ub ≤  -J dq + s"""
 
     #  (soft ineq. task    {  1   J          lb   ub         lb ≤ 1 s + J dq ≤ ub)
+
+    rho = ta.Range(0.0, value=0.1, exclude_low=True)
 
     def __init__(
         self, number_of_joints: int, stack_of_tasks: TaskHierarchy, **options
@@ -131,7 +134,7 @@ class HqpSolver(Solver):
     def _create_matrix(self):
         # Objective matrix P and vector q
         self.objective_matrix = np.identity(self.N + self.m_slacks)
-        self.objective_matrix[self.N :, self.N :] = self._options.get("rho", 0.1)
+        self.objective_matrix[self.N :, self.N :] = self.rho
 
         self.objective_vector = np.zeros((self.N + self.m_slacks,))
 

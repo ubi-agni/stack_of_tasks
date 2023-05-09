@@ -1,10 +1,10 @@
 from PyQt5.QtWidgets import QDoubleSpinBox, QFormLayout, QVBoxLayout, QWidget
-from stack_of_tasks_ui.generated.SolverSettings import Ui_SolverSettings
-from stack_of_tasks_ui.model.object_model import ObjectModel, RawDataRole
-from stack_of_tasks_ui.traits_mapping import HasTraitGroupBox
-from stack_of_tasks_ui.traits_mapping.custom_widgets.object_dropbown import ObjectDropdown
 
 from stack_of_tasks.solver import InverseJacobianSolver, OSQPSolver
+from stack_of_tasks.ui.generated.SolverSettings import Ui_SolverSettings
+from stack_of_tasks.ui.model.object_model import ObjectModel, RawDataRole
+from stack_of_tasks.ui.traits_mapping import HasTraitGroupBox
+from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import ObjectDropdown
 
 
 class SolverTab(QWidget):

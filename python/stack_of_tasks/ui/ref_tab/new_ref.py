@@ -5,11 +5,11 @@ from enum import Enum
 import typing
 
 from PyQt5.QtWidgets import QWidget
-from stack_of_tasks_ui.ButtonDialog import ButtonDialog
-from stack_of_tasks_ui.model.enum_model import EnumModel, RawDataRole
-from stack_of_tasks_ui.ref_tab.ref_details import Ref_Details
 
 from stack_of_tasks.ref_frame.offset import HasJacobian, Offset, OffsetWithJacobian
+from stack_of_tasks.ui.ButtonDialog import ButtonDialog
+from stack_of_tasks.ui.model.enum_model import EnumModel, RawDataRole
+from stack_of_tasks.ui.ref_tab.ref_details import Ref_Details
 
 
 class RefTypes(Enum):

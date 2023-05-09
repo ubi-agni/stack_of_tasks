@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 
+from random import random
+
 import traits.api as ta
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
-from stack_of_tasks_ui.mainwindow import Ui
-from stack_of_tasks_ui.model.task_hierarchy import TaskHierarchyModel
 
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
 from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+from stack_of_tasks.tasks.Eq_Tasks import ParallelTask, PositionTask
+from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
+from stack_of_tasks.ui.mainwindow import Ui
+from stack_of_tasks.ui.model.task_hierarchy import TaskHierarchyModel
+from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import ObjectModel
 
 SOLVER = [InverseJacobianSolver, OSQPSolver]
-import traits.api as ta
-from stack_of_tasks_ui.traits_mapping.custom_widgets.object_dropbown import ObjectModel
 
 
 class SolverConfig(ta.HasTraits):
@@ -29,10 +32,6 @@ class SolverConfig(ta.HasTraits):
 
 class HierarchyController:
     pass
-
-
-from stack_of_tasks.tasks.Eq_Tasks import ParallelTask, PositionTask
-from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 
 
 class DummyTask(Task):
@@ -61,8 +60,6 @@ class Controller(ta.HasTraits):
 
     st_model = TaskHierarchyModel(st)
 
-
-from random import random
 
 if __name__ == "__main__":
     c = Controller()

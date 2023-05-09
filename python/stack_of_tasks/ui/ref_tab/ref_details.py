@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from stack_of_tasks_ui.data_input import DataInput
-from stack_of_tasks_ui.model.av_ref import AvailableRefModel
-from stack_of_tasks_ui.traits_mapping.custom_widgets.matrix_view import NumpyTableModel
-
 from stack_of_tasks.ref_frame.frames import RefFrame
 from stack_of_tasks.ref_frame.offset import Offset
+from stack_of_tasks.ui.data_input import DataInput
+from stack_of_tasks.ui.model.av_ref import AvailableRefModel
+from stack_of_tasks.ui.traits_mapping.custom_widgets.matrix_view import NumpyTableModel
 
 
 class Ref_Details(DataInput):

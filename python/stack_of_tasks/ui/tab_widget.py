@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QTabWidget
-from stack_of_tasks_ui.generated.CentralTabWidgit import Ui_TabWidget
+
+from stack_of_tasks.ui.generated.CentralTabWidgit import Ui_TabWidget
 
 
 class TabWidget(QTabWidget, Ui_TabWidget):

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from PyQt5 import QtCore, QtWidgets
-from stack_of_tasks_ui.generated.Refs import Ui_Refs
-from stack_of_tasks_ui.model.av_ref import AvailableRefModel, RawDataRole
-from stack_of_tasks_ui.ref_tab.new_ref import AddRef
 
 from stack_of_tasks.ref_frame.offset import Offset
+from stack_of_tasks.ui.generated.Refs import Ui_Refs
+from stack_of_tasks.ui.model.av_ref import AvailableRefModel, RawDataRole
+from stack_of_tasks.ui.ref_tab.new_ref import AddRef
 
 
 class Ref_Tab(QtWidgets.QWidget, Ui_Refs):

@@ -1,11 +1,12 @@
 import typing
 
 from PyQt5 import QtWidgets
-from stack_of_tasks_ui.ButtonDialog import ButtonDialog
-from stack_of_tasks_ui.hierarchy_tab.task_details import TaskDetails
-from stack_of_tasks_ui.model import RawDataRole
-from stack_of_tasks_ui.traits_mapping import HasTraitPropertyMixin
-from stack_of_tasks_ui.traits_mapping.custom_widgets.object_dropbown import ObjectDropdown
+
+from stack_of_tasks.ui.ButtonDialog import ButtonDialog
+from stack_of_tasks.ui.hierarchy_tab.task_details import TaskDetails
+from stack_of_tasks.ui.model import RawDataRole
+from stack_of_tasks.ui.traits_mapping import HasTraitPropertyMixin
+from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import ObjectDropdown
 
 # TODO Sanity checks
 

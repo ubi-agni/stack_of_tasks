@@ -64,4 +64,4 @@ class Ui_Refs(object):
         self.actionadd_ref.setShortcut(_translate("Refs", "Ctrl+A"))
 
 
-from stack_of_tasks_ui.ref_tab.ref_details import Ref_Details
+from stack_of_tasks.ui.ref_tab.ref_details import Ref_Details

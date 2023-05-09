@@ -5,15 +5,16 @@ from typing import Callable, Generic, List, Type, TypedDict, TypeVar, Union
 import PyQt5.QtWidgets as QTW
 import traits.api as ta
 import traits.trait_types as tt
-from stack_of_tasks_ui.traits_mapping.custom_widgets.matrix_view import (
+
+from stack_of_tasks.ui.traits_mapping.custom_widgets.matrix_view import (
     MatrixView,
     NumpyTableModel,
 )
-from stack_of_tasks_ui.traits_mapping.custom_widgets.object_dropbown import (
+from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import (
     ObjectDropdown,
     ObjectModel,
 )
-from stack_of_tasks_ui.traits_mapping.custom_widgets.range import Range
+from stack_of_tasks.ui.traits_mapping.custom_widgets.range import Range
 
 
 class Mapping:

@@ -10,8 +10,9 @@ from stack_of_tasks.solver.OSQPSolver import OSQPSolver
 SOLVER = [InverseJacobianSolver, OSQPSolver]
 
 import traits.api as ta
-from stack_of_tasks_ui.traits_mapping.bindings import get_user_prop_name, trait_widget_binding
-from stack_of_tasks_ui.traits_mapping.ui_mapping import Mapping
+
+from stack_of_tasks.ui.traits_mapping.bindings import get_user_prop_name, trait_widget_binding
+from stack_of_tasks.ui.traits_mapping.ui_mapping import Mapping
 
 
 class HasTraitsFormLayout(QFormLayout):

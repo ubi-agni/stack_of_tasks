@@ -41,7 +41,7 @@ class Ui_TabWidget(object):
         # TabWidget.setTabText(TabWidget.indexOf(self.refs), _translate("TabWidget", "Refs"))
 
 
-from stack_of_tasks_ui.hierarchy_tab.tab import HierarchyTab
+from stack_of_tasks.ui.hierarchy_tab.tab import HierarchyTab
 
-# from stack_of_tasks_ui.ref_tab.tab import Ref_Tab
-from stack_of_tasks_ui.solver_tab.tab import SolverTab
+# from stack_of_tasks.ui.ref_tab.tab import Ref_Tab
+from stack_of_tasks.ui.solver_tab.tab import SolverTab

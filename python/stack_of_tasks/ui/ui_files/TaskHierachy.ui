@@ -53,7 +53,7 @@
   <customwidget>
    <class>TaskDetails</class>
    <extends>QWidget</extends>
-   <header>stack_of_tasks_ui.hierarchy_tab.task_details</header>
+   <header>stack_of_tasks.ui.hierarchy_tab.task_details</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

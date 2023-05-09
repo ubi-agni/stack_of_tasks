@@ -5,8 +5,9 @@ from typing import Callable, Generic, List, Optional, TypeVar
 import PyQt5.QtWidgets as QtW
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt, pyqtProperty, pyqtSignal
 from PyQt5.QtWidgets import QComboBox, QWidget
-from stack_of_tasks_ui.model import RawDataRole
-from stack_of_tasks_ui.model.object_model import RawDataRole
+
+from stack_of_tasks.ui.model import RawDataRole
+from stack_of_tasks.ui.model.object_model import RawDataRole
 
 ObjectType = TypeVar("ObjectType")
 

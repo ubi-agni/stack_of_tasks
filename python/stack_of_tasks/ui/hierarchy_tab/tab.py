@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt5 import QtWidgets
-from stack_of_tasks_ui.generated.TaskHierachy import Ui_TaskHierarchy
-from stack_of_tasks_ui.model import RawDataRole
 
 from stack_of_tasks.tasks.Task import Task
+from stack_of_tasks.ui.generated.TaskHierachy import Ui_TaskHierarchy
+from stack_of_tasks.ui.model import RawDataRole
 
 from .new_task import NewTask
 

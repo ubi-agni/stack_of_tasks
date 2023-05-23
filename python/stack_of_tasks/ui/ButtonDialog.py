@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QWidget
 
 
 class ButtonDialog(QDialog):
@@ -7,10 +7,8 @@ class ButtonDialog(QDialog):
 
         self._vl = QVBoxLayout()
         self.setLayout(self._vl)
-
-        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Abort)
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
         self._vl.addWidget(self.buttonBox)
-
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)

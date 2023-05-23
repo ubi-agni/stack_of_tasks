@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, List, Optional, Sized, Union
 
+import traits.trait_list_object as tal
 from PyQt5.QtCore import QAbstractItemModel, QMimeData, QModelIndex, Qt
 
 from stack_of_tasks.tasks.Task import Task
@@ -25,11 +26,12 @@ class TaskHierarchyModel(QAbstractItemModel):
     def __init__(self, task_hierarchy: Optional[TaskHierarchy] = None) -> None:
         super().__init__()
 
-        self.task_hierarchy = task_hierarchy
+        self.task_hierarchy: TaskHierarchy
+        self.set_hierarchy(task_hierarchy)
 
-    def set_hierarchy(self, hierarchy):
+    def set_hierarchy(self, task_hierarchy: TaskHierarchy):
         self.beginResetModel()
-        self.task_hierarchy = hierarchy
+        self.task_hierarchy = task_hierarchy
         self.endResetModel()
 
     # structure
@@ -44,6 +46,7 @@ class TaskHierarchyModel(QAbstractItemModel):
 
         if isinstance(parent_item, Task):
             return 0
+
         return len(parent_item)
 
     def columnCount(self, parent: QModelIndex = None) -> int:
@@ -92,9 +95,10 @@ class TaskHierarchyModel(QAbstractItemModel):
     def data(self, index: QModelIndex, role: int) -> Any:
         if index.isValid():
             item = index.internalPointer()
+
             if role == Qt.DisplayRole:
                 if isinstance(item, list):
-                    return f"Level {'x'}"
+                    return f"Level "
 
                 if isinstance(item, Task):
                     return f"{item.name} - "

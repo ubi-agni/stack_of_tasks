@@ -21,9 +21,9 @@ class Ui_TabWidget(object):
         self.hierarchy = HierarchyTab()
         self.hierarchy.setObjectName("hierarchy")
         TabWidget.addTab(self.hierarchy, "")
-        # self.refs = Ref_Tab()
-        # self.refs.setObjectName("refs")
-        # TabWidget.addTab(self.refs, "")
+        self.refs = Ref_Tab()
+        self.refs.setObjectName("refs")
+        TabWidget.addTab(self.refs, "")
 
         self.retranslateUi(TabWidget)
         TabWidget.setCurrentIndex(2)
@@ -38,10 +38,10 @@ class Ui_TabWidget(object):
         TabWidget.setTabText(
             TabWidget.indexOf(self.hierarchy), _translate("TabWidget", "Hierarchy")
         )
-        # TabWidget.setTabText(TabWidget.indexOf(self.refs), _translate("TabWidget", "Refs"))
+        TabWidget.setTabText(TabWidget.indexOf(self.refs), _translate("TabWidget", "Refs"))
 
 
 from stack_of_tasks.ui.hierarchy_tab.tab import HierarchyTab
 
-# from stack_of_tasks.ui.ref_tab.tab import Ref_Tab
+from stack_of_tasks.ui.ref_tab.tab import Ref_Tab
 from stack_of_tasks.ui.solver_tab.tab import SolverTab

@@ -17,7 +17,7 @@ class RobotState(ta.HasTraits):
 
     joint_state_msg: JointState = ta.Instance(JointState)
 
-    joint_values = ta.Array()
+    joint_values = ta.Array(comparison_mode=ta.ComparisonMode.none)
 
     def __init__(
         self, model: RobotModel, ns_prefix: str = "", init_joint_values=None

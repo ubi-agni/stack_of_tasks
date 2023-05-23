@@ -56,8 +56,10 @@ class RefFrame(ta.ABCHasTraits):
 class Offset(RefFrame):
     """Defines an offset to the given frame."""
 
-    offset: Transform = ta.Array(dtype="float")
-    frame: RefFrame = ta.Instance(RefFrame)  # should be readonly.
+    offset: Transform = ta.Array(
+        dtype="float", value=np.identity(4), comparison_mode=ta.ComparisonMode.none
+    )
+    frame: RefFrame = ta.Instance(RefFrame)
     T: Transform = ta.Property(ta.Array)
 
     def __init__(self, frame: HasTransform, offset=None) -> None:

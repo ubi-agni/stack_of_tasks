@@ -62,10 +62,10 @@ class Offset(RefFrame):
     frame: RefFrame = ta.Instance(RefFrame)
     T: Transform = ta.Property(ta.Array)
 
-    def __init__(self, frame: HasTransform, offset=None) -> None:
+    def __init__(self, frame: HasTransform, offset=None, **kwargs) -> None:
         if offset is None:
             offset = np.identity(4)
-        super(Offset, self).__init__(frame=frame, offset=offset)
+        super(Offset, self).__init__(frame=frame, offset=offset, **kwargs)
 
         if isinstance(self.frame, HasJacobian):
             self.add_trait("J", ta.Delegate("frame"))

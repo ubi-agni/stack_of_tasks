@@ -59,7 +59,7 @@ class Task(ta.ABCHasTraits):
         0.0, value=1.0, exclude_low=True, desc="The weight of this task in its task-level."
     )
 
-    A: A = ta.Property(observe="_compute_val")
+    A: A = ta.Property(depends_on="_recompute")
 
     def _get_A(self):
         return self._compute_val[0]
@@ -69,8 +69,10 @@ class Task(ta.ABCHasTraits):
     violation = None
     importance = None
 
-    def __init__(self, softnessType: TaskSoftnessType, weight: float = 1.0, **traits) -> None:
-        super().__init__(softness_type=softnessType, weight=weight, **traits)
+    def __init__(
+        self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits
+    ) -> None:
+        super().__init__(softness_type=softness_type, weight=weight, **traits)
         self.observe(
             self._trigger_recompute, "weight"
         )  # what properties should trigger recomputation
@@ -82,9 +84,9 @@ class Task(ta.ABCHasTraits):
     def _trigger_recompute(self, event_data=None):
         self._recompute = event_data
 
-    _compute_val = ta.Property(observe="_recompute")
+    _compute_val = ta.Property()
 
-    @ta.cached_property  # cache the compute property
+    @ta.property_depends_on("_recompute")  # cache the compute property
     def _get__compute_val(self):
         return self.compute()
 
@@ -103,11 +105,11 @@ class RelativeTask(Task, ABC):
         self,
         refA: RefFrame,
         refB: RefFrame,
-        softnessType: TaskSoftnessType,
+        softness_type: TaskSoftnessType,
         weight: float = 1,
         **traits,
     ) -> None:
-        super().__init__(softnessType, weight, refA=refA, refB=refB, **traits)
+        super().__init__(softness_type, weight, refA=refA, refB=refB, **traits)
         self.observe(self._trigger_recompute, "refA:T, refB:T, _J")
 
     _J: Jacobian = ta.Property(
@@ -145,15 +147,15 @@ class TargetTask(Task, ABC):
         self,
         target: RefFrame,
         robotFrame: RobotRefFrame,
-        softnessType: TaskSoftnessType,
+        softness_type: TaskSoftnessType,
         weight: float = 1,
     ) -> None:
-        super().__init__(softnessType, weight, target=target, robot=robotFrame)
+        super().__init__(softness_type, weight, target=target, robot=robotFrame)
         self.observe(self._trigger_recompute, "target:T, robot:T, _J")
 
 
 class EqTask(Task, ABC):
-    bound = ta.Property(observe="_compute_val")
+    bound = ta.Property(depends_on="_recompute")
 
     def _get_bound(self):
         return self._compute_val[1]

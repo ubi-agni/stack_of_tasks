@@ -12,8 +12,8 @@ class Origin(RefFrame):
 
     T: Transform = ta.ReadOnly(np.identity(4))
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.T.flags.writeable = False
 
 
@@ -28,15 +28,15 @@ class RobotRefFrame(RefFrame):
     """
 
     robot_state: RobotState = ta.Instance(RobotState)
-    link_name: str = ta.ReadOnly()
+    link_name: str = ta.Str()
 
     T = ta.Property(observe="_fk")
     J = ta.Property(observe="_fk")
 
     _fk = ta.Property(observe="robot_state.joint_values")
 
-    def __init__(self, state: RobotState, link: str) -> None:
-        super().__init__(robot_state=state, link_name=link)
+    def __init__(self, robot_state: RobotState, link_name: str, **kwargs) -> None:
+        super().__init__(robot_state=robot_state, link_name=link_name, **kwargs)
 
     @ta.cached_property
     def _get__fk(self):

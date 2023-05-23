@@ -19,9 +19,11 @@ class NewInstanceDialog(ButtonDialog):
         self.cls_selection = ObjectDropdown()
         self.cls_selection.current_object_changed.connect(self.cls_selection_changed)
 
-        self._vl.addWidget(self.cls_selection)
+        fl = QtWidgets.QFormLayout()
+        fl.addRow("Class:", self.cls_selection)
+        self._vl.insertLayout(0, fl)
         self.traits = NewInstanceWidget()
-        self._vl.addWidget(self.traits)
+        self._vl.insertWidget(1, self.traits)
 
         self.cls_selection.setModel(model)
 

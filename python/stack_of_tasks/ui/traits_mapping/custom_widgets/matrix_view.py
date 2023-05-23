@@ -12,11 +12,15 @@ from PyQt5.QtCore import (
     QRectF,
     QSize,
     Qt,
+    QVariant,
+    pyqtProperty,
+    pyqtSignal,
 )
 from PyQt5.QtGui import QPainter, QTextOption
 from PyQt5.QtWidgets import (
     QDoubleSpinBox,
     QHeaderView,
+    QSizePolicy,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableView,
@@ -138,13 +142,33 @@ class MatrixItemDelegate(QStyledItemDelegate):
 
 
 class MatrixView(QTableView):
+    matrix_changed = pyqtSignal(object)
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-    def setModel(self, model) -> None:
-        super().setModel(model)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.verticalHeader().setMinimumSectionSize(0)
+
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setMinimumSectionSize(0)
+
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+    def setModel(self, model) -> None:
+        super().setModel(model)
         self.setItemDelegate(MatrixItemDelegate())
+
+    def dataChanged(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles=None) -> None:
+        self.matrix_changed.emit(self._get_matrix())
+        super().dataChanged(topLeft, bottomRight, roles)
+
+    def _get_matrix(self):
+        return self.model()._matrix
+
+    def _set_matrix(self, val):
+        self.model().setMatrix(val)
+
+    matrix = pyqtProperty(
+        QVariant, _get_matrix, _set_matrix, notify=matrix_changed, user=True
+    )

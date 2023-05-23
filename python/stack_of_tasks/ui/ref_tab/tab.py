@@ -3,9 +3,9 @@ from __future__ import annotations
 from PyQt5 import QtCore, QtWidgets
 
 from stack_of_tasks.ref_frame import RefFrame
+from stack_of_tasks.ui.button_dialog import NewInstanceDialog
 from stack_of_tasks.ui.generated.Refs import Ui_Refs
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
-from stack_of_tasks.ui.new_instance_dialog import NewInstanceDialog
 from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import (
     ObjectModel,
     RawDataRole,

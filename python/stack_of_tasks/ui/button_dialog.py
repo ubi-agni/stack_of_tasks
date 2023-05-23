@@ -2,12 +2,26 @@ import typing
 
 from PyQt5 import QtWidgets
 
-from stack_of_tasks.ui.ButtonDialog import ButtonDialog
 from stack_of_tasks.ui.traits_mapping import NewInstanceWidget
 from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import (
     ObjectDropdown,
     ObjectModel,
 )
+
+
+class ButtonDialog(QtWidgets.QtWidgetsQDialog):
+    def __init__(self, parent: None) -> None:
+        super().__init__(parent)
+
+        self._vl = QtWidgets.QVBoxLayout()
+        self.setLayout(self._vl)
+        self.buttonBox = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+        )
+
+        self._vl.addWidget(self.buttonBox)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
 
 
 class NewInstanceDialog(ButtonDialog):

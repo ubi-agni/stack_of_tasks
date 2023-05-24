@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from enum import Enum, IntFlag, auto
-
-import typing
+from enum import IntFlag
 
 import PyQt5.QtWidgets as QTW
-from PyQt5.QtCore import Q_ENUMS, Q_FLAG, Qt
-from PyQt5.QtWidgets import QAbstractSpinBox, QWidget
+from PyQt5.QtWidgets import QAbstractSpinBox
 
 
 class HasBound(IntFlag):

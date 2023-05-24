@@ -8,15 +8,9 @@ import traits.trait_base as tb
 import traits.trait_types as tt
 
 from stack_of_tasks.ui.model_mapping import ModelMapping
-from stack_of_tasks.ui.traits_mapping.custom_widgets.matrix_view import (
-    MatrixView,
-    NumpyTableModel,
-)
-from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import (
-    ObjectDropdown,
-    ObjectModel,
-)
-from stack_of_tasks.ui.traits_mapping.custom_widgets.range import Range
+from stack_of_tasks.ui.widgets.matrix_view import MatrixView, NumpyTableModel
+from stack_of_tasks.ui.widgets.object_dropbown import ObjectDropdown, ObjectModel
+from stack_of_tasks.ui.widgets.range import Range
 
 
 class Mapping:

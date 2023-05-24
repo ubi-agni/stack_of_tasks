@@ -2,11 +2,9 @@ import typing
 
 from PyQt5 import QtWidgets
 
-from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import (
-    ObjectDropdown,
-    ObjectModel,
-)
+from stack_of_tasks.ui.model.object_model import ObjectModel
 from stack_of_tasks.ui.widgets.has_trait_widgets import NewInstanceWidget
+from stack_of_tasks.ui.widgets.object_dropbown import ObjectDropdown
 
 
 class ButtonDialog(QtWidgets.QDialog):

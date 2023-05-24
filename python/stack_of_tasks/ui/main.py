@@ -122,11 +122,11 @@ class SolverThread(Thread):
 
 
 class Controller(ta.HasTraits):
-    solver_cls: Type[Solver] = ta.Type(klass=Solver)
-    solver: Solver = ta.Instance(Solver)
+    solvercls: Type[Solver] = ta.Type(klass=Solver, value=None)
+    solver: Solver = ta.Instance(klass=Solver)
 
     def __init__(self):
-        super(Controller).__init__()
+        super().__init__()
 
         self.robot_model = RobotModel()
         self.robot_state = RobotState(self.robot_model)
@@ -137,10 +137,10 @@ class Controller(ta.HasTraits):
         self.worker = Worker(self, 50)
         self.thread: SolverThread = None
 
-        self.on_trait_change(self._solver_changed, "solver_cls")
-
-    def _solver_changed(self):
-        self.solver: Solver = self.solver_cls(self.robot_model.N, self.task_hierarchy)
+    @ta.observe("solvercls", post_init=True)
+    def _solver_changed(self, evt):
+        print("solver", evt)
+        self.solver: Solver = self.solvercls(self.robot_model.N, self.task_hierarchy)
         self.solver.stack_changed()
 
     def toggle_solver_state(self):
@@ -179,6 +179,8 @@ class Main(ta.HasTraits):
         self.solver_cls_model = ObjectModel(
             data=[OSQPSolver, InverseJacobianSolver], disp_func=display_cls_name
         )
+
+        ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
 
         self.task_class_model = ObjectModel(
             data=[PositionTask, ParallelTask, OrientationTask], disp_func=display_cls_name
@@ -244,6 +246,8 @@ def main():
     main_app = Main()
     main_app.setup()
 
+    print(main_app.controller.solver)
+
     app = QApplication(argv)
     ui_window = Ui()
 
@@ -252,11 +256,13 @@ def main():
     TraitWidgetBinding(
         main_app.controller, "solver", ui_window.tab_widget.solver.edit_solver, "trait_object"
     )
-    trait_widget_binding(
-        main_app.controller, "solver_cls", ui_window.tab_widget.solver.solverClassComboBox
-    )
 
-    ui_window.tab_widget.solver.solverClassComboBox.setModel(main_app.solver_cls_model)
+    trait_widget_binding(
+        main_app.controller,
+        "solvercls",
+        ui_window.tab_widget.solver.solverClassComboBox,
+        set_trait_post=True,
+    )
 
     ui_window.tab_widget.refs.new_ref_signal.connect(main_app.new_ref)
     ui_window.tab_widget.hierarchy.new_task_signal.connect(main_app.new_task)

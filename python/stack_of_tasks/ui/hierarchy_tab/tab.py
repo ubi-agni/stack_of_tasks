@@ -3,10 +3,10 @@ from __future__ import annotations
 from PyQt5 import QtCore, QtWidgets
 
 from stack_of_tasks.tasks.Task import Task
-from stack_of_tasks.ui.button_dialog import NewInstanceDialog
 from stack_of_tasks.ui.generated.TaskHierachy import Ui_TaskHierarchy
 from stack_of_tasks.ui.model import RawDataRole
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
+from stack_of_tasks.ui.widgets.button_dialog import NewInstanceDialog
 
 
 class HierarchyTab(QtWidgets.QWidget, Ui_TaskHierarchy):

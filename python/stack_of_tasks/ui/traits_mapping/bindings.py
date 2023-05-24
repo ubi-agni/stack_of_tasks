@@ -47,7 +47,12 @@ def get_user_prop_signal(widget: QWidget) -> typing.Optional[pyqtBoundSignal]:
 
 class WidgetTraitBinding:
     def __init__(
-        self, hasTrait: ta.HasTraits, traitName: str, widget: QWidget, propname: str = None
+        self,
+        hasTrait: ta.HasTraits,
+        traitName: str,
+        widget: QWidget,
+        propname: str = None,
+        set_post_init=False,
     ) -> None:
         self._hasTrait = hasTrait
         self._trait_name = traitName
@@ -64,8 +69,6 @@ class WidgetTraitBinding:
             self._widget.metaObject().indexOfProperty(self.prop_name)
         )
 
-        # print("WidgetTraitBinding", traitName, widget, self.prop_name, self.widget_prop.name())
-
         if self.widget_prop.hasNotifySignal():
             signal: pyqtBoundSignal = getattr(
                 self._widget, str(self.widget_prop.notifySignal().name(), "utf-8")
@@ -73,13 +76,22 @@ class WidgetTraitBinding:
 
             signal.connect(self)
 
+            if set_post_init:
+                val = self._widget.property(self.prop_name)
+                self(val)
+
     def __call__(self, value) -> Any:
         self._hasTrait.trait_set(**{self._trait_name: value})
 
 
 class TraitWidgetBinding:
     def __init__(
-        self, hasTrait: ta.HasTraits, traitName: str, widget: QWidget, propname: str = None
+        self,
+        hasTrait: ta.HasTraits,
+        traitName: str,
+        widget: QWidget,
+        propname: str = None,
+        set_post_init=False,
     ) -> None:
         self._hasTrait = hasTrait
         self._trait_name = traitName
@@ -97,6 +109,10 @@ class TraitWidgetBinding:
         if self.widget_prop.isWritable():
             self._hasTrait.observe(self, self._trait_name)
 
+            if set_post_init:
+                val = getattr(self._hasTrait, self._trait_name)
+                self._widget.setProperty(self.prop_name, val)
+
         self._widget.destroyed.connect(self._widget_removed)
 
     def _widget_removed(self):
@@ -107,10 +123,17 @@ class TraitWidgetBinding:
 
 
 def trait_widget_binding(
-    hasTrait: ta.HasTraits, traitName: str, widget: QWidget, propname: str = None
+    hasTrait: ta.HasTraits,
+    traitName: str,
+    widget: QWidget,
+    propname: str = None,
+    set_trait_post=False,
+    set_widget_post=False,
 ):
-    WidgetTraitBinding(hasTrait, traitName, widget, propname)
-    TraitWidgetBinding(hasTrait, traitName, widget, propname)
+    if set_trait_post and set_widget_post:
+        print("!Warning: undefined behavior when setting trait and widget after binding.")
+    WidgetTraitBinding(hasTrait, traitName, widget, propname, set_trait_post)
+    TraitWidgetBinding(hasTrait, traitName, widget, propname, set_widget_post)
 
 
 class TraitObjectModelBinder:

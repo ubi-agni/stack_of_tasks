@@ -198,6 +198,7 @@ class Main(ta.HasTraits):
         TraitObjectModelBinder(self, "refs", self.refs_model)
 
         self.task_hierachy_model = TaskHierarchyModel(self.controller.task_hierarchy)
+        ModelMapping.add_mapping(Task, self.task_hierachy_model)
 
         def _reset_th(evt):
             print(evt)
@@ -257,10 +258,7 @@ def main():
 
     ui_window.tab_widget.solver.solverClassComboBox.setModel(main_app.solver_cls_model)
 
-    ui_window.tab_widget.hierarchy.set_task_hierarchy_model(main_app.task_hierachy_model)
-    ui_window.tab_widget.refs.set_model(main_app.refs_model)
     ui_window.tab_widget.refs.new_ref_signal.connect(main_app.new_ref)
-
     ui_window.tab_widget.hierarchy.new_task_signal.connect(main_app.new_task)
 
     def button():

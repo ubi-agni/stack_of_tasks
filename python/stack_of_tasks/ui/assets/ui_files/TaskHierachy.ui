@@ -13,29 +13,17 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
+  <layout class="QHBoxLayout" name="main_layout">
    <item>
     <widget class="QTreeView" name="treeView"/>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QVBoxLayout" name="editor_layout">
      <item>
-      <widget class="QGroupBox" name="edit_group">
+      <widget class="EditorGroupBox" name="edit_task">
        <property name="title">
-        <string>Edit Task</string>
+        <string>Edit task:</string>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <item>
-         <widget class="QLabel" name="NoneSelected">
-          <property name="text">
-           <string>No Task Selected</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="TaskDetails" name="task_details" native="true"/>
-        </item>
-       </layout>
       </widget>
      </item>
      <item>
@@ -51,9 +39,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>TaskDetails</class>
-   <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.hierarchy_tab.task_details</header>
+   <class>EditorGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>stack_of_tasks.ui.widgets.has_trait_widgets</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

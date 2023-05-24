@@ -16,8 +16,6 @@ class HierarchyTab(QtWidgets.QWidget, Ui_TaskHierarchy):
         super().__init__()
         self.setupUi(self)
 
-        self.av_refs = None
-
         self.treeView.setDragDropMode(self.treeView.InternalMove)
         self.treeView.setDragEnabled(True)
         self.treeView.setAcceptDrops(True)
@@ -25,15 +23,9 @@ class HierarchyTab(QtWidgets.QWidget, Ui_TaskHierarchy):
 
         self.addTask.clicked.connect(self.add_task_action)
 
-        self.task_details.hide()
-
-    def set_task_hierarchy_model(self, model):
+        model = ModelMapping.get_mapping(Task)
         self.treeView.setModel(model)
         self.treeView.selectionModel().selectionChanged.connect(self.tasks_selected)
-
-    def set_ref_model(self, ref_model):
-        self.av_refs = ref_model
-        self.task_details.setModel(ref_model)
 
     def add_task_action(self):
         if (
@@ -45,14 +37,12 @@ class HierarchyTab(QtWidgets.QWidget, Ui_TaskHierarchy):
             self.new_task_signal.emit(cls, args)
 
     def tasks_selected(self):
-        if len(sel := self.treeView.selectedIndexes()) > 0 and isinstance(
-            item := sel[0].data(RawDataRole), Task
-        ):
-            self.task_details.set_trait_object(item)
-            self.NoneSelected.hide()
-            self.task_details.show()
+        if len(sel := self.treeView.selectedIndexes()) > 0:
+            obj = sel[0].data(RawDataRole)
 
+            if not isinstance(obj, Task):
+                obj = None
         else:
-            self.task_details.hide()
-            self.NoneSelected.show()
-            self.task_details.trait_form_layout.clear_widget()
+            obj = None
+
+        self.edit_task.set_trait_object(obj)

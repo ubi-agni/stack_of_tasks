@@ -2,14 +2,14 @@ import typing
 
 from PyQt5 import QtWidgets
 
-from stack_of_tasks.ui.traits_mapping import NewInstanceWidget
 from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import (
     ObjectDropdown,
     ObjectModel,
 )
+from stack_of_tasks.ui.widgets.has_trait_widgets import NewInstanceWidget
 
 
-class ButtonDialog(QtWidgets.QtWidgetsQDialog):
+class ButtonDialog(QtWidgets.QDialog):
     def __init__(self, parent: None) -> None:
         super().__init__(parent)
 

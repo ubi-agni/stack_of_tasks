@@ -18,45 +18,18 @@
     <widget class="QTreeView" name="ref_view"/>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_3">
+    <layout class="QVBoxLayout" name="editor_layout">
      <item>
-      <widget class="QGroupBox" name="edit_group">
+      <widget class="EditorGroupBox" name="edit_ref">
        <property name="title">
-        <string>Edit Ref</string>
+        <string>Edit ref-frame:</string>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <item>
-         <widget class="QLabel" name="NoneSelected">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="text">
-           <string>No Task Selected</string>
-          </property>
-          <property name="textFormat">
-           <enum>Qt::AutoText</enum>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="Ref_Details" name="ref_details" native="true"/>
-        </item>
-       </layout>
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="new_ref">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
+      <widget class="QPushButton" name="addRef">
        <property name="text">
-        <string>add ref</string>
+        <string>add ref-frame</string>
        </property>
       </widget>
      </item>
@@ -77,9 +50,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Ref_Details</class>
-   <extends>QWidget</extends>
-   <header>stack_of_tasks.ui.ref_tab.ref_details</header>
+   <class>EditorGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>stack_of_tasks.ui.widgets.has_trait_widgets</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

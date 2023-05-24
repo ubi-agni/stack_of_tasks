@@ -5,11 +5,8 @@ from PyQt5 import QtCore, QtWidgets
 from stack_of_tasks.ref_frame import RefFrame
 from stack_of_tasks.ui.button_dialog import NewInstanceDialog
 from stack_of_tasks.ui.generated.Refs import Ui_Refs
+from stack_of_tasks.ui.model import RawDataRole
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
-from stack_of_tasks.ui.traits_mapping.custom_widgets.object_dropbown import (
-    ObjectModel,
-    RawDataRole,
-)
 
 
 class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
@@ -19,18 +16,11 @@ class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
         super().__init__()
         self.setupUi(self)
 
-        self.new_ref.setDefaultAction(self.actionadd_ref)
-        self.actionadd_ref.triggered.connect(self.add_task_action)
+        # self.addRef.setDefaultAction(self.actionadd_ref)
+        self.actionadd_ref.triggered.connect(self.add_ref_action)
         self.actionadd_ref.triggered.connect(lambda x: print("add ref"))
-        self.ref_model: ObjectModel
-        self.ref_details.hide()
 
-    def set_model(self, model):
-        self.ref_model = model
-        self.ref_view.setModel(self.ref_model)
-        self.ref_view.selectionModel().selectionChanged.connect(self.ref_selected)
-
-    def add_task_action(self):
+    def add_ref_action(self):
         if (
             t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(RefFrame)))
         ).exec() == NewInstanceDialog.Accepted:
@@ -41,11 +31,9 @@ class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
 
     def ref_selected(self):
         if len(sel := self.ref_view.selectedIndexes()) > 0:
-            self.ref_details.set_trait_object(sel[0].data(RawDataRole))
-            self.NoneSelected.hide()
-            self.ref_details.show()
-
+            obj = sel[0].data(RawDataRole)
         else:
-            self.ref_details.hide()
-            self.NoneSelected.show()
-            self.ref_details.trait_form_layout.clear_widget()
+            obj = None
+
+        self.edit_ref.set_trait_object(obj)
+        self.edit_ref.set_trait_object(obj)

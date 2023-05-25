@@ -17,7 +17,7 @@ class Ui_Refs(object):
         Refs.resize(975, 649)
         self.horizontalLayout = QtWidgets.QHBoxLayout(Refs)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.ref_view = QtWidgets.QTreeView(Refs)
+        self.ref_view = QtWidgets.QListView(Refs)
         self.ref_view.setObjectName("ref_view")
         self.horizontalLayout.addWidget(self.ref_view)
         self.editor_layout = QtWidgets.QVBoxLayout()

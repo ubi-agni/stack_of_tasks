@@ -269,10 +269,11 @@ def main():
 
     def button():
         state = main_app.controller.toggle_solver_state()
+
         if state:
             ui_window.run_Button.setText("Stop")
         else:
-            ui_window.run_button.setText("Start")
+            ui_window.run_Button.setText("Start")
 
     ui_window.run_Button.clicked.connect(button)
 

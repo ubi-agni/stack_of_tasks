@@ -20,6 +20,10 @@ class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
         self.actionadd_ref.triggered.connect(self.add_ref_action)
         self.actionadd_ref.triggered.connect(lambda x: print("add ref"))
 
+        model = ModelMapping.get_mapping(RefFrame)
+        self.ref_view.setModel(model)
+        self.ref_view.selectionModel().selectionChanged.connect(self.ref_selected)
+
     def add_ref_action(self):
         if (
             t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(RefFrame)))

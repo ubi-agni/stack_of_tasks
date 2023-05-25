@@ -21,6 +21,8 @@ class HierarchyTab(QtWidgets.QWidget, Ui_TaskHierarchy):
         self.treeView.setAcceptDrops(True)
         self.treeView.setDropIndicatorShown(True)
 
+        self.treeView.setSelectionBehavior(self.treeView.SelectItems)
+
         self.addTask.clicked.connect(self.add_task_action)
 
         model = ModelMapping.get_mapping(Task)
@@ -39,7 +41,6 @@ class HierarchyTab(QtWidgets.QWidget, Ui_TaskHierarchy):
     def tasks_selected(self):
         if len(sel := self.treeView.selectedIndexes()) > 0:
             obj = sel[0].data(RawDataRole)
-
             if not isinstance(obj, Task):
                 obj = None
         else:

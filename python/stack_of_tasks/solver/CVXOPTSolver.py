@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
-from dataclasses import InitVar
-from tabnanny import verbose
 
 from typing import Any
 
 import cvxopt
 import numpy as np
-import scipy.sparse as snp
 
 from stack_of_tasks.solver.HQPSolver import HqpSolver
 from stack_of_tasks.tasks.Task import EqTask
@@ -27,10 +24,9 @@ class CVXOPTSolver(HqpSolver):
 
         print(dq, solution["x"][self.N :])
 
-        for task in self._stack_of_tasks.hierarchy[level_index]:
+        for task in self._stack_of_tasks.levels[level_index]:
             b = task.A.dot(dq)
             if isinstance(task, EqTask):
-
                 task.residual = b - task.bound
                 task.violation = ~np.isclose(task.residual, b)
             else:

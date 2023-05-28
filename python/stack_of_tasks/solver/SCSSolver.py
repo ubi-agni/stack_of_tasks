@@ -26,10 +26,9 @@ class SCSSolver(HqpSolver):
         print(solution["x"])
         dq = solution["x"][: self.N]
 
-        for task in self._stack_of_tasks.hierarchy[level_index]:
+        for task in self._stack_of_tasks.levels[level_index]:
             b = task.A.dot(dq)
             if isinstance(task, EqTask):
-
                 task.residual = b - task.bound
                 task.violation = ~np.isclose(task.residual, b)
             else:
@@ -41,7 +40,6 @@ class SCSSolver(HqpSolver):
         return solution["x"][: self.N]
 
     def _solve(self, warmstart, **options) -> Any:
-
         data = {
             "P": snp.csc_matrix(
                 self.objective_matrix[: self.N + self.slacks, : self.N + self.slacks]

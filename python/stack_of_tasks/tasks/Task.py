@@ -12,6 +12,7 @@ import traits.observation.expression as te
 
 from stack_of_tasks.ref_frame import HasJacobian, Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame, RobotRefFrame
+from stack_of_tasks.utils.class_register import Register
 
 UpperBound = NDArray
 LowerBound = NDArray
@@ -48,6 +49,10 @@ def task_kind_check(task: Task, *types):
     return True
 
 
+TaskRegister = Register("TaskRegister", register_base=False)
+
+
+@TaskRegister.register_base
 class Task(ta.ABCHasTraits):
     # Task Constants
     name = "BaseClass"
@@ -95,7 +100,7 @@ class Task(ta.ABCHasTraits):
         pass
 
 
-class RelativeTask(Task, ABC):
+class RelativeTask(Task):
     relType: RelativeType = ta.Enum(RelativeType, default=0)
 
     refA: RefFrame = ta.Instance(RefFrame)

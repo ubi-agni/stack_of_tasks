@@ -66,6 +66,23 @@ class String(MappingEntry):
         widget.setText(value)
 
 
+class Float(MappingEntry):
+    traits = [tt.BaseFloat, tt.BaseCFloat]
+
+    @classmethod
+    def widget(cls, trait: ta.CTrait) -> Type[QTW.QWidget]:
+        return QTW.QDoubleSpinBox
+
+    @classmethod
+    def setup_function(
+        cls, trait: ta.CTrait, trait_name: str, widget: QTW.QDoubleSpinBox, value=None
+    ):
+        if value is None:
+            value = trait.default
+
+        widget.setValue(value)
+
+
 class RangeEntry(MappingEntry):
     traits = [tt.BaseRange]
 

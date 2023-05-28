@@ -119,6 +119,7 @@ class TraitWidgetBinding:
         self._hasTrait.observe(self, self._trait_name, remove=True)
 
     def __call__(self, val) -> Any:
+        print(self._trait_name, val.new)
         self._widget.setProperty(self.prop_name, val.new)
 
 
@@ -151,7 +152,7 @@ class TraitObjectModelBinder:
 
         self._hasTrait().observe(self._list_set, self._trait_name)
         self._hasTrait().observe(self._data_changed, self._observe_name)
-        self._hasTrait().observe(self._item_changed, f"{self._observe_name}:*")
+        self._hasTrait().observe(self._item_changed, f"{self._observe_name}:display_name")
 
         self._finalizer_self = weakref.finalize(self, self._remove_listener)
 
@@ -159,7 +160,7 @@ class TraitObjectModelBinder:
         if (t := self._hasTrait()) is not None and self.alive:
             t.observe(self._list_set, self._trait_name, remove=True)
             t.observe(self._data_changed, self._observe_name, remove=True)
-            t.observe(self._item_changed, f"{self._observe_name}:*", remove=True)
+            t.observe(self._item_changed, f"{self._observe_name}:display_name", remove=True)
             print("listener_removed")
             self.alive = False
 
@@ -175,6 +176,6 @@ class TraitObjectModelBinder:
             self._model().items_removed(evt.index)
 
     def _item_changed(self, evt: TraitChangeEvent):
+        print(self._trait_name, evt.new)
         index = getattr(self._hasTrait(), self._trait_name).index(evt.object)
-        print(f"item changed {index}")
         self._model().item_changed(index)

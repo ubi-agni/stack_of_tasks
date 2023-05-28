@@ -14,6 +14,10 @@ from stack_of_tasks.utils.traits import matrix_edit
 Transform = np.ndarray
 Jacobian = np.ndarray
 
+from stack_of_tasks.utils.class_register import Register
+
+RefFrameRegister = Register("RefFrameRegister", register_base=False)
+
 
 @runtime_checkable
 class HasJacobian(Protocol):
@@ -35,6 +39,7 @@ class HasTransform(Protocol):
     T: Transform
 
 
+@RefFrameRegister.register_base
 class RefFrame(ta.ABCHasTraits):
     """The base class for all reference frames."""
 

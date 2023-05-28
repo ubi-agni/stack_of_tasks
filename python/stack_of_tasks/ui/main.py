@@ -11,24 +11,23 @@ from typing import Any, Generic, List, Type, TypeVar
 import numpy as np
 import traits.api as ta
 from PyQt5 import QtCore
-from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtWidgets import QApplication
 
 import rospy
 
-from stack_of_tasks.ref_frame import Offset, RefFrame
+from stack_of_tasks.ref_frame import Offset, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
 from stack_of_tasks.robot_model.jointstate_publisher import JointStatePublisher
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
+from stack_of_tasks.solver import SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
-from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
-from stack_of_tasks.solver.OSQPSolver import OSQPSolver
-from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, ParallelTask, PositionTask
+from stack_of_tasks.tasks import TaskRegister
+from stack_of_tasks.tasks.Eq_Tasks import PositionTask
 from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui.mainwindow import Ui
-from stack_of_tasks.ui.model.object_model import ObjectModel, display_cls_name
+from stack_of_tasks.ui.model.object_model import ObjectModel
 from stack_of_tasks.ui.model.task_hierarchy import TaskHierarchyModel
 from stack_of_tasks.ui.model_mapping import ClassKey, InjectionArg, ModelMapping
 from stack_of_tasks.ui.traits_mapping.bindings import (
@@ -36,9 +35,6 @@ from stack_of_tasks.ui.traits_mapping.bindings import (
     TraitWidgetBinding,
     trait_widget_binding,
 )
-
-SOLVER = [InverseJacobianSolver, OSQPSolver]
-
 
 T = TypeVar("T")
 
@@ -176,20 +172,13 @@ class Main(ta.HasTraits):
         )  # all robot links
         RobotRefFrame.class_traits()["link_name"].selection_model = self.link_model
 
-        self.solver_cls_model = ObjectModel(
-            data=[OSQPSolver, InverseJacobianSolver], disp_func=display_cls_name
-        )
-
+        self.solver_cls_model = ObjectModel.from_class_register(SolverRegister)
         ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
 
-        self.task_class_model = ObjectModel(
-            data=[PositionTask, ParallelTask, OrientationTask], disp_func=display_cls_name
-        )
+        self.task_class_model = ObjectModel.from_class_register(TaskRegister)
         ModelMapping.add_mapping(ClassKey(Task), self.task_class_model)
 
-        self.refs_cls_model = ObjectModel(
-            data=[Origin, Offset, RobotRefFrame], disp_func=display_cls_name
-        )
+        self.refs_cls_model = ObjectModel.from_class_register(RefFrameRegister)
         ModelMapping.add_mapping(ClassKey(RefFrame), self.refs_cls_model)
 
         self.refs: List[RefFrame]

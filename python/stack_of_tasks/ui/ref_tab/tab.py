@@ -16,7 +16,7 @@ class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
         super().__init__()
         self.setupUi(self)
 
-        # self.addRef.setDefaultAction(self.actionadd_ref)
+        self.addRef.clicked.connect(self.add_ref_action)
         self.actionadd_ref.triggered.connect(self.add_ref_action)
         self.actionadd_ref.triggered.connect(lambda x: print("add ref"))
 

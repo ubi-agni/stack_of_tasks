@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from typing import Callable, Generic, List, Optional, Type, TypeVar
+from typing_extensions import Self
 
 from PyQt5.QtCore import QAbstractListModel, QModelIndex, QObject, QSortFilterProxyModel, Qt
 
 from stack_of_tasks.ui.model import RawDataRole
+from stack_of_tasks.utils.class_register import Register
 
 ObjectType = TypeVar("ObjectType")
 
@@ -21,7 +23,7 @@ class ObjectModel(Generic[ObjectType], QAbstractListModel):
     def __init__(
         self,
         data: Optional[List[ObjectType]] = None,
-        disp_func: Optional[Callable[[ObjectType], str]] = None,
+        disp_func: Callable[[ObjectType], str] = display_cls_name,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -81,6 +83,10 @@ class ObjectModel(Generic[ObjectType], QAbstractListModel):
             end = idx.stop
         self.beginRemoveRows(QModelIndex(), start, end)
         self.endRemoveRows()
+
+    @classmethod
+    def from_class_register(cls: Type[Self], register: Register) -> Self:
+        return cls(register.concrete_classes)
 
 
 class FilterObjectModel(QSortFilterProxyModel):

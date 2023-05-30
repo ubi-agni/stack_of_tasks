@@ -22,7 +22,7 @@ class RobotState(ta.HasTraits):
     def __init__(
         self, model: RobotModel, ns_prefix: str = "", init_joint_values=None
     ) -> None:
-        super().__init__(robot_model=model, joint_state_msg=JointState(), joint_values=[])
+        super().__init__(robot_model=model, joint_state_msg=JointState())
         self.joint_state_msg.name = [j.name for j in self.robot_model.active_joints]
 
         # cache mapping joint -> (T, J)

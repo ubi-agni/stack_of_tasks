@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QApplication
 
 import rospy
 
-from stack_of_tasks.marker import IAMarker, MarkerRegister
+from stack_of_tasks.marker import FullMovementMarker, IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.ref_frame import Offset, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
@@ -26,7 +26,7 @@ from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import TaskRegister
-from stack_of_tasks.tasks.Eq_Tasks import PositionTask
+from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, PositionTask
 from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui.mainwindow import Ui
@@ -34,6 +34,7 @@ from stack_of_tasks.ui.model.object_model import ObjectModel
 from stack_of_tasks.ui.model.task_hierarchy import TaskHierarchyModel
 from stack_of_tasks.ui.model_mapping import ClassKey, InjectionArg, ModelMapping
 from stack_of_tasks.ui.traits_mapping.bindings import (
+    SyncTraitBinder,
     TraitObjectModelBinder,
     TraitWidgetBinding,
     trait_widget_binding,
@@ -226,6 +227,12 @@ class Main(ta.HasTraits):
 
         with self.controller.task_hierarchy.new_level() as level:
             level.append(PositionTask(off, frame, TaskSoftnessType.linear))
+            level.append(OrientationTask(off, frame, TaskSoftnessType.linear))
+
+        ma = FullMovementMarker("pos")
+        self.marker_server.add_marker(ma)
+
+        self.syncer = SyncTraitBinder(ma, "transform", off, "offset")
 
     def new_ref(self, cls, args):
         new_ref = DependencyInjection.create_instance(cls, args)

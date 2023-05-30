@@ -17,6 +17,7 @@ from visualization_msgs.msg import (
     Marker,
 )
 
+from stack_of_tasks.utils.class_register import Register
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose
 
 
@@ -52,17 +53,23 @@ class Guard(object):
         return items in self.locked_items
 
 
+MarkerRegister = Register("MarkerRegister")
+
+
+@MarkerRegister.register_base
 class IAMarker(ta.ABCHasTraits):
     name = ta.Str(value="")
+
     transform = ta.Array(
         shape=(4, 4), value=np.identity(4), comparison_mode=ta.ComparisonMode.none
     )
+
     scale = ta.Range(low=0.0, value=0.25, exclude_low=True)
 
     sync = ta.Event()
 
-    def __init__(self, name) -> None:
-        super().__init__(name=name)
+    def __init__(self, name, **kwargs) -> None:
+        super().__init__(name=name, **kwargs)
 
         self.lg = Guard()
 

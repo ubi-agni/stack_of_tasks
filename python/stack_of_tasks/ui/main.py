@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from sys import argv
 from threading import Event, Thread, current_thread
@@ -15,6 +16,8 @@ from PyQt5.QtWidgets import QApplication
 
 import rospy
 
+from stack_of_tasks.marker import IAMarker, MarkerRegister
+from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.ref_frame import Offset, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
 from stack_of_tasks.robot_model.jointstate_publisher import JointStatePublisher
@@ -37,6 +40,8 @@ from stack_of_tasks.ui.traits_mapping.bindings import (
 )
 
 T = TypeVar("T")
+
+logger = logging.getLogger(__name__)
 
 
 class DependencyInjection:
@@ -163,10 +168,12 @@ class Main(ta.HasTraits):
         Task.add_class_trait("display_name", ta.Str)
 
         self.controller = Controller()
+        self.marker_server = MarkerServer()
 
         DependencyInjection.mapping["robot_state"] = self.controller.robot_state
 
         # QT-Models
+
         self.link_model = ObjectModel(
             data=[*self.controller.robot_model.links.keys()]
         )  # all robot links
@@ -185,8 +192,16 @@ class Main(ta.HasTraits):
         self.add_trait("refs", ta.List(RefFrame))
         self.refs_model = ObjectModel(disp_func=lambda x: x.display_name)
         ModelMapping.add_mapping(RefFrame, self.refs_model)
-
         TraitObjectModelBinder(self, "refs", self.refs_model)
+
+        self.marker: List[IAMarker]
+        self.add_trait("marker", ta.List(IAMarker))
+        self.marker_model = ObjectModel(disp_func=lambda x: x.name)
+        ModelMapping.add_mapping(IAMarker, self.marker_model)
+        TraitObjectModelBinder(self, "marker", self.marker_model)
+
+        self.marker_cls_model = ObjectModel.from_class_register(MarkerRegister)
+        ModelMapping.add_mapping(ClassKey(IAMarker), self.marker_cls_model)
 
         self.task_hierachy_model = TaskHierarchyModel(self.controller.task_hierarchy)
         ModelMapping.add_mapping(Task, self.task_hierachy_model)
@@ -222,13 +237,19 @@ class Main(ta.HasTraits):
         with self.controller.task_hierarchy.new_level() as l:
             l.append(new_task)
 
+    def new_marker(self, cls, args):
+        new_marker = DependencyInjection.create_instance(cls, args)
+        self.marker_server.add_marker(new_marker)
+        self.marker.append(new_marker)
+
     def teardown(self):
         if self.controller.is_thread_running():
             self.controller.toggle_solver_state()
 
 
 def main():
-    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+    logger.info("Setup application")
+    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1.3"
     QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
 
@@ -255,6 +276,7 @@ def main():
 
     ui_window.tab_widget.refs.new_ref_signal.connect(main_app.new_ref)
     ui_window.tab_widget.hierarchy.new_task_signal.connect(main_app.new_task)
+    ui_window.tab_widget.marker.new_marker_signal.connect(main_app.new_marker)
 
     def button():
         state = main_app.controller.toggle_solver_state()
@@ -269,6 +291,16 @@ def main():
     app.exec()
 
 
+def fix_logging(level=logging.DEBUG):
+    console = logging.StreamHandler()
+    console.setLevel(level)
+    formatter = logging.Formatter("%(levelname)-8s:%(name)-12s: %(message)s")
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+
+
 if __name__ == "__main__":
     rospy.init_node("ik")
+    fix_logging()
+
     main()

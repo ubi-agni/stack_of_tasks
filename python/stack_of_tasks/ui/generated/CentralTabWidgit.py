@@ -26,7 +26,11 @@ class Ui_TabWidget(object):
         TabWidget.addTab(self.refs, "")
 
         self.retranslateUi(TabWidget)
-        TabWidget.setCurrentIndex(2)
+        TabWidget.setCurrentIndex(1)
+
+        self.marker = MarkerTab()
+        TabWidget.addTab(self.marker, "Marker")
+
         QtCore.QMetaObject.connectSlotsByName(TabWidget)
 
     def retranslateUi(self, TabWidget):
@@ -42,6 +46,6 @@ class Ui_TabWidget(object):
 
 
 from stack_of_tasks.ui.hierarchy_tab.tab import HierarchyTab
-
+from stack_of_tasks.ui.marker_tab.tab import MarkerTab
 from stack_of_tasks.ui.ref_tab.tab import Ref_Tab
 from stack_of_tasks.ui.solver_tab.tab import SolverTab

@@ -13,8 +13,8 @@ from .abstract_marker import IAMarker
 
 
 class PositionMarker(IAMarker):
-    def __init__(self, name) -> None:
-        super().__init__(name)
+    def __init__(self, name, **kwargs) -> None:
+        super().__init__(name, **kwargs)
 
         self._add_movement_marker(
             self.marker, "", InteractiveMarkerControl.MOVE_3D, self.sphere()
@@ -30,8 +30,8 @@ class PositionMarker(IAMarker):
 
 
 class OrientationMarker(IAMarker):
-    def __init__(self, name) -> None:
-        super().__init__(name)
+    def __init__(self, name, **kwargs) -> None:
+        super().__init__(name, **kwargs)
 
         self._add_display_marker(self.marker, "_disp", self.sphere())
         self._add_movement_control(self.marker, "_rot", InteractiveMarkerControl.ROTATE_AXIS)
@@ -44,8 +44,8 @@ class OrientationMarker(IAMarker):
 
 
 class FullMovementMarker(IAMarker):
-    def __init__(self, name) -> None:
-        super().__init__(name)
+    def __init__(self, name, **kwargs) -> None:
+        super().__init__(name, **kwargs)
 
         self._add_display_marker(self.marker, "", self.sphere())
         self._add_movement_control(self.marker, "_rot", InteractiveMarkerControl.ROTATE_AXIS)
@@ -61,8 +61,8 @@ class FullMovementMarker(IAMarker):
 class ConeMarker(IAMarker):
     angle = Range(0.0, 1.0, value=0.2)
 
-    def __init__(self, name) -> None:
-        super().__init__(name)
+    def __init__(self, name, **kwargs) -> None:
+        super().__init__(name, **kwargs)
 
         self._cone = self._add_display_marker(
             self.marker, "_cone", self.cone(self.angle, self.scale)

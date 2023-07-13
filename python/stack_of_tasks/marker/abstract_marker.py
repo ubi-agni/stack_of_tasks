@@ -19,6 +19,7 @@ from visualization_msgs.msg import (
 
 from stack_of_tasks.utils.class_register import Register
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
 
 class Guard(object):
@@ -57,7 +58,7 @@ MarkerRegister = Register("MarkerRegister")
 
 
 @MarkerRegister.register_base
-class IAMarker(ta.ABCHasTraits):
+class IAMarker(ABCSoTHasTraits):
     name = ta.Str(value="")
 
     transform = ta.Array(

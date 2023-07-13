@@ -7,9 +7,10 @@ from typing import Iterator, List, Set
 import traits.api as ta
 
 from stack_of_tasks.tasks.Task import Task
+from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
-class TaskHierarchy(ta.HasTraits):
+class TaskHierarchy(BaseSoTHasTraits):
     levels: List[Set[Task]] = ta.List(trait=ta.List(trait=ta.Instance(Task)), items=False)
 
     def __iter__(self) -> Iterator[Set[Task]]:

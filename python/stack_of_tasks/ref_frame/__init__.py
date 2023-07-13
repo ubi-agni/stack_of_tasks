@@ -18,6 +18,8 @@ from stack_of_tasks.utils.class_register import Register
 
 RefFrameRegister = Register("RefFrameRegister", register_base=False)
 
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
+
 
 @runtime_checkable
 class HasJacobian(Protocol):
@@ -40,7 +42,7 @@ class HasTransform(Protocol):
 
 
 @RefFrameRegister.register_base
-class RefFrame(ta.ABCHasTraits):
+class RefFrame(ABCSoTHasTraits):
     """The base class for all reference frames."""
 
     T: Transform = ta.Any

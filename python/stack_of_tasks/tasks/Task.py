@@ -13,6 +13,7 @@ import traits.observation.expression as te
 from stack_of_tasks.ref_frame import HasJacobian, Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame, RobotRefFrame
 from stack_of_tasks.utils.class_register import Register
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
 UpperBound = NDArray
 LowerBound = NDArray
@@ -53,7 +54,7 @@ TaskRegister = Register("TaskRegister", register_base=False)
 
 
 @TaskRegister.register_base
-class Task(ta.ABCHasTraits):
+class Task(ABCSoTHasTraits):
     # Task Constants
     name = "BaseClass"
     task_size = -1

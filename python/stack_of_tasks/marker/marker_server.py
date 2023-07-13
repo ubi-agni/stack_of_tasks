@@ -6,10 +6,12 @@ from traits.observation.events import TraitChangeEvent
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from visualization_msgs.msg import InteractiveMarkerFeedback
 
+from stack_of_tasks.utils.traits import BaseSoTHasTraits
+
 from .abstract_marker import IAMarker
 
 
-class MarkerServer(HasTraits):
+class MarkerServer(BaseSoTHasTraits):
     marker = Dict(str, IAMarker)
     _control = Dict(str, IAMarker)
 

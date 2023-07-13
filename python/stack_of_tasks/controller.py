@@ -9,9 +9,10 @@ from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
+from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
-class Controller(ta.HasTraits):
+class Controller(BaseSoTHasTraits):
     robot_model: RobotModel = ta.Instance(RobotModel)
     robot_state: RobotState = ta.Instance(RobotState)
 

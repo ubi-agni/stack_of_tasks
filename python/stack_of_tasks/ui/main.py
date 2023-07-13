@@ -39,6 +39,7 @@ from stack_of_tasks.ui.traits_mapping.bindings import (
     TraitWidgetBinding,
     trait_widget_binding,
 )
+from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 T = TypeVar("T")
 
@@ -123,7 +124,7 @@ class SolverThread(Thread):
             self.worker.wait()
 
 
-class Controller(ta.HasTraits):
+class Controller(BaseSoTHasTraits):
     solvercls: Type[Solver] = ta.Type(klass=Solver, value=None)
     solver: Solver = ta.Instance(klass=Solver)
 
@@ -160,7 +161,7 @@ class Controller(ta.HasTraits):
         return self.thread is not None and self.thread.is_alive()
 
 
-class Main(ta.HasTraits):
+class Main(BaseSoTHasTraits):
     def __init__(self):
         super().__init__()
 

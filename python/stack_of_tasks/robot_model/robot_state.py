@@ -6,13 +6,13 @@ import traits.api as ta
 import rospy
 from sensor_msgs.msg import JointState
 
-from stack_of_tasks.utils.traits import matrix_edit
+from stack_of_tasks.utils.traits import ABCSoTHasTraits, matrix_edit
 from stack_of_tasks.utils.transform_math import adjoint
 
 from .robot_model import ActiveJoint, Joint, RobotModel
 
 
-class RobotState(ta.HasTraits):
+class RobotState(ABCSoTHasTraits):
     robot_model: RobotModel = ta.Instance(RobotModel)
 
     joint_state_msg: JointState = ta.Instance(JointState)

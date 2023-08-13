@@ -21,26 +21,27 @@ class RobotRefFrame(RefFrame):
     """A reference to a robot frame. Contains current transform (T) and Jacobian (J) of the given robot link. All attributes are read only and will be calculated dynamically.
 
     Attributes:
-        robot_state (RobotState): A read only reference to the frames robot state.
         link_name (str): The frames robot link name. Read only.
         T (Transform): The current robot link transform.
         J (Jacobian): The current robot link jacobian.
     """
 
-    robot_state: RobotState = ta.Instance(RobotState)
-    link_name: str = ta.Str()
+    link_name: str = ta.Str(None)
 
-    T = ta.Property(observe="_fk")
-    J = ta.Property(observe="_fk")
+    T = ta.Property(visible=False, observe="_fk", trait=ta.Array)
+    J = ta.Property(visible=False, observe="_fk", trait=ta.Array)
 
-    _fk = ta.Property(observe="robot_state.joint_values")
+    _fk = ta.Property()
+    _robot_state: RobotState = ta.Instance(RobotState)
 
     def __init__(self, robot_state: RobotState, link_name: str, **kwargs) -> None:
-        super().__init__(robot_state=robot_state, link_name=link_name, **kwargs)
+        super().__init__(_robot_state=robot_state, link_name=link_name, **kwargs)
 
-    @ta.cached_property
+    @ta.property_depends_on(
+        "_robot_state.joint_values, link_name"
+    )  # BUG CANT WAIT UNTIL INIT STATE
     def _get__fk(self):
-        return self.robot_state.fk(self.link_name)
+        return self._robot_state.fk(self.link_name)
 
     def _get_T(self):
         return self._fk[0]

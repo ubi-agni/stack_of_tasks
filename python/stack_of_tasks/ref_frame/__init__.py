@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-
 from typing import Protocol, runtime_checkable
 
 import numpy as np
@@ -43,7 +41,7 @@ class HasTransform(Protocol):
 class RefFrame(ABCSoTHasTraits):
     """The base class for all reference frames."""
 
-    T: Transform = ta.Any
+    T: Transform
 
     def transform(self, T_matrix: Transform) -> Offset:
         return Offset(self, T_matrix)
@@ -51,10 +49,10 @@ class RefFrame(ABCSoTHasTraits):
     def translate(self, x=0.0, y=0.0, z=0.0) -> Offset:
         return self.transform(tfs.translation_matrix([x, y, z]))
 
-    def rotate_quaternion(self, quaternion) -> Offset:
+    def rotate_quaternion(self, quaternion: np.ndarray) -> Offset:
         return self.transform(tfs.quaternion_matrix(quaternion))
 
-    def rotate_axis_angle(self, axis, angle) -> Offset:
+    def rotate_axis_angle(self, axis: np.ndarray, angle: float) -> Offset:
         return self.transform(tfs.rotation_matrix(angle, axis))
 
 
@@ -62,18 +60,22 @@ class Offset(RefFrame):
     """Defines an offset to the given frame."""
 
     offset: Transform = ta.Array(
-        dtype="float", value=np.identity(4), comparison_mode=ta.ComparisonMode.none
+        dtype="float",
+        value=np.identity(4),
+        comparison_mode=ta.ComparisonMode.none,
     )
     frame: RefFrame = ta.Instance(RefFrame)
-    T: Transform = ta.Property(ta.Array)
+    T: Transform = ta.Property(ta.Array, visible=False)
 
     def __init__(self, frame: HasTransform, offset=None, **kwargs) -> None:
         if offset is None:
             offset = np.identity(4)
+
         super(Offset, self).__init__(frame=frame, offset=offset, **kwargs)
 
-        if isinstance(self.frame, HasJacobian):
-            self.add_trait("J", ta.Delegate("frame"))
+        # hasattr does not work see: https://github.com/enthought/traits/issues/1753
+        if "J" in self.frame.trait_names():
+            self.add_trait("J", ta.Delegate("frame", visible=False))
 
     @ta.property_depends_on("frame.T, offset")
     def _get_T(self):

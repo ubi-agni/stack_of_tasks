@@ -85,3 +85,6 @@ class Offset(RefFrame):
         with matrix_edit(self, "offset"):
             self.offset[:] = self.offset @ T_matrix
         return self
+
+
+from .marker_frame import MarkerFrame

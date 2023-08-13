@@ -223,6 +223,10 @@ class RobotModel:
 
         return dict([(joint, parent)]) if joint.parent is None else dict()
 
+    @property
+    def link_names(self):
+        return list(self.links.keys())
+
     def isEEF(self, link: str):
         joint = self.links[link]
         return not any([joint is j.parent for j in self.joints.values()])

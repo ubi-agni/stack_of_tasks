@@ -1,14 +1,7 @@
 from numpy.typing import NDArray
 
 
-class Callback(list):
-    def __call__(self, *args) -> None:
-        for listener in self:
-            listener(*args)
-
-
 def prettyprintMatrix(matrix: NDArray, fmt=".2"):
-
     if len(matrix.shape) == 1:
         s = [f"{e:{fmt}}" for e in matrix]
         l = max(map(len, s))

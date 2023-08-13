@@ -5,12 +5,12 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from numpy.typing import NDArray
-from typing import Any, Tuple
+from typing import Tuple
 
 import traits.api as ta
 import traits.observation.expression as te
 
-from stack_of_tasks.ref_frame import HasJacobian, Jacobian
+from stack_of_tasks.ref_frame import Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame, RobotRefFrame
 from stack_of_tasks.ui.utils.class_register import Register
 from stack_of_tasks.utils.traits import ABCSoTHasTraits
@@ -25,7 +25,7 @@ def maybe_child(parent, name):
     return te.trait(parent).match(lambda n, _: n == name)
 
 
-def maybe_trait(name):
+def maybe_trait(name):  # needed? te.trait(..., optional=True)?
     return te.match(lambda n, _: n == name)
 
 
@@ -55,17 +55,19 @@ TaskRegister = Register("TaskRegister", register_base=False)
 
 @TaskRegister.register_base
 class Task(ABCSoTHasTraits):
-    # Task Constants
     name = "BaseClass"
     task_size = -1
 
     # universal task properties
     softness_type = ta.Enum(TaskSoftnessType)
     weight = ta.Range(
-        0.0, value=1.0, exclude_low=True, desc="The weight of this task in its task-level."
+        low=0.0,
+        value=1.0,
+        exclude_low=True,
+        desc="The weight of this task in its task-level.",
     )
 
-    A: A = ta.Property(depends_on="_recompute")
+    A: A = ta.Property(depends_on="_recompute", trait=ta.Array, visible=False)
 
     def _get_A(self):
         return self._compute_val[0]
@@ -83,7 +85,6 @@ class Task(ABCSoTHasTraits):
             self._trigger_recompute, "weight"
         )  # what properties should trigger recomputation
 
-    # (re)computation mechanism
     _recompute = ta.Event()
 
     # function to trigger computation
@@ -107,6 +108,10 @@ class RelativeTask(Task):
     refA: RefFrame = ta.Instance(RefFrame)
     refB: RefFrame = ta.Instance(RefFrame)
 
+    _J: Jacobian = ta.Property(
+        observe=(maybe_child("refA", "J") | maybe_child("refB", "J") | te.trait("relType"))
+    )
+
     def __init__(
         self,
         refA: RefFrame,
@@ -118,18 +123,15 @@ class RelativeTask(Task):
         super().__init__(softness_type, weight, refA=refA, refB=refB, **traits)
         self.observe(self._trigger_recompute, "refA:T, refB:T, _J")
 
-    _J: Jacobian = ta.Property(
-        observe=(maybe_child("refA", "J") | maybe_child("refB", "J") | te.trait("relType"))
-    )
-
     @ta.cached_property
     def _get__J(self):
-        a_is_J = isinstance(self.refA, HasJacobian)
-        b_is_J = isinstance(self.refB, HasJacobian)
+        a_is_J = "J" in self.refA.trait_names()
+        b_is_J = "J" in self.refB.trait_names()
 
-        if a_is_J and not b_is_J:
+        if a_is_J and (not b_is_J):
             J = self.refA.J
-        elif not a_is_J and b_is_J:
+
+        elif (not a_is_J) and b_is_J:
             J = -self.refB.J
 
         elif a_is_J and b_is_J:
@@ -139,6 +141,8 @@ class RelativeTask(Task):
                 J = self.refA.J
             else:
                 J = self.refA.J - self.refB.J
+        else:
+            raise ValueError("Either REF A or REF B has to have J")
 
         return J
 
@@ -160,8 +164,8 @@ class TargetTask(Task, ABC):
         self.observe(self._trigger_recompute, "target:T, robot:T, _J")
 
 
-class EqTask(Task, ABC):
-    bound = ta.Property(depends_on="_recompute")
+class EqTask(Task):
+    bound = ta.Property(trait=ta.Array, depends_on="_recompute")
 
     def _get_bound(self):
         return self._compute_val[1]

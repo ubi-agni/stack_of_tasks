@@ -10,8 +10,8 @@ class ConeTask(RelativeTask, IeqTask):
     name = "Cone"
     task_size: int = 1
 
-    robot_axis = ta.Array(shape=(1, 3))
-    target_axis = ta.Array(shape=(1, 3))
+    robot_axis = ta.Array(shape=[3])
+    target_axis = ta.Array(shape=[3])
     angle = ta.Float(default_value=0.0)
 
     def compute(self) -> Tuple[A, LowerBound, UpperBound]:

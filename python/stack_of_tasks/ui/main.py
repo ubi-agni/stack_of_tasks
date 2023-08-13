@@ -39,6 +39,7 @@ from stack_of_tasks.ui.traits_mapping.bindings import (
     TraitWidgetBinding,
     trait_widget_binding,
 )
+from stack_of_tasks.ui.utils.dependency_injection import DependencyInjection
 from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 T = TypeVar("T")

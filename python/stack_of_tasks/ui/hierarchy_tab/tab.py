@@ -6,6 +6,7 @@ from stack_of_tasks.tasks.Task import Task
 from stack_of_tasks.ui.generated.TaskHierachy import Ui_TaskHierarchy
 from stack_of_tasks.ui.model import RawDataRole
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
+from stack_of_tasks.ui.utils.dependency_injection import DependencyInjection
 from stack_of_tasks.ui.widgets.button_dialog import NewInstanceDialog
 
 

@@ -14,6 +14,14 @@ class BaseSoTHasTraits(ta.HasTraits):
     # Make 'private' traits (leading '_') have no type checking:
     __ = ta.Any(private=True, transient=True)
 
+    trait_removed = ta.Event()
+
+    def remove_trait(self, name):
+        r = super().remove_trait(name)
+        if r:
+            self.trait_removed = name
+        return r
+
     def __init__(self, **traits):
         self._update_private_metadata()
         super().__init__(**traits)

@@ -12,7 +12,7 @@ import traits.observation.expression as te
 
 from stack_of_tasks.ref_frame import HasJacobian, Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame, RobotRefFrame
-from stack_of_tasks.utils.class_register import Register
+from stack_of_tasks.ui.utils.class_register import Register
 from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
 UpperBound = NDArray

@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from functools import wraps
 
-from typing import Any, Type
+from typing import Any, Generic, Type
 
 
 class RegisterBaseError(Exception):
@@ -15,16 +15,21 @@ class RegisterBaseError(Exception):
         super().__init__(tr)
 
 
-class Register:
+from typing import TypeVar
+
+ClassType = TypeVar("ClassType")
+
+
+class Register(Generic[ClassType]):
     def __init__(self, name: str, register_abstract=False, register_base=True) -> None:
         self.name: str = name
-        self._base_cls = None
-        self._register = []
+        self._base_cls: ClassType = None
+        self._register: list[ClassType] = []
 
         self._abstract = register_abstract
         self._base = register_base
 
-    def register_base(self, cls: Type[object]):
+    def register_base(self, cls: ClassType):
         if self._base_cls is not None:
             raise RegisterBaseError(self._base_cls, cls, self)
 

@@ -71,9 +71,7 @@ class IAMarker(ABCSoTHasTraits):
 
     def __init__(self, name, **kwargs) -> None:
         super().__init__(name=name, **kwargs)
-
         self.lg = Guard()
-
         self.markers = []
 
         self.marker = self._create_interactive_marker(
@@ -84,17 +82,17 @@ class IAMarker(ABCSoTHasTraits):
 
         self.markers.append(self.marker)
 
-    @ta.observe("name")
+    @ta.observe("name", post_init=True)
     def _name_changed(self, evt: TraitChangeEvent):
-        self.marker.name = self.name
+        self.marker.name = evt.new
 
-    @ta.observe("transform")
+    @ta.observe("transform", post_init=True)
     def _transform_changed(self, evt: TraitChangeEvent):
         if "transform" not in self.lg:
             self.marker.pose = matrix_to_pose(self.transform)
             self.sync = self.name
 
-    @ta.observe("scale")
+    @ta.observe("scale", post_init=True)
     def _scale_changed(self, evt: TraitChangeEvent):
         if "scale" not in self.lg:
             self.marker.scale = self.scale

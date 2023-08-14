@@ -2,17 +2,26 @@ from __future__ import annotations
 
 from typing import Any
 
+import qtawesome
 import traits.api as ta
 from PyQt5.QtCore import pyqtProperty
-from PyQt5.QtWidgets import QFormLayout, QGroupBox, QLabel, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from stack_of_tasks.ui.model_mapping import InjectionArg
-from stack_of_tasks.ui.traits_mapping import (
-    get_editable_trait_names,
-    get_init_arg_trait_names,
+from stack_of_tasks.ui.traits_mapping import get_init_arg_trait_names, ui_mapping
+from stack_of_tasks.ui.traits_mapping.bindings import (
+    get_user_property,
+    set_user_property,
+    trait_widget_binding,
 )
-from stack_of_tasks.ui.traits_mapping.bindings import get_user_property, trait_widget_binding
-from stack_of_tasks.ui.traits_mapping.ui_mapping import Mapping
 
 
 class NewInstanceWidget(QWidget):
@@ -32,19 +41,20 @@ class NewInstanceWidget(QWidget):
             self.fl.removeRow(0)
 
         cls_trs = self.cls.class_traits()
-        for name in get_init_arg_trait_names(self.cls):
-            tr = cls_trs[name]
 
-            if tr.injected:
-                self.args[name] = InjectionArg()
+        for name in get_init_arg_trait_names(self.cls):
+            trait: ta.CTrait = cls_trs[name]
+
+            if trait.injected is not None:
+                self.args[trait.injected] = InjectionArg()
                 continue
 
-            w = Mapping.find_widget(tr)
+            me = ui_mapping.Mapping.find_entry(trait)
 
-            if w is not None:
-                widget_cls, setup = w
-                widget = widget_cls()
-                setup(tr, name, widget, None)
+            if me is not None:
+                widget = me.widget()
+                me.setup_function(trait, widget)
+                set_user_property(widget, trait.trait_type.default_value)
 
             else:
                 continue
@@ -54,12 +64,12 @@ class NewInstanceWidget(QWidget):
 
     def get_arguments(self) -> dict["str", Any]:
         r = {}
+
         for k, v in self.args.items():
             if isinstance(v, InjectionArg):
                 r[k] = v
             else:
                 r[k] = get_user_property(v)
-                # print(f"arg_name: {k}, {get_user_property(v)}, {v}")
 
         return r
 
@@ -70,24 +80,40 @@ class HasTraitsFormLayout(QFormLayout):
         self.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
 
     def setHastTrait(self, inst: ta.HasTraits):
-        for name in get_editable_trait_names(inst):
+        for name in inst.visible_traits():
+            print("visible_trait", name, inst.trait(name).__dict__)
             trait = inst.trait(name)
             if trait.injected:
                 continue
-            match = Mapping.find_widget(trait)
 
-            if match is not None:
-                widget_cls, setup_function = match
-                widget = widget_cls()
-                setup_function(trait, name, widget, getattr(inst, name))
+            me = ui_mapping.Mapping.find_entry(trait)
+
+            if me is not None:
+                widget = me.widget()
+                me.setup_function(trait, widget)
+
+                set_user_property(widget, getattr(inst, name))
 
                 trait_widget_binding(inst, name, widget)
-
                 self.addRow(name, widget)
 
     def clear_widget(self):
         while self.rowCount() > 0:
             self.removeRow(0)
+
+
+class LinkButtonWrapper(QHBoxLayout):
+    def __init__(self, widget):
+        super().__init__()
+
+        self.link_icon = qtawesome.icon("fa.link")
+        self.unlink_icon = qtawesome.icon("fa.unlink")
+
+        self.addWidget(widget)
+
+        self.link_button = QPushButton(icon=self.link_icon)
+        self.link_button.setContentsMargins(0, 0, 0, 0)
+        self.addWidget(self.link_button)
 
 
 class HasTraitWidget(QWidget):

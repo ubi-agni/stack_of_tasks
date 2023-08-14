@@ -13,36 +13,17 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QHBoxLayout" name="main_layout">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTreeView" name="treeView"/>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="editor_layout">
-     <item>
-      <widget class="EditorGroupBox" name="edit_task">
-       <property name="title">
-        <string>Edit task:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="addTask">
-       <property name="text">
-        <string>add task</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="SOT_View" name="treeView"/>
    </item>
   </layout>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>EditorGroupBox</class>
-   <extends>QGroupBox</extends>
-   <header>stack_of_tasks.ui.widgets.has_trait_widgets</header>
-   <container>1</container>
+   <class>SOT_View</class>
+   <extends>QTreeView</extends>
+   <header>stack_of_tasks.ui.property_tree.prop_tree</header>
   </customwidget>
  </customwidgets>
  <resources/>

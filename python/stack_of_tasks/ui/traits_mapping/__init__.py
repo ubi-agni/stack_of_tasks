@@ -40,14 +40,17 @@ def get_editable_trait_names(obj: ta.HasTraits):
 
 
 def get_init_arg_trait_names(cls: type[ta.HasTraits]):
-    cls_trait_names = cls.class_visible_traits()
+    visible_trait_names = cls.class_visible_traits()
     cls_trts = cls.class_traits()
 
-    trait_names = []
-    for name in cls_trait_names:
+    injected_names = cls.class_trait_names(injected=lambda x: isinstance(x, str))
+
+    trait_names = set(injected_names)
+    for name in visible_trait_names:
         if is_editable_trait(name, cls_trts[name]):
-            trait_names.append(name)
-    return trait_names
+            trait_names.add(name)
+
+    return list(trait_names)
 
 
 def is_valid_value(obj: ta.HasTraits | ta.MetaHasTraits, name: str, val: Any) -> bool:

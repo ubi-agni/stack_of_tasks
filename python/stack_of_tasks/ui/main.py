@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pprint import pprint
 from sys import argv
 from threading import Event, Thread, current_thread
 
@@ -13,10 +14,12 @@ import numpy as np
 import traits.api as ta
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication
+from traits.trait_notifiers import set_ui_handler
 
 import rospy
 
-from stack_of_tasks.marker import FullMovementMarker, IAMarker, MarkerRegister
+from stack_of_tasks.logger import fix_rospy_logging, sot_logger
+from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.ref_frame import Offset, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
@@ -26,15 +29,15 @@ from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import TaskRegister
-from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, PositionTask
+from stack_of_tasks.tasks.Eq_Tasks import PositionTask
 from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
+from stack_of_tasks.ui import DISPLAY_STRING_ATTR
 from stack_of_tasks.ui.mainwindow import Ui
 from stack_of_tasks.ui.model.object_model import ObjectModel
-from stack_of_tasks.ui.model.task_hierarchy import TaskHierarchyModel
-from stack_of_tasks.ui.model_mapping import ClassKey, InjectionArg, ModelMapping
+from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
+from stack_of_tasks.ui.property_tree.prop_tree import SOT_Model
 from stack_of_tasks.ui.traits_mapping.bindings import (
-    SyncTraitBinder,
     TraitObjectModelBinder,
     TraitWidgetBinding,
     trait_widget_binding,
@@ -42,30 +45,7 @@ from stack_of_tasks.ui.traits_mapping.bindings import (
 from stack_of_tasks.ui.utils.dependency_injection import DependencyInjection
 from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
-T = TypeVar("T")
-
-logger = logging.getLogger(__name__)
-
-
-class DependencyInjection:
-    mapping = {}
-
-    @staticmethod
-    def inject(arg_vector):
-        injected = {}
-
-        for arg in arg_vector.keys():
-            if isinstance(arg_vector[arg], InjectionArg):
-                injected[arg] = DependencyInjection.mapping[arg]
-            else:
-                injected[arg] = arg_vector[arg]
-
-        return injected
-
-    @staticmethod
-    def create_instance(instance_cls: Type[T], kwargs: dict) -> T:
-        # inject arguments
-        return instance_cls(**DependencyInjection.inject(kwargs))
+logger = sot_logger.getChild("main")
 
 
 class Worker:
@@ -143,7 +123,6 @@ class Controller(BaseSoTHasTraits):
 
     @ta.observe("solvercls", post_init=True)
     def _solver_changed(self, evt):
-        print("solver", evt)
         self.solver: Solver = self.solvercls(self.robot_model.N, self.task_hierarchy)
         self.solver.stack_changed()
 
@@ -166,9 +145,9 @@ class Main(BaseSoTHasTraits):
     def __init__(self):
         super().__init__()
 
-        RefFrame.add_class_trait("display_name", ta.Str)
-        RobotRefFrame.class_traits()["robot_state"].injected = "robot_state"
-        Task.add_class_trait("display_name", ta.Str)
+        RefFrame.add_class_trait(DISPLAY_STRING_ATTR, ta.Str)
+        RobotRefFrame.class_traits()["_robot_state"].injected = "robot_state"
+        Task.add_class_trait(DISPLAY_STRING_ATTR, ta.Str)
 
         self.controller = Controller()
         self.marker_server = MarkerServer()
@@ -180,7 +159,10 @@ class Main(BaseSoTHasTraits):
         self.link_model = ObjectModel(
             data=[*self.controller.robot_model.links.keys()]
         )  # all robot links
-        RobotRefFrame.class_traits()["link_name"].selection_model = self.link_model
+
+        RobotRefFrame.class_traits()[
+            "link_name"
+        ].enum_selection = self.link_model  # temp. workaround
 
         self.solver_cls_model = ObjectModel.from_class_register(SolverRegister)
         ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
@@ -193,48 +175,46 @@ class Main(BaseSoTHasTraits):
 
         self.refs: List[RefFrame]
         self.add_trait("refs", ta.List(RefFrame))
-        self.refs_model = ObjectModel(disp_func=lambda x: x.display_name)
+        self.refs_model = ObjectModel()
+
         ModelMapping.add_mapping(RefFrame, self.refs_model)
         TraitObjectModelBinder(self, "refs", self.refs_model)
 
         self.marker: List[IAMarker]
         self.add_trait("marker", ta.List(IAMarker))
-        self.marker_model = ObjectModel(disp_func=lambda x: x.name)
+
+        self.observe(self._marker_list_changed, "marker")
+
+        self.marker_model = ObjectModel()
         ModelMapping.add_mapping(IAMarker, self.marker_model)
         TraitObjectModelBinder(self, "marker", self.marker_model)
 
         self.marker_cls_model = ObjectModel.from_class_register(MarkerRegister)
         ModelMapping.add_mapping(ClassKey(IAMarker), self.marker_cls_model)
 
-        self.task_hierachy_model = TaskHierarchyModel(self.controller.task_hierarchy)
+        self.task_hierachy_model = SOT_Model(self.controller.task_hierarchy)
         ModelMapping.add_mapping(Task, self.task_hierachy_model)
 
         def _reset_th(evt):
-            print(evt)
             self.task_hierachy_model.beginResetModel()
             self.task_hierachy_model.endResetModel()
 
-        self.controller.task_hierarchy.observe(_reset_th, "*")
+        self.controller.task_hierarchy.observe(_reset_th, "stack_changed")
 
     def setup(self):
-        o = Origin(display_name="Origin")
+        self.task_hierachy_model.set_stack(self.controller.task_hierarchy)
 
-        off = Offset(frame=o, display_name="Offset")
+        o = Origin()
+        off = Offset(frame=o)
+        off.observe(print, "trait_added")
 
-        frame = RobotRefFrame(
-            self.controller.robot_state, "panda_hand_tcp", display_name="hand"
-        )
-
+        frame = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp")
+        setattr(frame, DISPLAY_STRING_ATTR, "hand")
         self.refs.extend([o, off, frame])
 
         with self.controller.task_hierarchy.new_level() as level:
-            level.append(PositionTask(off, frame, TaskSoftnessType.linear))
-            level.append(OrientationTask(off, frame, TaskSoftnessType.linear))
-
-        ma = FullMovementMarker("pos")
-        self.marker_server.add_marker(ma)
-
-        self.syncer = SyncTraitBinder(ma, "transform", off, "offset")
+            task = PositionTask(off, frame, TaskSoftnessType.linear)
+            level.append(task)
 
     def new_ref(self, cls, args):
         new_ref = DependencyInjection.create_instance(cls, args)
@@ -248,25 +228,42 @@ class Main(BaseSoTHasTraits):
 
     def new_marker(self, cls, args):
         new_marker = DependencyInjection.create_instance(cls, args)
-        self.marker_server.add_marker(new_marker)
         self.marker.append(new_marker)
+        self._add_marker_to_server(new_marker)
+
+    def _marker_list_changed(self, evt):
+        print(evt)
+        for x in evt.added:
+            self._add_marker_to_server(x)
+
+    def _add_marker_to_server(self, marker):
+        self.marker_server.add_marker(marker)
 
     def teardown(self):
         if self.controller.is_thread_running():
             self.controller.toggle_solver_state()
 
 
+def _ui_handler(handler, *args, **kwargs):
+    logger.debug(f"handler {handler}, args {args}, kwargs {kwargs}")
+    print("ui handler: ", args, kwargs)
+
+
 def main():
     logger.info("Setup application")
-    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1.3"
+    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+    os.environ["QT_SCALE_FACTOR"] = "2"
+
     QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+
+    logger.info("create main")
+    set_ui_handler(_ui_handler)
 
     main_app = Main()
     main_app.setup()
 
-    print(main_app.controller.solver)
-
+    logger.info("create application ")
     app = QApplication(argv)
     ui_window = Ui()
 
@@ -284,7 +281,6 @@ def main():
     )
 
     ui_window.tab_widget.refs.new_ref_signal.connect(main_app.new_ref)
-    ui_window.tab_widget.hierarchy.new_task_signal.connect(main_app.new_task)
     ui_window.tab_widget.marker.new_marker_signal.connect(main_app.new_marker)
 
     def button():
@@ -295,21 +291,15 @@ def main():
         else:
             ui_window.run_Button.setText("Start")
 
+    def debug_button():
+        print(main_app.controller.task_hierarchy.levels)
+
     ui_window.run_Button.clicked.connect(button)
 
     app.exec()
 
 
-def fix_logging(level=logging.DEBUG):
-    console = logging.StreamHandler()
-    console.setLevel(level)
-    formatter = logging.Formatter("%(levelname)-8s:%(name)-12s: %(message)s")
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-
-
 if __name__ == "__main__":
     rospy.init_node("ik")
-    fix_logging()
-
+    fix_rospy_logging(sot_logger)
     main()

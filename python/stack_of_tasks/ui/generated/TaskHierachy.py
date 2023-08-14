@@ -15,20 +15,11 @@ class Ui_TaskHierarchy(object):
     def setupUi(self, TaskHierarchy):
         TaskHierarchy.setObjectName("TaskHierarchy")
         TaskHierarchy.resize(845, 505)
-        self.main_layout = QtWidgets.QHBoxLayout(TaskHierarchy)
-        self.main_layout.setObjectName("main_layout")
-        self.treeView = QtWidgets.QTreeView(TaskHierarchy)
+        self.verticalLayout = QtWidgets.QVBoxLayout(TaskHierarchy)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.treeView = SOT_View(TaskHierarchy)
         self.treeView.setObjectName("treeView")
-        self.main_layout.addWidget(self.treeView)
-        self.editor_layout = QtWidgets.QVBoxLayout()
-        self.editor_layout.setObjectName("editor_layout")
-        self.edit_task = EditorGroupBox(TaskHierarchy)
-        self.edit_task.setObjectName("edit_task")
-        self.editor_layout.addWidget(self.edit_task)
-        self.addTask = QtWidgets.QPushButton(TaskHierarchy)
-        self.addTask.setObjectName("addTask")
-        self.editor_layout.addWidget(self.addTask)
-        self.main_layout.addLayout(self.editor_layout)
+        self.verticalLayout.addWidget(self.treeView)
 
         self.retranslateUi(TaskHierarchy)
         QtCore.QMetaObject.connectSlotsByName(TaskHierarchy)
@@ -36,6 +27,4 @@ class Ui_TaskHierarchy(object):
     def retranslateUi(self, TaskHierarchy):
         _translate = QtCore.QCoreApplication.translate
         TaskHierarchy.setWindowTitle(_translate("TaskHierarchy", "Form"))
-        self.edit_task.setTitle(_translate("TaskHierarchy", "Edit task:"))
-        self.addTask.setText(_translate("TaskHierarchy", "add task"))
-from stack_of_tasks.ui.widgets.has_trait_widgets import EditorGroupBox
+from stack_of_tasks.ui.property_tree.prop_tree import SOT_View

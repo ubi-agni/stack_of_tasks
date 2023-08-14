@@ -119,7 +119,6 @@ class TraitWidgetBinding:
         self._hasTrait.observe(self, self._trait_name, remove=True)
 
     def __call__(self, val) -> Any:
-        print(self._trait_name, val.new)
         self._widget.setProperty(self.prop_name, val.new)
 
 
@@ -146,12 +145,12 @@ class TraitObjectModelBinder:
         self._trait_name = trait
         self.alive = True
 
-        self._model()._objs = getattr(self._hasTrait(), self._trait_name)
+        model.extend(getattr(self._hasTrait(), self._trait_name))
 
         self._observe_name = f"{self._trait_name}:items"
 
         self._hasTrait().observe(self._list_set, self._trait_name)
-        self._hasTrait().observe(self._data_changed, self._observe_name)
+        self._hasTrait().observe(self._list_changed, self._observe_name)
         # self._hasTrait().observe(self._item_changed, f"{self._observe_name}:display_name")
 
         self._finalizer_self = weakref.finalize(self, self._remove_listener)
@@ -159,39 +158,23 @@ class TraitObjectModelBinder:
     def _remove_listener(self, obj=None):
         if (t := self._hasTrait()) is not None and self.alive:
             t.observe(self._list_set, self._trait_name, remove=True)
-            t.observe(self._data_changed, self._observe_name, remove=True)
+            t.observe(self._list_changed, self._observe_name, remove=True)
             # t.observe(self._item_changed, f"{self._observe_name}:display_name", remove=True)
 
             self.alive = False
 
     def _list_set(self, evt: TraitChangeEvent):
-        self._model.set_data_list(evt.new)
+        self._model().clear()
+        self._model().extend(evt.new)
 
-    def _data_changed(self, evt: ListChangeEvent):
-        if (
-            len(evt.added) > 0
-        ):  # assume adding and removing from list cant happen at the same time
-            self._model().items_inserted(evt.index)
-        else:
-            self._model().items_removed(evt.index)
+    def _list_changed(self, evt: ListChangeEvent):
+        if len(evt.added) > 0:
+            self._model().extend(evt.added)
+        if len(evt.removed) > 0:
+            pass  # Todo make elements removable
 
-    def _item_changed(self, evt: TraitChangeEvent):
-        print(self._trait_name, evt.new)
-        index = getattr(self._hasTrait(), self._trait_name).index(evt.object)
-        self._model().item_changed(index)
-
-
-class SyncTraitBinder:
-    def __init__(
-        self, inst_one: ta.HasTraits, trait_one: str, inst_two: ta.HasTraits, trait_two: str
-    ) -> None:
-        self._ta_one: ta.HasTraits = inst_one
-        self._ta_two: ta.HasTraits = inst_two
-
-        self._name_one: str = trait_one
-        self._name_two: str = trait_two
-
-        self._ta_one.sync_trait(self._name_one, self._ta_two, self._name_two)
-
-    def remove(self):
-        self._ta_one.sync_trait(self._name_one, self._ta_two, self._name_two, remove=True)
+    # Todo notify model of element-change (does this happen internally?)
+    # def _item_changed(self, evt: TraitChangeEvent):
+    #    print(self._trait_name, evt.new)
+    #    index = getattr(self._hasTrait(), self._trait_name).index(evt.object)
+    #    self._model().item_changed(index)

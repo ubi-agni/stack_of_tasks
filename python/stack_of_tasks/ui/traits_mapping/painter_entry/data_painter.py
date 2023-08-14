@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+from itertools import chain
+
+from typing import Any
+
+import numpy as np
+from PyQt5.QtCore import QPointF, QRect, QSize, Qt
+from PyQt5.QtGui import QPainter, QPen
+from PyQt5.QtWidgets import QApplication, QStyle, QStyleOptionFrame, QStyleOptionViewItem
+
+
+class Delegate_Painter:
+    @classmethod
+    def size_hint(cls, option: QStyleOptionViewItem, data: Any):
+        return QSize()
+
+    has_Painter = False
+
+    @classmethod
+    def paint(cls, painter: QPainter, option: QStyleOptionViewItem, data: Any):
+        painter.save()
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(option.rect, option.palette.highlight())
+        painter.restore()
+
+
+class MatrixPainter(Delegate_Painter):
+    has_Painter = True
+
+    @classmethod
+    def size_hint(cls, option: QStyleOptionViewItem, data: np.ndarray):
+        if data is None:
+            return super().size_hint(option, data)
+
+        m = QApplication.style().pixelMetric(QApplication.style().PM_ButtonMargin, option)
+        f = QApplication.style().pixelMetric(
+            QApplication.style().PM_DefaultFrameWidth, option
+        )
+
+        max_w = option.fontMetrics.averageCharWidth() * 5
+        max_h = option.fontMetrics.height()
+
+        h = data.shape[0] * (max_h + f) + 2 * m
+        w = (data.shape[1] if len(data.shape) > 1 else 1) * (max_w + f) + 2 * m
+
+        return QSize(w, h)
+
+    @classmethod
+    def paint(cls, painter: QPainter, option: QStyleOptionViewItem, data: np.ndarray) -> None:
+        super().paint(painter, option, data)
+        painter.save()
+        shape = data.shape
+        rect = option.rect
+        content_size = cls.size_hint(option, data)
+        rect.setSize(content_size)
+
+        m = shape[0]
+        dm = rect.height() / m
+
+        lns = list(
+            chain.from_iterable(
+                (
+                    QPointF(rect.left(), rect.top() + dm * i),
+                    QPointF(rect.right(), rect.top() + dm * i),
+                )
+                for i in range(1, m)
+            )
+        )
+
+        if len(shape) > 1:
+            n = shape[1]
+            dn = rect.width() / n
+
+            lns.extend(
+                chain.from_iterable(
+                    (
+                        QPointF(rect.left() + dn * i, rect.top()),
+                        QPointF(rect.left() + dn * i, rect.bottom()),
+                    )
+                    for i in range(1, n)
+                )
+            )
+        else:
+            dn = rect.width()
+
+        line_pen = QPen(option.palette.dark().color(), 0.2)
+        painter.setPen(line_pen)
+        painter.drawLines(*lns)
+
+        painter.restore()
+
+        text_role = (
+            option.palette.HighlightedText
+            if option.state & QStyle.State_Selected
+            else option.palette.Text
+        )
+
+        if len(shape) > 1:
+            for j in range(m):
+                for i in range(n):
+                    QApplication.style().drawItemText(
+                        painter,
+                        QRect(rect.left() + i * dn, rect.top() + j * dm, dn, dm),
+                        Qt.AlignCenter,
+                        option.palette,
+                        True,
+                        f"{data[j, i]:.2f}",
+                        text_role,
+                    )
+        else:
+            for i in range(m):
+                QApplication.style().drawItemText(
+                    painter,
+                    QRect(rect.left(), rect.top() + i * dm, dn, dm),
+                    Qt.AlignCenter,
+                    option.palette,
+                    True,
+                    f"{data[i]:.2f}",
+                    text_role,
+                )
+
+        return True

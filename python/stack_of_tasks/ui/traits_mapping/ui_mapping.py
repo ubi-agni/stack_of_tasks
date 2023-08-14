@@ -1,29 +1,38 @@
 from __future__ import annotations
 
-from typing import Callable, Generic, List, Type, TypedDict, TypeVar, Union
+from typing import Generic, List, Type, TypeVar
 
 import PyQt5.QtWidgets as QTW
 import traits.api as ta
-import traits.trait_base as tb
 import traits.trait_types as tt
+from PyQt5.QtWidgets import QWidget
+from traits.trait_numeric import Array
 
-from stack_of_tasks.ui.model_mapping import ModelMapping
-from stack_of_tasks.ui.widgets.matrix_view import MatrixView, NumpyTableModel
-from stack_of_tasks.ui.widgets.object_dropbown import ObjectDropdown, ObjectModel
+from stack_of_tasks.ui.model.object_model import ObjectModel
+from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
+from stack_of_tasks.ui.widgets.matrix_view import MatrixWidget
+from stack_of_tasks.ui.widgets.object_dropbown import AddableObjectDropdown, ObjectDropdown
 from stack_of_tasks.ui.widgets.range import Range
+
+from .painter_entry.data_painter import Delegate_Painter, MatrixPainter
 
 
 class Mapping:
     mappings: List[MappingEntry] = []
 
     @classmethod
-    def find_widget(cls, trait: ta.CTrait):
-        if trait.selection_model is not None:
-            return NoneInstanceSelection.widget(trait), NoneInstanceSelection.setup_function
+    def find_entry(cls, trait: ta.CTrait) -> bool:
+        if getattr(trait, "enum_selection") is not None:  # temp. workaround
+            return Enum
 
         for m in cls.mappings:
             if m.matches(trait):
-                return m.widget(trait), m.setup_function
+                return m
+
+    @classmethod
+    def find_widget(cls, trait: ta.CTrait):
+        if (e := cls.find_entry(trait)) is not None:
+            return e.widget, e.setup_function
 
 
 MappingType = TypeVar("MappingType")
@@ -32,8 +41,11 @@ MappingType = TypeVar("MappingType")
 class MappingEntry(Generic[MappingType]):
     traits: List[ta.CTrait]
 
-    def __init_subclass__(cls, **kwargs) -> None:
-        super().__init_subclass__(**kwargs)
+    painter: Type[Delegate_Painter] = Delegate_Painter
+    widget: Type[QWidget] = None
+
+    def __init_subclass__(cls, *args, **kwargs) -> None:
+        super().__init_subclass__(*args, **kwargs)
         Mapping.mappings.append(cls)
 
     @classmethod
@@ -41,25 +53,16 @@ class MappingEntry(Generic[MappingType]):
         return any(isinstance(trait.trait_type, x) for x in cls.traits)
 
     @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[MappingType]:
-        pass
-
-    @classmethod
-    def setup_function(cls, trait: ta.CTrait, trait_name: str, widget: QTW, value=None):
+    def setup_function(cls, trait: ta.CTrait, widget: QTW):
         pass
 
 
 class String(MappingEntry):
     traits = [tt.String, tt.BaseStr, tt.BaseCStr]
+    widget = QTW.QLineEdit
 
     @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[QTW.QWidget]:
-        return QTW.QLineEdit
-
-    @classmethod
-    def setup_function(
-        cls, trait: ta.CTrait, trait_name: str, widget: QTW.QLineEdit, value=None
-    ):
+    def setup_function(cls, trait: ta.CTrait, widget: QTW.QLineEdit, value=None):
         if value is None:
             value = trait.default
 
@@ -69,35 +72,25 @@ class String(MappingEntry):
 class Float(MappingEntry):
     traits = [tt.BaseFloat, tt.BaseCFloat]
 
-    @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[QTW.QWidget]:
-        return QTW.QDoubleSpinBox
+    widget = QTW.QDoubleSpinBox
 
     @classmethod
-    def setup_function(
-        cls, trait: ta.CTrait, trait_name: str, widget: QTW.QDoubleSpinBox, value=None
-    ):
+    def setup_function(cls, trait: ta.CTrait, widget: QTW.QDoubleSpinBox, value=None):
         if value is None:
             value = trait.default
-
-        widget.setValue(value)
 
 
 class RangeEntry(MappingEntry):
     traits = [tt.BaseRange]
 
-    @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[QTW.QWidget]:
-        return Range
+    widget = Range
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, trait_name: str, widget: Range, value=None):
+    def setup_function(cls, trait: ta.CTrait, widget: Range, value=None):
         rng: ta.Range = trait.trait_type
 
         if value is None:
             value = trait.default
-
-        widget.setValue(value)
 
         widget.setMinimum(rng._low)
         widget.setMaximum(rng._high)
@@ -109,107 +102,41 @@ class RangeEntry(MappingEntry):
 class Selection(MappingEntry):
     traits = [tt.Instance]
 
-    @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[ObjectDropdown]:
-        return ObjectDropdown
+    widget = AddableObjectDropdown
 
     @classmethod
-    def setup_function(
-        cls, trait: ta.CTrait, trait_name: str, widget: ObjectDropdown, value=None
-    ):
+    def setup_function(cls, trait: ta.CTrait, widget: AddableObjectDropdown):
         t: tt.Instance = trait.trait_type
         key = t.model_key if t.model_key is not None else t.klass
-        refs_model: ObjectModel = ModelMapping.get_mapping(key)
+        refs_model = ModelMapping.get_mapping(key)
+        cls_model = ModelMapping.get_mapping(ClassKey(key))
+        widget.cls_model = cls_model
 
         if refs_model is not None:
             widget.setModel(refs_model)
-
-            if value is not None:
-                widget.current_object = value
-
-        else:
-            if value is None:
-                value = trait.default
-                widget.current_object = value
-                widget.setModel(ObjectModel(data=[value]))
-
-
-class NoneInstanceSelection(Selection):
-    traits = []
-
-    @classmethod
-    def matches(cls, trait: ta.CTrait) -> bool:
-        return False
-
-    @classmethod
-    def setup_function(
-        cls, trait: ta.CTrait, trait_name: str, widget: ObjectDropdown, value=None
-    ):
-        widget.setModel(trait.selection_model)
-
-        if value is not None:
-            if isinstance(value, str) and len(value) == 0:
-                return
-
-            widget.current_object = value
 
 
 class Enum(MappingEntry):
     traits = [tt.BaseEnum]
 
-    @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[ObjectDropdown]:
-        return ObjectDropdown
+    widget = ObjectDropdown
 
     @classmethod
-    def setup_function(
-        cls, trait: ta.CTrait, trait_name: str, widget: ObjectDropdown, value=None
-    ):
-        widget.setModel(ObjectModel(data=trait.trait_type.values))
-        if value is None:
-            widget.current_object = trait.default
+    def setup_function(cls, trait: ta.CTrait, widget: ObjectDropdown):
+        if getattr(trait, "enum_selection") is not None:
+            widget.setModel(getattr(trait, "enum_selection"))
+
         else:
-            widget.current_object = value
+            widget.setModel(ObjectModel(data=trait.trait_type.values))
 
-
-from traits.trait_numeric import Array
+        # TODO defferd value input via trait.name
 
 
 class Matrix(MappingEntry):
     traits = [Array]
+    widget = MatrixWidget
+    painter = MatrixPainter
 
     @classmethod
     def matches(cls, trait: ta.CTrait) -> bool:
         return isinstance(trait.trait_type, Array)
-
-    @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[MatrixView]:
-        return MatrixView
-
-    @classmethod
-    def setup_function(
-        cls, trait: ta.CTrait, trait_name: str, widget: MatrixView, value=None
-    ):
-        model = NumpyTableModel()
-
-        if value is None:
-            value = trait.trait_type.default_value
-
-        model.setMatrix(value)
-        widget.setModel(model)
-
-
-class ReadOnly(MappingEntry):
-    traits = [Array]
-
-    @classmethod
-    def matches(cls, trait: ta.CTrait) -> bool:
-        return type(trait.trait_type) is type(ta.ReadOnly) and trait.default is tb.Undefined
-
-    @classmethod
-    def widget(cls, trait: ta.CTrait) -> Type[MatrixView]:
-        return None
-
-    @staticmethod
-    def setup_function(obj: ta.HasTraits, trait_name: str, widget: MatrixView):
-        pass

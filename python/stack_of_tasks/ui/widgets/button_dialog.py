@@ -3,8 +3,8 @@ import typing
 from PyQt5 import QtWidgets
 
 from stack_of_tasks.ui.model.object_model import ObjectModel
+from stack_of_tasks.ui.widgets import object_dropbown
 from stack_of_tasks.ui.widgets.has_trait_widgets import NewInstanceWidget
-from stack_of_tasks.ui.widgets.object_dropbown import ObjectDropdown
 
 
 class ButtonDialog(QtWidgets.QDialog):
@@ -28,8 +28,7 @@ class NewInstanceDialog(ButtonDialog):
     ) -> None:
         super().__init__(parent)
 
-        self.cls_selection = ObjectDropdown()
-        self.cls_selection.current_object_changed.connect(self.cls_selection_changed)
+        self.cls_selection = object_dropbown.ObjectDropdown()
 
         fl = QtWidgets.QFormLayout()
         fl.addRow("Class:", self.cls_selection)
@@ -37,6 +36,7 @@ class NewInstanceDialog(ButtonDialog):
         self.traits = NewInstanceWidget()
         self._vl.insertWidget(1, self.traits)
 
+        self.cls_selection.current_object_changed.connect(self.cls_selection_changed)
         self.cls_selection.setModel(model)
 
     def cls_selection_changed(self, cls):

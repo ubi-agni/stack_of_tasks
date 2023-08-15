@@ -17,11 +17,9 @@ class ObjectModel(Generic[ObjectType], QStandardItemModel):
         super().__init__()
 
         if data is not None:
-            print(data)
             self.extend(data)
 
     def find(self, value):
-        # print(f"find {value}")
         for i in range(self.rowCount()):
             if self.data(self.index(i, 0), RawDataRole) == value:
                 return i
@@ -32,7 +30,6 @@ class ObjectModel(Generic[ObjectType], QStandardItemModel):
 
     def append(self, obj: ObjectType):
         self.appendRow(RawDatatItem(obj))
-        self._list.append(obj)
 
     def extend(self, objs: list[ObjectType]):
         for obj in objs:

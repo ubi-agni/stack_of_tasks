@@ -6,11 +6,13 @@ import typing
 from typing import Any
 
 import traits.api as ta
-from PyQt5.QtCore import pyqtBoundSignal
+from PyQt5.QtCore import QModelIndex, QPersistentModelIndex, pyqtBoundSignal
 from PyQt5.QtWidgets import QWidget
 from traits.observation.events import ListChangeEvent, TraitChangeEvent
 
+from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.model.object_model import ObjectModel
+from stack_of_tasks.utils.traits import Guard
 
 BINDERS = []  # prevent object from being gc-ed
 
@@ -137,7 +139,11 @@ def trait_widget_binding(
 
 
 class TraitObjectModelBinder:
-    def __init__(self, obj: ta.HasTraits, trait: str, model: ObjectModel) -> None:
+    def __init__(
+        self, obj: ta.HasTraits, trait: str, model: ObjectModel, init_data=False
+    ) -> None:
+        self._guard = Guard()
+
         self._hasTrait = weakref.ref(obj, self._remove_listener)
         self._model = weakref.ref(model, self._remove_listener)
         self._model().destroyed.connect(self._remove_listener)
@@ -145,13 +151,15 @@ class TraitObjectModelBinder:
         self._trait_name = trait
         self.alive = True
 
-        model.extend(getattr(self._hasTrait(), self._trait_name))
+        if init_data:
+            model.extend(getattr(self._hasTrait(), self._trait_name))
 
         self._observe_name = f"{self._trait_name}:items"
 
         self._hasTrait().observe(self._list_set, self._trait_name)
         self._hasTrait().observe(self._list_changed, self._observe_name)
-        # self._hasTrait().observe(self._item_changed, f"{self._observe_name}:display_name")
+
+        self._model().rowsInserted.connect(self._model_inserted)
 
         self._finalizer_self = weakref.finalize(self, self._remove_listener)
 
@@ -159,22 +167,26 @@ class TraitObjectModelBinder:
         if (t := self._hasTrait()) is not None and self.alive:
             t.observe(self._list_set, self._trait_name, remove=True)
             t.observe(self._list_changed, self._observe_name, remove=True)
-            # t.observe(self._item_changed, f"{self._observe_name}:display_name", remove=True)
 
             self.alive = False
 
+    def _model_inserted(self, parent: QModelIndex, first: int, last: int):
+        if (t := self._hasTrait()) is not None and "trait" not in self._guard:
+            m = self._model()
+            new_data = [m.item(i).data(RawDataRole) for i in range(first, last + 1)]
+
+            with self._guard("trait"):
+                getattr(t, self._trait_name).extend(new_data)
+
     def _list_set(self, evt: TraitChangeEvent):
-        self._model().clear()
-        self._model().extend(evt.new)
+        if "trait" not in self._guard:
+            self._model().clear()
+            self._model().extend(evt.new)
 
     def _list_changed(self, evt: ListChangeEvent):
-        if len(evt.added) > 0:
-            self._model().extend(evt.added)
-        if len(evt.removed) > 0:
-            pass  # Todo make elements removable
-
-    # Todo notify model of element-change (does this happen internally?)
-    # def _item_changed(self, evt: TraitChangeEvent):
-    #    print(self._trait_name, evt.new)
-    #    index = getattr(self._hasTrait(), self._trait_name).index(evt.object)
-    #    self._model().item_changed(index)
+        if "trait" not in self._guard:
+            if len(evt.added) > 0:
+                with self._guard("trait"):
+                    self._model().extend(evt.added)
+            if len(evt.removed) > 0:
+                pass

@@ -3,21 +3,13 @@ from __future__ import annotations
 
 import enum
 
-import typing
 from typing import Any, Generic, TypeVar
 
 import traits.api as ta
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QStandardItem
-from PyQt5.QtWidgets import QWidget
 
-from stack_of_tasks.ui import (
-    DISPLAY_STRING_ATTR,
-    ItemRole,
-    MappingEntryRole,
-    RawDataRole,
-    TraitRole,
-)
+from stack_of_tasks.ui import DISPLAY_STRING_ATTR, ItemRole, RawDataRole
 
 _DataType = TypeVar("_DataType")
 

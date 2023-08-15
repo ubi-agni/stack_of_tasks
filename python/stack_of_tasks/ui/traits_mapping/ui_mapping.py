@@ -108,12 +108,13 @@ class Selection(MappingEntry):
     def setup_function(cls, trait: ta.CTrait, widget: AddableObjectDropdown):
         t: tt.Instance = trait.trait_type
         key = t.model_key if t.model_key is not None else t.klass
-        refs_model = ModelMapping.get_mapping(key)
+
+        object_model = ModelMapping.get_mapping(key)
         cls_model = ModelMapping.get_mapping(ClassKey(key))
         widget.cls_model = cls_model
 
-        if refs_model is not None:
-            widget.setModel(refs_model)
+        if object_model is not None:
+            widget.setModel(object_model)
 
 
 class Enum(MappingEntry):

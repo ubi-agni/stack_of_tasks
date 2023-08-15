@@ -183,7 +183,7 @@ class Main(BaseSoTHasTraits):
         self.marker: List[IAMarker]
         self.add_trait("marker", ta.List(IAMarker))
 
-        self.observe(self._marker_list_changed, "marker")
+        self.observe(self._marker_list_changed, "marker:items")
 
         self.marker_model = ObjectModel()
         ModelMapping.add_mapping(IAMarker, self.marker_model)
@@ -232,7 +232,6 @@ class Main(BaseSoTHasTraits):
         self._add_marker_to_server(new_marker)
 
     def _marker_list_changed(self, evt):
-        print(evt)
         for x in evt.added:
             self._add_marker_to_server(x)
 

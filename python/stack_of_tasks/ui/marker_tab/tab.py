@@ -35,7 +35,7 @@ class MarkerTab(QtWidgets.QWidget):
 
     def add_button_action(self):
         if (
-            t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(IAMarker)))
+            t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(IAMarker)), self)
         ).exec() == NewInstanceDialog.Accepted:
             cls = t.cls_selection.current_object
             args = t.traits.get_arguments()

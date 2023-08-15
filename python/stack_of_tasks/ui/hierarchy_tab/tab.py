@@ -34,7 +34,7 @@ class HierarchyTab(QtWidgets.QWidget, Ui_TaskHierarchy):
         self.treeView.selectionModel().selectionChanged.connect(self.tasks_selected)
 
     def add_task(self):
-        dialog = NewInstanceDialog(ModelMapping.get_mapping(ClassKey(Task)))
+        dialog = NewInstanceDialog(ModelMapping.get_mapping(ClassKey(Task)), self)
 
         if dialog.exec() == NewInstanceDialog.Accepted:
             cls = dialog.cls_selection.current_object

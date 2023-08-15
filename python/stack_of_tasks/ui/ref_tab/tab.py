@@ -27,7 +27,7 @@ class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
 
     def add_ref_action(self):
         if (
-            t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(RefFrame)))
+            t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(RefFrame)), self)
         ).exec() == NewInstanceDialog.Accepted:
             cls = t.cls_selection.current_object
             args = t.traits.get_arguments()

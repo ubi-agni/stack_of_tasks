@@ -59,10 +59,9 @@ class AddableObjectDropdown(ObjectDropdown):
         self.add_button_clicked.connect(self.create_new_element)
 
     def create_new_element(self):
-        d = NewInstanceDialog(self.cls_model)
+        d = NewInstanceDialog(self.cls_model, self)
         if d.exec() == NewInstanceDialog.Accepted:
             args = d.traits.get_arguments()
-
             new_data = d.traits.cls(**args)
             self.model().append(new_data)
             self.set_current_object(new_data)

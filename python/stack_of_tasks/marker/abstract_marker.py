@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections import defaultdict
 
 import numpy as np
 import traits.api as ta
@@ -19,40 +18,7 @@ from visualization_msgs.msg import (
 
 from stack_of_tasks.ui.utils.class_register import Register
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose
-from stack_of_tasks.utils.traits import ABCSoTHasTraits
-
-
-class Guard(object):
-    class Context(object):
-        def __init__(self, guard, items) -> None:
-            self._guard = guard
-            self._items = items
-
-        def __enter__(self):
-            self._guard._enter(self._items)
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            self._guard._exit(self._items)
-
-    def __init__(self) -> None:
-        self.locked_items = defaultdict(int)
-
-    def __call__(self, *items):
-        return self.Context(self, items)
-
-    def _enter(self, items):
-        for item in items:
-            self.locked_items[item] += 1
-
-    def _exit(self, items):
-        for item in items:
-            self.locked_items[item] -= 1
-            if self.locked_items[item] <= 0:
-                del self.locked_items[item]
-
-    def __contains__(self, items):
-        return items in self.locked_items
-
+from stack_of_tasks.utils.traits import ABCSoTHasTraits, Guard
 
 MarkerRegister = Register("MarkerRegister")
 

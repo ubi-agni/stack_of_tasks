@@ -102,7 +102,7 @@ class Task(ABCSoTHasTraits):
         pass
 
 
-class RelativeTask(Task):
+class RelativeTask(Task, ABC):
     relType: RelativeType = ta.Enum(RelativeType, default=0)
 
     refA: RefFrame = ta.Instance(RefFrame)
@@ -164,8 +164,8 @@ class TargetTask(Task, ABC):
         self.observe(self._trigger_recompute, "target:T, robot:T, _J")
 
 
-class EqTask(Task):
-    bound = ta.Property(trait=ta.Array, depends_on="_recompute")
+class EqTask(Task, ABC):
+    bound = ta.Property(trait=ta.Array, depends_on="_recompute", visible=False)
 
     def _get_bound(self):
         return self._compute_val[1]

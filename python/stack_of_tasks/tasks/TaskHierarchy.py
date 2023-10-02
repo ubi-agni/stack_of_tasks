@@ -6,6 +6,7 @@ from enum import IntEnum, auto
 from typing import Iterator, List
 
 import traits.api as ta
+import traits.observation.api as te
 from traits.observation.events import ListChangeEvent
 
 from stack_of_tasks.tasks.Task import Task
@@ -34,6 +35,9 @@ class LevelChanged(StackChangeEvent):
         self.level = level
 
 
+stack_change_expression = te.trait("levels").list_items().list_items()
+
+
 class TaskHierarchy(BaseSoTHasTraits):
     levels: List[List[Task]] = ta.List(trait=ta.List(trait=ta.Instance(Task)), items=False)
 
@@ -50,7 +54,7 @@ class TaskHierarchy(BaseSoTHasTraits):
     stack_changed = ta.Event()
     layout_changed = ta.Event()
 
-    @ta.observe("levels:items.items")
+    @ta.observe(stack_change_expression)
     def _stack_changed(self, evt):
         self.stack_changed = evt
 
@@ -88,12 +92,25 @@ class TaskHierarchy(BaseSoTHasTraits):
     def remove_task(self, task: Task):
         for l in self.levels:
             if task in l:
-                if len(l) > 1:
-                    l.remove(task)
-                else:
+                l.remove(task)
+                if len(l) == 0:
                     self.levels.remove(l)
 
                 break
 
     def remove_level(self, level: int):
         return self.levels.pop(level)
+
+    def insert_task(self, level: int, task: Task):
+        self.levels[level].append(task)
+
+    def insert_level(self, index, tasks: List[Task]):
+        self.levels.insert(index, tasks)
+
+    def move_level(self, level: int, new_index: int):
+        level = self.remove_level(level)
+        self.levels.insert(new_index, level)
+
+    def move_task_to_level(self, new_level: int, task_to_move: Task):
+        self.remove_task(task_to_move)
+        self.insert_task(new_level, task_to_move)

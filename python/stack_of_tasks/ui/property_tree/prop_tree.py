@@ -4,10 +4,8 @@ from __future__ import annotations
 import typing
 
 import PyQt5.QtWidgets as QtW
-import traits.api as ta
 import traits.observation.events as te
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import QMimeData, QModelIndex, Qt
+from PyQt5.QtCore import QMimeData, QModelIndex, QPersistentModelIndex, Qt
 from PyQt5.QtGui import QMouseEvent, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import QHeaderView, QWidget
 
@@ -91,7 +89,7 @@ class SOT_Model(QStandardItemModel):
                             levelItem.removeRow(cid)
                             break
 
-    def remove_index(self, index_to_remove: QModelIndex):
+    def remove_item_at_index(self, index_to_remove: QModelIndex):
         item = self.itemFromIndex(index_to_remove)
 
         if isinstance(item, LevelItem):
@@ -103,13 +101,17 @@ class SOT_Model(QStandardItemModel):
             self.stack_of_tasks.remove_task(task)
 
     def add_task(self, task: Task, parent: QModelIndex = None):
-        parent_item = self.itemFromIndex(parent)
-        if parent_item is not None:
-            if isinstance(parent_item, LevelItem):
-                self.stack_of_tasks.levels[parent_item.row()].append(task)
-        else:
+        if parent is None:
             with self.stack_of_tasks.new_level() as l:
                 l.append(task)
+        else:
+            parent_item = self.itemFromIndex(parent)
+
+            if parent_item is not None:
+                if isinstance(parent_item, LevelItem):
+                    self.stack_of_tasks.levels[parent_item.row()].append(task)
+                elif isinstance(parent_item, TraitItem):
+                    self.stack_of_tasks.levels[parent_item.parent().row()].append(task)
 
     def mimeData(self, indexes: typing.Iterable[QModelIndex]) -> QMimeData:
         print(indexes)
@@ -144,28 +146,19 @@ class SOT_Model(QStandardItemModel):
             source_item: QStandardItem = data.source_item
             dest_item = self.itemFromIndex(parent)
 
-            if source_item.parent() is dest_item:
-                return False
-
-            tasks_to_move = None
-
-            if isinstance(source_item, LevelItem):
-                level = source_item.row()
-                tasks_to_move = self.stack_of_tasks.remove_level(level)
+            if isinstance(source_item, LevelItem) and dest_item is None:
+                self.stack_of_tasks.move_level(source_item.row(), row)
 
             elif isinstance(source_item, RawDatatItem):
                 task = source_item.data(RawDataRole)
-                self.stack_of_tasks.remove_task(task)
-                tasks_to_move = [task]
-            else:
-                return False
 
-            if isinstance(dest_item, LevelItem):
-                level = dest_item.row()
-                self.stack_of_tasks.levels[level].extend(tasks_to_move)
+                if isinstance(dest_item, LevelItem):
+                    level = dest_item.row()
+                    self.stack_of_tasks.move_task_to_level(level, task)
 
-            elif dest_item is None:
-                self.stack_of_tasks.levels.insert(row, tasks_to_move)
+                elif dest_item is None:
+                    self.stack_of_tasks.remove_task(task)
+                    self.stack_of_tasks.insert_level(row, [task])
 
             return True
         else:
@@ -196,3 +189,14 @@ class SOT_View(QtW.QTreeView):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         self.clearSelection()
         return super().mousePressEvent(e)
+
+    def add_task(self, task: Task):
+        selected_indices = self.selectedIndexes()
+        self.model().add_task(
+            task, None if len(selected_indices) == 0 else selected_indices[0]
+        )
+
+    def remove_selected_task(self):
+        selected_indices = self.selectedIndexes()
+        index_to_remove = selected_indices[0]
+        self.model().remove_item_at_index(index_to_remove)

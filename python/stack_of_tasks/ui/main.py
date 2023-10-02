@@ -128,6 +128,7 @@ class Controller(BaseSoTHasTraits):
 
     def toggle_solver_state(self):
         if self.thread is None:
+            self.solver.stack_changed()
             self.thread = SolverThread(self.worker)
             self.thread.start()
             return True
@@ -199,7 +200,7 @@ class Main(BaseSoTHasTraits):
             self.task_hierachy_model.beginResetModel()
             self.task_hierachy_model.endResetModel()
 
-        self.controller.task_hierarchy.observe(_reset_th, "stack_changed")
+        self.controller.task_hierarchy.observe(_reset_th, "stack_changed, layout_changed")
 
     def setup(self):
         self.task_hierachy_model.set_stack(self.controller.task_hierarchy)
@@ -301,4 +302,5 @@ def main():
 if __name__ == "__main__":
     rospy.init_node("ik")
     fix_rospy_logging(sot_logger)
+    logging.root.setLevel(logging.DEBUG)
     main()

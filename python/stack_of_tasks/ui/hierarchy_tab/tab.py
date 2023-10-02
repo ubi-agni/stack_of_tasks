@@ -28,15 +28,15 @@ class HierarchyTab(QWidget):
         self.remove_action = self.tool_bar.addAction(qta.icon("fa.trash-o"), "remove")
         self.remove_action.setDisabled(True)
 
-        self.add_action.triggered.connect(self.add_task)
-        self.remove_action.triggered.connect(self.remove_element)
+        self.add_action.triggered.connect(self.add_action_callback)
+        self.remove_action.triggered.connect(self.remove_action_callback)
 
         model = ModelMapping.get_mapping(Task)
         self.treeView.setModel(model)
 
         self.treeView.selectionModel().selectionChanged.connect(self.tasks_selected)
 
-    def add_task(self):
+    def add_action_callback(self):
         dialog = NewInstanceDialog(ModelMapping.get_mapping(ClassKey(Task)), self)
 
         if dialog.exec() == NewInstanceDialog.Accepted:
@@ -44,13 +44,10 @@ class HierarchyTab(QWidget):
             args = dialog.traits.get_arguments()
             task = DependencyInjection.create_instance(cls, args)
 
-            index = self.treeView.selectionModel().currentIndex()
+            self.treeView.add_task(task)
 
-            self.treeView.model().add_task(task, index)
-
-    def remove_element(self):
-        selected = self.treeView.selectionModel().currentIndex()
-        self.treeView.model().remove_index(selected)
+    def remove_action_callback(self):
+        self.treeView.remove_selected_task()
 
     def tasks_selected(self):
         if len(self.treeView.selectedIndexes()) > 0:

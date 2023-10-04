@@ -95,7 +95,7 @@ class Task(ABCSoTHasTraits):
 
     @ta.property_depends_on("_recompute")  # cache the compute property
     def _get__compute_val(self):
-        return self.compute()
+        return tuple(map(partial(np.multiply, self.weight), self.compute()))
 
     @abstractmethod
     def compute(self) -> Tuple[A, ...]:

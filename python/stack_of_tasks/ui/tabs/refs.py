@@ -1,31 +1,38 @@
 from __future__ import annotations
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QHBoxLayout, QListView
 
 from stack_of_tasks.ref_frame import RefFrame
 from stack_of_tasks.ui import RawDataRole
-from stack_of_tasks.ui.generated.Refs import Ui_Refs
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
 from stack_of_tasks.ui.widgets.button_dialog import NewInstanceDialog
+from stack_of_tasks.ui.widgets.has_trait_widgets import EditorGroupBox
+
+from .base import Base
 
 
-class Ref_Tab(QtWidgets.QWidget, Ui_Refs):
-    new_ref_signal = QtCore.pyqtSignal([type, dict])
+class RefFrames(Base):
+    new_ref_signal = pyqtSignal([type, dict])
 
     def __init__(self) -> None:
         super().__init__()
-        self.setupUi(self)
 
-        self.addRef.clicked.connect(self.add_ref_action)
-        self.actionadd_ref.triggered.connect(self.add_ref_action)
-        self.actionadd_ref.triggered.connect(lambda x: print("add ref"))
+        self.horizontalLayout = QHBoxLayout(self)
+        self.ref_view = QListView(self)
+        self.horizontalLayout.addWidget(self.ref_view)
+
+        self.edit_ref = EditorGroupBox(self)
+        self.edit_ref.setTitle("Edit Ref:")
+        self.horizontalLayout.addWidget(self.edit_ref)
 
         model = ModelMapping.get_mapping(RefFrame)
-
         self.ref_view.setModel(model)
         self.ref_view.selectionModel().selectionChanged.connect(self.ref_selected)
 
-    def add_ref_action(self):
+        self.verticalLayout.addLayout(self.horizontalLayout)
+
+    def add_action_callback(self):
         if (
             t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(RefFrame)), self)
         ).exec() == NewInstanceDialog.Accepted:

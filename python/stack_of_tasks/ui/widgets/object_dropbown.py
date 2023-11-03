@@ -10,8 +10,6 @@ from PyQt5.QtWidgets import QComboBox, QStyle, QStyleOptionButton, QStyleOptionC
 
 from stack_of_tasks.ui import RawDataRole
 
-from .button_dialog import NewInstanceDialog
-
 logger = Logger(__name__)
 
 
@@ -129,3 +127,6 @@ class AddableObjectDropdown(ObjectDropdown):
         )
 
         style.drawControl(style.CE_PushButton, button_option, painter)
+
+
+from .button_dialog import NewInstanceDialog

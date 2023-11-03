@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import typing
+
 import numpy as np
 import traits.api as ta
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import QModelIndex, QSize, Qt
+from PyQt5.QtCore import QModelIndex, QPersistentModelIndex, QSize, Qt
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtWidgets import QStyle, QStyleOptionViewItem, QWidget
 
@@ -17,7 +19,15 @@ from .has_traits_delegate import HasTraitsDelegate
 
 
 class PropItemDelegate(HasTraitsDelegate):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._current_editor = None
+        self._current_editor_index = None
+
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QtCore.QSize:
+        if self._current_editor_index is not None and self._current_editor_index == index:
+            return self._current_editor.sizeHint()
+
         me: MappingEntry = index.data(MappingEntryRole)
         if me is not None:
             data = index.data(RawDataRole)
@@ -40,9 +50,20 @@ class PropItemDelegate(HasTraitsDelegate):
                 widget.setBackgroundRole(option.palette.Highlight)
             me.setup_function(trait, widget)
 
+            self._current_editor = widget
+            self._current_editor_index = QPersistentModelIndex(index)
+            self.sizeHintChanged.emit(index)
+
             return widget
         else:
             return super().createEditor(parent, option, index)
+
+    def destroyEditor(self, editor: QWidget, index: QModelIndex) -> None:
+        self._current_editor = None
+        self._current_editor_index = None
+
+        super().destroyEditor(editor, index)
+        self.sizeHintChanged.emit(index)
 
     def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
         value = index.data(RawDataRole)

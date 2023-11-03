@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from functools import partial
 
 from numpy.typing import NDArray
 from typing import Tuple
 
+import numpy as np
 import traits.api as ta
 import traits.observation.expression as te
 
@@ -60,6 +62,7 @@ class Task(ABCSoTHasTraits):
 
     # universal task properties
     softness_type = ta.Enum(TaskSoftnessType)
+
     weight = ta.Range(
         low=0.0,
         value=1.0,
@@ -73,8 +76,8 @@ class Task(ABCSoTHasTraits):
         return self._compute_val[0]
 
     # TODO task optimization info
-    residual = None
-    violation = None
+    residual = ta.Any(visible=True)
+    violation = ta.Any(visible=True)
     importance = None
 
     def __init__(

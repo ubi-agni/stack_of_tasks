@@ -5,6 +5,7 @@ import traits.api as ta
 
 import rospy
 
+from stack_of_tasks.robot_model.actuators import DummyActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
@@ -28,6 +29,8 @@ class Controller(BaseSoTHasTraits):
 
         super().__init__()
 
+        self.actuator = DummyActuator(self.robot_state)
+
         # collection of tasks
         self.hierarchy = TaskHierarchy()
         self.solver = solver(self.robot_model.N, self.hierarchy, **solver_args)
@@ -43,6 +46,7 @@ class Controller(BaseSoTHasTraits):
 
         warmstart_dq = None
         while _condition():
+            self.robot_state.update()  # read current joint values
             warmstart_dq = self.control_step(rate, warmstart_dq)
             rrate.sleep()
 
@@ -57,7 +61,7 @@ class Controller(BaseSoTHasTraits):
         dq = self.solver.solve(lb, ub, warmstart=warmstart)
 
         if dq is not None:
-            self.robot_state.actuate(dq)
+            self.actuator.actuate(dq)
         else:
             print("dq is none")
 

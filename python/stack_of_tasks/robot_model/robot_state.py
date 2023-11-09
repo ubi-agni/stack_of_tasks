@@ -5,7 +5,7 @@ import traits.api as ta
 
 import rospy
 
-from stack_of_tasks.utils.traits import ABCSoTHasTraits, matrix_edit
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
 from stack_of_tasks.utils.transform_math import adjoint
 
 from .robot_model import ActiveJoint, Joint, RobotModel
@@ -37,15 +37,19 @@ class RobotState(ABCSoTHasTraits):
         else:
             self.init_values = 0.5 * (self.robot_model.mins + self.robot_model.maxs)
 
-        self.joint_values = numpy.array(self.init_values)
+        # buffer for joint values received from sensors
+        self.incoming_joint_values = numpy.array(self.init_values)
+        self.joint_values = self.incoming_joint_values
+
+    @ta.observe("joint_values")
+    def _jv_change(self, evt):
+        self.clear_cache()
+
+    def update(self):
+        self.joint_values = self.incoming_joint_values
 
     def reset(self):
         self.joint_values = self.init_values
-
-    def actuate(self, delta):
-        with matrix_edit(self, "joint_values"):
-            self.joint_values += delta
-        self.clear_cache()
 
     def clear_cache(self):
         self._fk_cache.clear()

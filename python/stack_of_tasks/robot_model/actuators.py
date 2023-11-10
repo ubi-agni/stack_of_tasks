@@ -1,4 +1,7 @@
+import numpy
+
 import rospy
+from controller_manager_msgs.srv import ListControllers, LoadController, SwitchController
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 
@@ -71,3 +74,31 @@ class VelocityCommandActuator(JointStateSubscriber):
     def actuate(self, dq):
         self.msg.data = dq[self.joint_mask] * self.rate
         self._pub.publish(self.msg)
+
+    def switch_controllers(self, start, stop=None, ns="/controller_manager"):
+        def call(ns, cls, **kwargs):
+            rospy.wait_for_service(ns)
+            service = rospy.ServiceProxy(ns, cls)
+            return service(**kwargs)
+
+        loaded = call(ns + "/list_controllers", ListControllers)
+        loaded = [c.name for c in loaded.controller]
+
+        for name in start:
+            if name not in loaded:
+                call(ns + "/load_controller", LoadController, name=name)
+
+        if not call(
+            ns + "/switch_controller",
+            SwitchController,
+            start_controllers=start,
+            stop_controllers=stop,
+            strictness=1,
+            start_asap=False,
+            timeout=0.0,
+        ).ok:
+            raise RuntimeError("Failed to switch controller")
+
+    def stop(self, stop=None):
+        self.actuate(numpy.zeros(self._robot_state.robot_model.N))
+        self.switch_controllers([], stop)

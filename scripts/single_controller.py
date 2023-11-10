@@ -6,7 +6,7 @@ import rospy
 
 from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
-from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+from stack_of_tasks.solver import OSQPSolver
 from stack_of_tasks.tasks.Eq_Tasks import (
     DistanceTask,
     OrientationTask,

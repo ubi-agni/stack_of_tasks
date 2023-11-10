@@ -4,8 +4,7 @@ import typing
 
 import traits.api as ta
 
-from stack_of_tasks.solver.InverseJacobianSolver import InverseJacobianSolver
-from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+from stack_of_tasks.solver import InverseJacobianSolver, OSQPSolver
 
 SOLVER = [InverseJacobianSolver, OSQPSolver]
 from typing import Any, Type

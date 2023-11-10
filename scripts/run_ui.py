@@ -16,7 +16,7 @@ from stack_of_tasks.marker.markers import SixDOFMarker
 from stack_of_tasks.ref_frame.frames import JointFrame
 from stack_of_tasks.ref_frame.frames.World import Offset, World
 from stack_of_tasks.robot_model import JointStatePublisher, RobotModel, RobotState
-from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+from stack_of_tasks.solver import OSQPSolver
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui.mainwindow import Ui
 from stack_of_tasks.ui.model.av_ref import AvailableRefModel

@@ -40,7 +40,8 @@ def get_editable_trait_names(obj: ta.HasTraits):
 
 
 def get_init_arg_trait_names(cls: type[ta.HasTraits]):
-    visible_trait_names = cls.class_visible_traits()
+    visible_trait_names = sorted(cls.class_visible_traits())
+
     cls_trts = cls.class_traits()
 
     injected_names = cls.class_trait_names(injected=lambda x: isinstance(x, str))

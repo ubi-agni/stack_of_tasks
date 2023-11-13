@@ -64,7 +64,6 @@ class AttrNameItem(TraitTreeBase):
         data = getattr(obj, attr_name)
         if isinstance(data, ta.HasTraits):
             obj.observe(self._attr_change_cb, attr_name)
-            obj.observe(print, "trait_modified")
             self._setup_children(data)
 
     def _attr_change_cb(self, evt):
@@ -84,6 +83,11 @@ class AttrValueItem(RawDatatItem):
         self.setDragEnabled(False)
         self.setDropEnabled(False)
         self.setEditable(True)
+
+        obj.observe(self._data_changed, attr_name)
+
+    def _data_changed(self, obj):
+        self.emitDataChanged()
 
     def raw_data(self):
         return getattr(self._obj, self._attr_name)

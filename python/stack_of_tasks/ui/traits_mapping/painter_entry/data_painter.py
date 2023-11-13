@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 from PyQt5.QtCore import QPointF, QRect, QSize, Qt
 from PyQt5.QtGui import QPainter, QPen
-from PyQt5.QtWidgets import QApplication, QStyle, QStyleOptionFrame, QStyleOptionViewItem
+from PyQt5.QtWidgets import QApplication, QStyle, QStyleOptionViewItem
 
 
 class Delegate_Painter:
@@ -38,7 +38,7 @@ class MatrixPainter(Delegate_Painter):
             QApplication.style().PM_DefaultFrameWidth, option
         )
 
-        max_w = option.fontMetrics.averageCharWidth() * 5
+        max_w = option.fontMetrics.averageCharWidth() * 10
         max_h = option.fontMetrics.height()
 
         h = data.shape[0] * (max_h + f) + 2 * m
@@ -50,13 +50,16 @@ class MatrixPainter(Delegate_Painter):
     def paint(cls, painter: QPainter, option: QStyleOptionViewItem, data: np.ndarray) -> None:
         super().paint(painter, option, data)
         painter.save()
+
         shape = data.shape
         rect = option.rect
         content_size = cls.size_hint(option, data)
         rect.setSize(content_size)
 
-        m = shape[0]
-        dm = rect.height() / m
+        if (m := shape[0]) > 0:
+            dm = rect.height() / m
+        else:
+            dm = 0
 
         lns = list(
             chain.from_iterable(
@@ -84,11 +87,13 @@ class MatrixPainter(Delegate_Painter):
         else:
             dn = rect.width()
 
-        line_pen = QPen(option.palette.dark().color(), 0.2)
-        painter.setPen(line_pen)
-        painter.drawLines(*lns)
+        if len(lns) > 0:
+            painter.save()
+            line_pen = QPen(option.palette.dark().color(), 0.2)
+            painter.setPen(line_pen)
+            painter.drawLines(*lns)
 
-        painter.restore()
+            painter.restore()
 
         text_role = (
             option.palette.HighlightedText
@@ -105,7 +110,7 @@ class MatrixPainter(Delegate_Painter):
                         Qt.AlignCenter,
                         option.palette,
                         True,
-                        f"{data[j, i]:.2f}",
+                        f"{data[j, i]:.2e}",
                         text_role,
                     )
         else:
@@ -116,8 +121,9 @@ class MatrixPainter(Delegate_Painter):
                     Qt.AlignCenter,
                     option.palette,
                     True,
-                    f"{data[i]:.2f}",
+                    f"{data[i]:.2e}",
                     text_role,
                 )
 
+        painter.restore()
         return True

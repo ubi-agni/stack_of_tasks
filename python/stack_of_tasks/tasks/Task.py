@@ -76,8 +76,8 @@ class Task(ABCSoTHasTraits):
         return self._compute_val[0]
 
     # TODO task optimization info
-    residual = ta.Any(visible=True)
-    violation = ta.Any(visible=True)
+    residual = ta.Array(visible=True)
+    violation = ta.Array(visible=True)
     importance = None
 
     def __init__(

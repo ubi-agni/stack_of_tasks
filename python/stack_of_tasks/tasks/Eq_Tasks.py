@@ -60,7 +60,7 @@ class PlaneTask(TargetTask, EqTask):
         )
 
 
-RobotAxis = ta.Array(shape=(3, 1), value=np.array([[0], [0], [1]]))
+RobotAxis = ta.Array(shape=(3,), value=np.array([0, 0, 1]))
 
 
 class ParallelTask(RelativeTask, EqTask):

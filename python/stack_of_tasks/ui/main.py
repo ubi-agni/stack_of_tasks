@@ -23,7 +23,7 @@ from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.ref_frame import Offset, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
-from stack_of_tasks.robot_model.jointstate_publisher import JointStatePublisher
+from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
@@ -114,7 +114,7 @@ class Controller(BaseSoTHasTraits):
 
         self.robot_model = RobotModel()
         self.robot_state = RobotState(self.robot_model)
-        self.jst = JointStatePublisher(self.robot_state)
+        self.jst = JointStatePublisherActuator(self.robot_state)
 
         self.task_hierarchy = TaskHierarchy()
 

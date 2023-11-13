@@ -4,9 +4,8 @@ import numpy
 import traits.api as ta
 
 import rospy
-from sensor_msgs.msg import JointState
 
-from stack_of_tasks.utils.traits import ABCSoTHasTraits, matrix_edit
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
 from stack_of_tasks.utils.transform_math import adjoint
 
 from .robot_model import ActiveJoint, Joint, RobotModel
@@ -14,16 +13,12 @@ from .robot_model import ActiveJoint, Joint, RobotModel
 
 class RobotState(ABCSoTHasTraits):
     robot_model: RobotModel = ta.Instance(RobotModel)
-
-    joint_state_msg: JointState = ta.Instance(JointState)
-
     joint_values = ta.Array(comparison_mode=ta.ComparisonMode.none)
 
     def __init__(
         self, model: RobotModel, ns_prefix: str = "", init_joint_values=None
     ) -> None:
-        super().__init__(robot_model=model, joint_state_msg=JointState())
-        self.joint_state_msg.name = [j.name for j in self.robot_model.active_joints]
+        super().__init__(robot_model=model)
 
         # cache mapping joint -> (T, J)
         self._fk_cache: Dict[Joint, Tuple[numpy.ndarray, numpy.ndarray]] = {}
@@ -31,7 +26,6 @@ class RobotState(ABCSoTHasTraits):
         if init_joint_values is not None:
             self.init_values = init_joint_values
         elif rospy.has_param(ns_prefix + "initial_joints"):
-            self.joint_state_msg.position = numpy.empty((self.robot_model.N))
             init_pos = rospy.get_param(ns_prefix + "initial_joints")
 
             if isinstance(init_pos, dict):
@@ -43,19 +37,19 @@ class RobotState(ABCSoTHasTraits):
         else:
             self.init_values = 0.5 * (self.robot_model.mins + self.robot_model.maxs)
 
-        self.joint_values = numpy.array(self.init_values)
+        # buffer for joint values received from sensors
+        self.incoming_joint_values = numpy.array(self.init_values)
+        self.joint_values = self.incoming_joint_values
 
     @ta.observe("joint_values")
     def _jv_change(self, evt):
-        self.joint_state_msg.position = self.joint_values
         self.clear_cache()
+
+    def update(self):
+        self.joint_values = self.incoming_joint_values
 
     def reset(self):
         self.joint_values = self.init_values
-
-    def actuate(self, delta):
-        with matrix_edit(self, "joint_values"):
-            self.joint_values += delta
 
     def clear_cache(self):
         self._fk_cache.clear()

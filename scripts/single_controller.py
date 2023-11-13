@@ -6,7 +6,7 @@ import rospy
 
 from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
-from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+from stack_of_tasks.solver import OSQPSolver
 from stack_of_tasks.tasks.Eq_Tasks import (
     DistanceTask,
     OrientationTask,
@@ -35,17 +35,18 @@ def setup(app: Application):
     distTask = DistanceTask(
         marker_frame,
         robot_frame,
-        softnessType=TaskSoftnessType.linear,
+        softness_type=TaskSoftnessType.linear,
         weight=0.1,
         distance=0.2,
     )
     axis = np.array([0, 0, 1])
-    paraTask = ParallelTask(
+    axisTask = ParallelTask(
         marker_frame, robot_frame, TaskSoftnessType.linear, robot_axis=axis, target_axis=axis
     )
 
     with app.task_hierarchy.new_level() as level:
-        level.add(posTask)
+        level.append(posTask)
+        level.append(axisTask)
 
 
 if __name__ == "__main__":

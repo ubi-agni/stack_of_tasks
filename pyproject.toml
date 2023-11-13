@@ -36,7 +36,7 @@ disable = [
 [tool.isort]
 profile = "black"
 line_length = 94
-known_msgs = "std_msgs,sensor_msgs,geometry_msgs,visualization_msgs"
+known_msgs = "controller_manager_msgs,std_msgs,sensor_msgs,geometry_msgs,visualization_msgs"
 known_ros = "rospy,tf,interactive_markers"
 known_first_party = "stack_of_tasks"
 known_typing = "typing, typing_extensions, numpy.typing"

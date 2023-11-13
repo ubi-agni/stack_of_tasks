@@ -67,7 +67,6 @@ class PropItemDelegate(HasTraitsDelegate):
 
     def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
         value = index.data(RawDataRole)
-        print("set editor data", value)
         set_user_property(editor, value)
 
     def setModelData(

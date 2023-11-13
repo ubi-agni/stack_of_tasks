@@ -113,8 +113,6 @@ class NumpyTableModel(QStandardItemModel):
                     slice(startIndex.column(), endIndex.column() + 1),
                 )
 
-            print(index, data.shape)
-
             self._matrix[index] = data
             self._setup_items()
 
@@ -193,9 +191,6 @@ class MatrixWidget(QTableView):
 
     def model(self) -> NumpyTableModel:
         return super().model()
-
-    def _mc(self, data):
-        print("matrix changed: ", data)
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         if e.modifiers() & Qt.ControlModifier:

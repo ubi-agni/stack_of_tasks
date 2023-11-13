@@ -81,7 +81,6 @@ class HasTraitsFormLayout(QFormLayout):
 
     def setHastTrait(self, inst: ta.HasTraits):
         for name in inst.visible_traits():
-            print("visible_trait", name, inst.trait(name).__dict__)
             trait = inst.trait(name)
             if trait.injected:
                 continue

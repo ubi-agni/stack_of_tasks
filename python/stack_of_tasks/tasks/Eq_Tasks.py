@@ -37,7 +37,6 @@ class DistanceTask(RelativeTask, EqTask):
 
     def compute(self) -> Tuple[A, Bound]:
         delta = self.refA.T[0:3, 3] - self.refB.T[0:3, 3]
-        print(self.distance - np.linalg.norm(delta))
 
         return np.array([delta.dot(self._J[:3])]), self.weight * (
             self.distance - np.linalg.norm(delta)

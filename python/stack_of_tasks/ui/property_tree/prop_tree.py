@@ -114,7 +114,6 @@ class SOT_Model(QStandardItemModel):
                     self.stack_of_tasks.levels[parent_item.parent().row()].append(task)
 
     def mimeData(self, indexes: typing.Iterable[QModelIndex]) -> QMimeData:
-        print(indexes)
         item = self.itemFromIndex(indexes[0])
 
         return InternalMoveMimeData(item)
@@ -127,7 +126,6 @@ class SOT_Model(QStandardItemModel):
         column: int,
         parent: QModelIndex,
     ) -> bool:
-        print(type(data), row, column, self.itemFromIndex(parent))
         if isinstance(data, InternalMoveMimeData):
             parent_item = self.itemFromIndex(parent)
             return column <= 0 and (isinstance(parent_item, LevelItem) or parent_item is None)

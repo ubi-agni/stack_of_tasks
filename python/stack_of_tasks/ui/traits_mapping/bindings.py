@@ -26,7 +26,6 @@ def set_user_property(widget: QWidget, value: Any) -> None:
 
 def get_user_property(widget: QWidget) -> Any:
     if (prop_name := get_user_prop_name(widget)) is not None:
-        # print(f"get_user_property {widget, prop_name}")
         return widget.property(prop_name)
 
 

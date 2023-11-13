@@ -32,7 +32,7 @@ class ObjectDropdown(QComboBox):
         if val is not None:
             val_index = self.model().find(val)
             if val_index is None:
-                print(f"NO INDEX FOR {val}, {type(val)}")
+                return
             else:
                 self.setCurrentIndex(val_index)
 

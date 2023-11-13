@@ -207,7 +207,6 @@ class Main(BaseSoTHasTraits):
 
         o = Origin()
         off = Offset(frame=o)
-        off.observe(print, "trait_added")
 
         frame = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp")
         setattr(frame, DISPLAY_STRING_ATTR, "hand")
@@ -246,7 +245,6 @@ class Main(BaseSoTHasTraits):
 
 def _ui_handler(handler, *args, **kwargs):
     logger.debug(f"handler {handler}, args {args}, kwargs {kwargs}")
-    print("ui handler: ", args, kwargs)
 
 
 def main():

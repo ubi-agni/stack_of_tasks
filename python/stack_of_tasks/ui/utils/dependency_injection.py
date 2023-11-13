@@ -14,7 +14,6 @@ class DependencyInjection:
 
         for arg in arg_vector.keys():
             if isinstance(arg_vector[arg], InjectionArg):
-                print("arg: ", arg)
                 injected[arg] = DependencyInjection.mapping[arg]
             else:
                 injected[arg] = arg_vector[arg]

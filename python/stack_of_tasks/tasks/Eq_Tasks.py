@@ -12,7 +12,7 @@ class PositionTask(RelativeTask, EqTask):
     task_size: int = 3
 
     def compute(self) -> Tuple[A, Bound]:
-        return self._J[:3], self.weight * (self.refB.T[:3, 3] - self.refA.T[:3, 3])
+        return self._J[:3], self.refB.T[:3, 3] - self.refA.T[:3, 3]
 
 
 class OrientationTask(RelativeTask, EqTask):
@@ -24,7 +24,7 @@ class OrientationTask(RelativeTask, EqTask):
         delta = np.identity(4)
         delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.refB.T[0:3, 0:3])
         angle, axis, _ = rotation_from_matrix(delta)
-        return self.weight * self._J[3:], tA[0:3, 0:3].dot(angle * axis)
+        return self._J[3:], tA[0:3, 0:3].dot(angle * axis)
 
 
 class DistanceTask(RelativeTask, EqTask):
@@ -38,9 +38,7 @@ class DistanceTask(RelativeTask, EqTask):
     def compute(self) -> Tuple[A, Bound]:
         delta = self.refA.T[0:3, 3] - self.refB.T[0:3, 3]
 
-        return np.array([delta.dot(self._J[:3])]), self.weight * (
-            self.distance - np.linalg.norm(delta)
-        )
+        return np.array([delta.dot(self._J[:3])]), self.distance - np.linalg.norm(delta)
 
 
 class PlaneTask(TargetTask, EqTask):

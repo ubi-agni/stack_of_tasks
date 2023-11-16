@@ -33,16 +33,17 @@ class MatrixPainter(Delegate_Painter):
         if data is None:
             return super().size_hint(option, data)
 
-        m = QApplication.style().pixelMetric(QApplication.style().PM_ButtonMargin, option)
-        f = QApplication.style().pixelMetric(
-            QApplication.style().PM_DefaultFrameWidth, option
-        )
+        style = QApplication.style()
+        m = style.pixelMetric(style.PM_ButtonMargin, option)
+        f = style.pixelMetric(style.PM_DefaultFrameWidth, option)
 
         max_w = option.fontMetrics.averageCharWidth() * 10
         max_h = option.fontMetrics.height()
 
+        if len(data.shape) == 1:
+            data = data.reshape((-1, 1))
         h = data.shape[0] * (max_h + f) + 2 * m
-        w = (data.shape[1] if len(data.shape) > 1 else 1) * (max_w + f) + 2 * m
+        w = data.shape[1] * (max_w + f) + 2 * m
 
         return QSize(w, h)
 
@@ -51,6 +52,8 @@ class MatrixPainter(Delegate_Painter):
         super().paint(painter, option, data)
         painter.save()
 
+        if len(data.shape) == 1:
+            data = data.reshape((-1, 1))
         shape = data.shape
         rect = option.rect
         content_size = cls.size_hint(option, data)
@@ -71,21 +74,18 @@ class MatrixPainter(Delegate_Painter):
             )
         )
 
-        if len(shape) > 1:
-            n = shape[1]
-            dn = int(rect.width() / n)
+        n = shape[1]
+        dn = int(rect.width() / n)
 
-            lns.extend(
-                chain.from_iterable(
-                    (
-                        QPointF(rect.left() + dn * i, rect.top()),
-                        QPointF(rect.left() + dn * i, rect.bottom()),
-                    )
-                    for i in range(1, n)
+        lns.extend(
+            chain.from_iterable(
+                (
+                    QPointF(rect.left() + dn * i, rect.top()),
+                    QPointF(rect.left() + dn * i, rect.bottom()),
                 )
+                for i in range(1, n)
             )
-        else:
-            dn = rect.width()
+        )
 
         if len(lns) > 0:
             painter.save()
@@ -101,27 +101,15 @@ class MatrixPainter(Delegate_Painter):
             else option.palette.Text
         )
 
-        if len(shape) > 1:
-            for j in range(m):
-                for i in range(n):
-                    QApplication.style().drawItemText(
-                        painter,
-                        QRect(rect.left() + i * dn, rect.top() + j * dm, dn, dm),
-                        Qt.AlignCenter,
-                        option.palette,
-                        True,
-                        f"{data[j, i]:.2e}",
-                        text_role,
-                    )
-        else:
-            for i in range(m):
+        for j in range(m):
+            for i in range(n):
                 QApplication.style().drawItemText(
                     painter,
-                    QRect(rect.left(), rect.top() + i * dm, dn, dm),
+                    QRect(rect.left() + i * dn, rect.top() + j * dm, dn, dm),
                     Qt.AlignCenter,
                     option.palette,
                     True,
-                    f"{data[i]:.2e}",
+                    f"{data[j, i]:.2e}",
                     text_role,
                 )
 

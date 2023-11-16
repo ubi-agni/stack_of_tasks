@@ -126,6 +126,7 @@ class MatrixItemDelegate(QStyledItemDelegate):
 
         self._editor_widget = QDoubleSpinBox()
         self._editor_widget.setDecimals(10)
+        self._editor_widget.setRange(-1e10, 1e10)
 
         self._editor_widget.setFocusPolicy(Qt.StrongFocus)
         self._editor_widget.setAutoFillBackground(True)

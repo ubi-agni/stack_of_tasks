@@ -41,7 +41,7 @@ class MatrixPainter(Delegate_Painter):
         max_h = option.fontMetrics.height()
 
         if len(data.shape) == 1:
-            data = data.reshape((-1, 1))
+            data = data.reshape((1, -1))
         h = data.shape[0] * (max_h + f) + 2 * m
         w = data.shape[1] * (max_w + f) + 2 * m
 
@@ -53,7 +53,7 @@ class MatrixPainter(Delegate_Painter):
         painter.save()
 
         if len(data.shape) == 1:
-            data = data.reshape((-1, 1))
+            data = data.reshape((1, -1))
         shape = data.shape
         rect = option.rect
         content_size = cls.size_hint(option, data)

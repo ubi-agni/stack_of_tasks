@@ -231,7 +231,7 @@ class MatrixWidget(QTableView):
     def set_matrix(self, val):
         self.shape = val.shape
         if len(val.shape) == 1:
-            val = val.reshape((-1, 1))
+            val = val.reshape((1, -1))
         self.matrix_model.setMatrix(val)
 
     matrix = pyqtProperty(QVariant, get_matrix, set_matrix, notify=matrix_changed, user=True)

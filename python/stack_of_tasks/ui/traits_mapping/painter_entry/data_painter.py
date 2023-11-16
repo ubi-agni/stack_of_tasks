@@ -42,8 +42,8 @@ class MatrixPainter(Delegate_Painter):
 
         if len(data.shape) == 1:
             data = data.reshape((1, -1))
-        h = data.shape[0] * (max_h + f) + 2 * m
-        w = data.shape[1] * (max_w + f) + 2 * m
+        h = data.shape[0] * (max_h + f)
+        w = data.shape[1] * (max_w + f)
 
         return QSize(w, h)
 

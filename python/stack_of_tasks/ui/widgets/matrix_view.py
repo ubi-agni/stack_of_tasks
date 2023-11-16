@@ -184,6 +184,7 @@ class MatrixWidget(QTableView):
 
         self.setFrameStyle(QFrame.NoFrame)
 
+        self.shape = None
         self.matrix_model = NumpyTableModel()
         self.setModel(self.matrix_model)
 
@@ -225,9 +226,12 @@ class MatrixWidget(QTableView):
         # super().dataChanged(topLeft, bottomRight, roles)
 
     def get_matrix(self):
-        return self.matrix_model.matrix()
+        return self.matrix_model.matrix().reshape(self.shape)
 
     def set_matrix(self, val):
+        self.shape = val.shape
+        if len(val.shape) == 1:
+            val = val.reshape((-1, 1))
         self.matrix_model.setMatrix(val)
 
     matrix = pyqtProperty(QVariant, get_matrix, set_matrix, notify=matrix_changed, user=True)

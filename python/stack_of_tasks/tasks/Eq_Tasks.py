@@ -3,6 +3,7 @@ import traits.api as ta
 
 from tf.transformations import rotation_from_matrix
 
+from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.tasks.Task import A, Bound, EqTask, RelativeTask, TargetTask, Tuple
 from stack_of_tasks.utils.transform_math import skew
 
@@ -77,6 +78,31 @@ class ParallelTask(RelativeTask, EqTask):
         return (skew(ref).dot(skew(axis))).dot(self._J[3:]), np.cross(ref, axis)
 
 
+class JointTask(EqTask):
+    name = "Joint Position"
+
+    _robot_state: RobotState = ta.Instance(RobotState)
+    mask = ta.Array()
+    target = ta.Array()
+
+    def __init__(self, robot_state: RobotState, joints=None, **traits) -> None:
+        super().__init__(_robot_state=robot_state, **traits)
+        m = self._robot_state.robot_model
+        self.task_size = m.N
+        if joints is None:
+            self.mask = np.ones(self.task_size)
+            self.target = self._robot_state.joint_values
+        else:
+            self.mask = [1.0 if j.name in joints else 0.0 for j in m.active_joints]
+            self.target = [joints[j.name] for j in m.active_joints]
+
+    def compute(self) -> Tuple[A, Bound]:
+        return (
+            np.diag(self.mask),
+            np.multiply(self.mask, self._robot_state.joint_values - self.target),
+        )
+
+
 #
 #
 # class LineTask(EqTask):
@@ -96,8 +122,3 @@ class ParallelTask(RelativeTask, EqTask):
 #        self.bound = -sw.dot(d)
 #
 #
-# class JointPos(JointTask, EqTask):
-#    name = "Joint Position"
-#
-#    def _compute(self, current_joint_pose, desired_joint_pose):
-#        self.bound = (current_joint_pose - desired_joint_pose) * self.weight

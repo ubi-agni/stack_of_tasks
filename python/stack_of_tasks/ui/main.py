@@ -29,7 +29,7 @@ from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import TaskRegister
-from stack_of_tasks.tasks.Eq_Tasks import PositionTask
+from stack_of_tasks.tasks.Eq_Tasks import JointTask, PositionTask
 from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui import DISPLAY_STRING_ATTR
@@ -137,6 +137,7 @@ class Main(BaseSoTHasTraits):
         RefFrame.add_class_trait(DISPLAY_STRING_ATTR, ta.Str)
         RobotRefFrame.class_traits()["_robot_state"].injected = "robot_state"
         Task.add_class_trait(DISPLAY_STRING_ATTR, ta.Str)
+        JointTask.class_traits()["_robot_state"].injected = "robot_state"
 
         self.controller = Controller()
         self.marker_server = MarkerServer()
@@ -289,4 +290,5 @@ if __name__ == "__main__":
     rospy.init_node("ik")
     fix_rospy_logging(sot_logger)
     logging.root.setLevel(logging.DEBUG)
+    logging.getLogger("rospy").setLevel(logging.WARNING)
     main()

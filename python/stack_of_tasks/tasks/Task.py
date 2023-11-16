@@ -191,6 +191,3 @@ class IeqTask(Task, ABC):
     @abstractmethod
     def compute(self) -> Tuple[A, LowerBound, UpperBound]:
         pass
-
-
-# TODO Joint-Task

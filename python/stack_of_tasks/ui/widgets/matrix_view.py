@@ -187,8 +187,6 @@ class MatrixWidget(QTableView):
         self.matrix_model = NumpyTableModel()
         self.setModel(self.matrix_model)
 
-        self.matrix_changed.connect(self._mc)
-
     def model(self) -> NumpyTableModel:
         return super().model()
 

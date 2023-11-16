@@ -46,11 +46,12 @@ class Controller(BaseSoTHasTraits):
 
         warmstart_dq = None
         while _condition():
-            self.robot_state.update()  # read current joint values
             warmstart_dq = self.control_step(rate, warmstart_dq)
             rrate.sleep()
 
     def control_step(self, rate, warmstart):
+        self.robot_state.update()  # read current joint values
+
         lb = np.maximum(
             -0.01, (self.robot_model.mins * 0.95 - self.robot_state.joint_values) / rate
         )

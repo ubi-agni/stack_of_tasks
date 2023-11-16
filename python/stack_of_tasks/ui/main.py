@@ -60,27 +60,22 @@ class Worker:
         self.warmstart = None
 
     def calculate(self) -> Any:
+        c = self.controller
+        c.robot_state.update()  # read current joint values
+
         lb = np.maximum(
             -0.01,
-            (
-                self.controller.robot_model.mins * 0.95
-                - self.controller.robot_state.joint_values
-            )
-            / self.rate,
+            (c.robot_model.mins * 0.95 - c.robot_state.joint_values) / self.rate,
         )
         ub = np.minimum(
             0.01,
-            (
-                self.controller.robot_model.maxs * 0.95
-                - self.controller.robot_state.joint_values
-            )
-            / self.rate,
+            (c.robot_model.maxs * 0.95 - c.robot_state.joint_values) / self.rate,
         )
 
-        dq = self.controller.solver.solve(lb, ub, warmstart=self.warmstart)
+        dq = c.solver.solve(lb, ub, warmstart=self.warmstart)
 
         if dq is not None:
-            self.controller.robot_state.actuate(dq)
+            c.actuator.actuate(dq)
             self.warmstart = dq
         else:
             self.warmstart = None
@@ -114,7 +109,7 @@ class Controller(BaseSoTHasTraits):
 
         self.robot_model = RobotModel()
         self.robot_state = RobotState(self.robot_model)
-        self.jst = JointStatePublisherActuator(self.robot_state)
+        self.actuator = JointStatePublisherActuator(self.robot_state)
 
         self.task_hierarchy = TaskHierarchy()
 

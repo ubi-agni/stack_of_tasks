@@ -14,10 +14,9 @@ class Application:
         self, setup: SetupSignature, solverClass, publish_joints=True, **args
     ) -> None:
         self.marker_server = MarkerServer()
-        self.controller = Controller(solverClass, **args)
-        self.task_hierarchy = self.controller.hierarchy
+        self.controller = c = Controller(solverClass, **args)
+        self.task_hierarchy = c.hierarchy
         if publish_joints:
-            jsp = JointStatePublisherActuator(self.controller.robot_state)
-            self.controller.actuator = jsp
+            c.actuator = JointStatePublisherActuator(c.robot_state)
 
         setup(self)

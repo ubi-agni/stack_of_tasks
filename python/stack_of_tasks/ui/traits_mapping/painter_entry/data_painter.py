@@ -50,6 +50,9 @@ class MatrixPainter(Delegate_Painter):
     @classmethod
     def paint(cls, painter: QPainter, option: QStyleOptionViewItem, data: np.ndarray) -> None:
         super().paint(painter, option, data)
+        if data is None or data.size == 0:
+            return
+
         painter.save()
 
         if len(data.shape) == 1:

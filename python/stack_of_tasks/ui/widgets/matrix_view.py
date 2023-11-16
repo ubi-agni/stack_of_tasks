@@ -171,13 +171,13 @@ class MatrixWidget(QTableView):
 
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.verticalHeader().setMinimumSectionSize(0)
+        self.verticalHeader().setVisible(False)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setMinimumSectionSize(0)
         self.horizontalHeader().setVisible(False)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.verticalHeader().setVisible(False)
 
         self.setItemDelegate(MatrixItemDelegate())
         self.viewport().setMinimumSize(0, 0)

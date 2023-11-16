@@ -37,11 +37,10 @@ class RobotRefFrame(RefFrame):
     def __init__(self, robot_state: RobotState, link_name: str, **kwargs) -> None:
         super().__init__(_robot_state=robot_state, link_name=link_name, **kwargs)
 
-    @ta.property_depends_on(
-        "_robot_state.joint_values, link_name"
-    )  # BUG CANT WAIT UNTIL INIT STATE
+    @ta.property_depends_on("_robot_state.joint_values, link_name")
     def _get__fk(self):
-        return self._robot_state.fk(self.link_name)
+        if self.link_name is not None:
+            return self._robot_state.fk(self.link_name)
 
     def _get_T(self):
         return self._fk[0]

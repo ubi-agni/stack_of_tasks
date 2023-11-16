@@ -57,7 +57,7 @@ class MatrixPainter(Delegate_Painter):
         rect.setSize(content_size)
 
         if (m := shape[0]) > 0:
-            dm = rect.height() / m
+            dm = int(rect.height() / m)
         else:
             dm = 0
 
@@ -73,7 +73,7 @@ class MatrixPainter(Delegate_Painter):
 
         if len(shape) > 1:
             n = shape[1]
-            dn = rect.width() / n
+            dn = int(rect.width() / n)
 
             lns.extend(
                 chain.from_iterable(

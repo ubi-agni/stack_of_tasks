@@ -81,13 +81,14 @@ class ActiveJoint(Joint):
     Representation of Active Joints
     """
 
-    def __init__(self, jtype, name, T, axis, joint_min, joint_max):
+    def __init__(self, jtype, name, T, axis, joint_min, joint_max, velocity_max):
         super().__init__(jtype, name, T)
 
         self.idx = None  # index of associated Jacobian column
         self.axis = axis
         self.min = joint_min
         self.max = joint_max
+        self.vmax = velocity_max
         self.twist = None
 
         if self.jtype is JointType.revolute:
@@ -115,11 +116,12 @@ class MimicJoint(ActiveJoint):
         axis,
         joint_min,
         joint_max,
+        velocity_max,
         base,
         multiplier,
         offset,
     ):
-        super().__init__(jtype, name, T, axis, joint_min, joint_max)
+        super().__init__(jtype, name, T, axis, joint_min, joint_max, velocity_max)
 
         self.base = base
         self.multiplier = multiplier
@@ -168,6 +170,7 @@ class RobotModel:
         self.N = len(self.active_joints)
         self.mins = numpy.array([j.min for j in self.active_joints])
         self.maxs = numpy.array([j.max for j in self.active_joints])
+        self.vmaxs = numpy.array([j.vmax for j in self.active_joints])
 
     def _mimic_base(self, name: str, multiplier: float, offset: float):
         "recursively resolve MimicJoint to its base"
@@ -196,6 +199,7 @@ class RobotModel:
             axis = pv(tag, "xyz", child="axis")
             jmin = gxa(tag, "lower", default=-numpy.inf, child="limit")
             jmax = gxa(tag, "upper", default=numpy.inf, child="limit")
+            vmax = gxa(tag, "velocity", default=10.0, child="limit")
 
             if jmin is None or jmax is None:
                 raise RobotModelException(f"Joint {name} has not limits")
@@ -207,9 +211,11 @@ class RobotModel:
                     gxa(mimic, "multiplier", 1.0),
                     gxa(mimic, "offset", 0.0),
                 )
-                joint = MimicJoint(jtype, name, T, axis, jmin, jmax, base, multiplier, offset)
+                joint = MimicJoint(
+                    jtype, name, T, axis, jmin, jmax, vmax, base, multiplier, offset
+                )
             else:
-                joint = ActiveJoint(jtype, name, T, axis, jmin, jmax)
+                joint = ActiveJoint(jtype, name, T, axis, jmin, jmax, vmax)
         else:
             joint = Joint(jtype, name, T)
 

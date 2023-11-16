@@ -62,16 +62,9 @@ class Worker:
     def calculate(self) -> Any:
         c = self.controller
         c.robot_state.update()  # read current joint values
-
-        lb = np.maximum(
-            -0.01,
-            (c.robot_model.mins * 0.95 - c.robot_state.joint_values) / self.rate,
-        )
-        ub = np.minimum(
-            0.01,
-            (c.robot_model.maxs * 0.95 - c.robot_state.joint_values) / self.rate,
-        )
-
+        m = c.robot_model
+        lb = np.maximum(-m.vmaxs / self.rate, 0.95 * m.mins - c.robot_state.joint_values)
+        ub = np.minimum(+m.vmaxs / self.rate, 0.95 * m.maxs - c.robot_state.joint_values)
         dq = c.solver.solve(lb, ub, warmstart=self.warmstart)
 
         if dq is not None:

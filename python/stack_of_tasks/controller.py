@@ -51,14 +51,9 @@ class Controller(BaseSoTHasTraits):
 
     def control_step(self, rate, warmstart):
         self.robot_state.update()  # read current joint values
-
-        lb = np.maximum(
-            -0.01, (self.robot_model.mins * 0.95 - self.robot_state.joint_values) / rate
-        )
-        ub = np.minimum(
-            0.01, (self.robot_model.maxs * 0.95 - self.robot_state.joint_values) / rate
-        )
-
+        m = self.robot_model
+        lb = np.maximum(-m.vmaxs / rate, 0.95 * m.mins - self.robot_state.joint_values)
+        ub = np.minimum(+m.vmaxs / rate, 0.95 * m.maxs - self.robot_state.joint_values)
         dq = self.solver.solve(lb, ub, warmstart=warmstart)
 
         if dq is not None:

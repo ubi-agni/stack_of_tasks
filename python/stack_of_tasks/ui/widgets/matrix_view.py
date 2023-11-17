@@ -126,6 +126,7 @@ class MatrixItemDelegate(QStyledItemDelegate):
 
         self._editor_widget = QDoubleSpinBox()
         self._editor_widget.setDecimals(10)
+        self._editor_widget.setRange(-1e10, 1e10)
 
         self._editor_widget.setFocusPolicy(Qt.StrongFocus)
         self._editor_widget.setAutoFillBackground(True)
@@ -171,19 +172,20 @@ class MatrixWidget(QTableView):
 
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.verticalHeader().setMinimumSectionSize(0)
+        self.verticalHeader().setVisible(False)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setMinimumSectionSize(0)
         self.horizontalHeader().setVisible(False)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.verticalHeader().setVisible(False)
 
         self.setItemDelegate(MatrixItemDelegate())
         self.viewport().setMinimumSize(0, 0)
 
         self.setFrameStyle(QFrame.NoFrame)
 
+        self.shape = None
         self.matrix_model = NumpyTableModel()
         self.setModel(self.matrix_model)
 
@@ -225,9 +227,12 @@ class MatrixWidget(QTableView):
         # super().dataChanged(topLeft, bottomRight, roles)
 
     def get_matrix(self):
-        return self.matrix_model.matrix()
+        return self.matrix_model.matrix().reshape(self.shape)
 
     def set_matrix(self, val):
+        self.shape = val.shape
+        if len(val.shape) == 1:
+            val = val.reshape((1, -1))
         self.matrix_model.setMatrix(val)
 
     matrix = pyqtProperty(QVariant, get_matrix, set_matrix, notify=matrix_changed, user=True)

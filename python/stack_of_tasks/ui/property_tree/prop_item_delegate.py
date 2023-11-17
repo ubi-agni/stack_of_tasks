@@ -10,9 +10,8 @@ from PyQt5.QtCore import QModelIndex, QPersistentModelIndex, QSize, Qt
 from PyQt5.QtGui import QStandardItem
 from PyQt5.QtWidgets import QStyle, QStyleOptionViewItem, QWidget
 
-from stack_of_tasks.ui import ItemRole, MappingEntryRole, RawDataRole, TraitRole
+from stack_of_tasks.ui import MappingEntryRole, RawDataRole, TraitRole
 from stack_of_tasks.ui.traits_mapping.bindings import get_user_property, set_user_property
-from stack_of_tasks.ui.traits_mapping.painter_entry.data_painter import MatrixPainter
 from stack_of_tasks.ui.traits_mapping.ui_mapping import MappingEntry
 
 from .has_traits_delegate import HasTraitsDelegate

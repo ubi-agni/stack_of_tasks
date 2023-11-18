@@ -75,9 +75,10 @@ class VelocityCommandActuator(JointStateSubscriber):
         self.msg.data = dq[self.joint_mask] * self.rate
         self._pub.publish(self.msg)
 
-    def switch_controllers(self, start, stop=None, ns="/controller_manager"):
+    @staticmethod
+    def switch_controllers(start, stop=None, ns="/controller_manager"):
         def call(ns, cls, **kwargs):
-            rospy.wait_for_service(ns)
+            rospy.wait_for_service(ns, timeout=1)
             service = rospy.ServiceProxy(ns, cls)
             return service(**kwargs)
 

@@ -75,11 +75,6 @@ class Task(ABCSoTHasTraits):
     def _get_A(self):
         return self._compute_val[0]
 
-    # TODO task optimization info
-    residual = ta.Array(visible=True)
-    violation = ta.Array(visible=True)
-    importance = None
-
     def __init__(
         self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits
     ) -> None:
@@ -169,9 +164,13 @@ class TargetTask(Task, ABC):
 
 class EqTask(Task, ABC):
     bound = ta.Property(trait=ta.Array, depends_on="_recompute", visible=False)
+    residual = ta.Property(trait=ta.Array, visible=True)
 
     def _get_bound(self):
         return self._compute_val[1]
+
+    def _get_residual(self):
+        return self.bound
 
     @abstractmethod
     def compute(self) -> Tuple[A, Bound]:
@@ -181,12 +180,17 @@ class EqTask(Task, ABC):
 class IeqTask(Task, ABC):
     upper_bound = ta.Property(observe="_compute_val")
     lower_bound = ta.Property(observe="_compute_val")
+    residual = ta.Property(trait=ta.Array, visible=True)
 
     def _get_lower_bound(self) -> LowerBound:
         return self._compute_val[1]
 
     def _get_upper_bound(self) -> UpperBound:
         return self._compute_val[2]
+
+    def _get_residual(self) -> Bound:
+        # TODO
+        return self.lower_bound
 
     @abstractmethod
     def compute(self) -> Tuple[A, LowerBound, UpperBound]:

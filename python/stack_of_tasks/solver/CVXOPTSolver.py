@@ -22,17 +22,8 @@ class CVXOPTSolver(HqpSolver):
     def _interpret_solution(self, level_index, solution: object) -> Any:
         dq = np.asarray(solution["x"]).reshape(-1)[: self.N]
 
-        print(dq, solution["x"][self.N :])
-
         for task in self._stack_of_tasks.levels[level_index]:
             b = task.A.dot(dq)
-            if isinstance(task, EqTask):
-                task.residual = b - task.bound
-                task.violation = ~np.isclose(task.residual, b)
-            else:
-                task.residual = None
-                task.violation = (task.lower_bound < b) & (b < task.upper_bound)
-
             self._add_nullspace(task.A, b)
 
         return dq

@@ -28,13 +28,6 @@ class SCSSolver(HqpSolver):
 
         for task in self._stack_of_tasks.levels[level_index]:
             b = task.A.dot(dq)
-            if isinstance(task, EqTask):
-                task.residual = b - task.bound
-                task.violation = ~np.isclose(task.residual, b)
-            else:
-                task.residual = None
-                task.violation = (task.lower_bound < b) & (b < task.upper_bound)
-
             self._add_nullspace(task.A, b)
 
         return solution["x"][: self.N]

@@ -35,6 +35,8 @@ class RobotRefFrame(RefFrame):
     _robot_state: RobotState = ta.Instance(RobotState)
 
     def __init__(self, robot_state: RobotState, link_name: str, **kwargs) -> None:
+        if "name" not in kwargs:
+            kwargs["name"] = link_name
         super().__init__(_robot_state=robot_state, link_name=link_name, **kwargs)
 
     @ta.property_depends_on("_robot_state.joint_values, link_name")

@@ -58,4 +58,4 @@ def setup(app: Application):
 if __name__ == "__main__":
     rospy.init_node("sot")
     app = Application(setup, OSQPSolver, True, rho=0.1)
-    app.controller.control_loop(rospy.is_shutdown, 50, True)
+    app.controller.control_loop(rospy.is_shutdown, 50)

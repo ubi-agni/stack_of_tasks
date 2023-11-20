@@ -39,13 +39,10 @@ class Controller(BaseSoTHasTraits):
     def _stack_change(self, evt):
         self.solver.stack_changed()
 
-    def control_loop(self, condition: Callable[[], bool], rate: int, invert_condition=False):
-        _condition = lambda: not condition() if invert_condition else condition
-
+    def control_loop(self, stopping_condition: Callable[[], bool], rate: int):
         rrate = rospy.Rate(rate)
-
         warmstart_dq = None
-        while _condition():
+        while not stopping_condition():
             warmstart_dq = self.control_step(rate, warmstart_dq)
             rrate.sleep()
 

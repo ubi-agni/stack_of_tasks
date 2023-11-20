@@ -18,7 +18,7 @@ class Controller(BaseSoTHasTraits):
     robot_state: RobotState = ta.Instance(RobotState)
 
     solver: Solver = ta.Instance(Solver)
-    hierarchy: TaskHierarchy = ta.Instance(TaskHierarchy)
+    task_hierarchy: TaskHierarchy = ta.Instance(TaskHierarchy)
 
     def __init__(self, solver: Type[Solver], **solver_args) -> None:
         # robotmodel
@@ -32,10 +32,10 @@ class Controller(BaseSoTHasTraits):
         self.actuator = DummyActuator(self.robot_state)
 
         # collection of tasks
-        self.hierarchy = TaskHierarchy()
-        self.solver = solver(self.robot_model.N, self.hierarchy, **solver_args)
+        self.task_hierarchy = TaskHierarchy()
+        self.solver = solver(self.robot_model.N, self.task_hierarchy, **solver_args)
 
-    @ta.observe("hierarchy.stack_changed")
+    @ta.observe("task_hierarchy.stack_changed")
     def _stack_change(self, evt):
         self.solver.stack_changed()
 

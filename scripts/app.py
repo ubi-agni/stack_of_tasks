@@ -15,7 +15,7 @@ class Application:
     ) -> None:
         self.marker_server = MarkerServer()
         self.controller = c = Controller(solverClass, **args)
-        self.task_hierarchy = c.hierarchy
+        self.task_hierarchy = c.task_hierarchy
         if publish_joints:
             c.actuator = JointStatePublisherActuator(c.robot_state)
 

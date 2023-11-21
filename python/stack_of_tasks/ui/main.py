@@ -141,13 +141,13 @@ class Main(BaseSoTHasTraits):
         self.controller = Controller()
         self.marker_server = MarkerServer()
 
+        model = self.controller.robot_model
+        # IAMarker.class_traits()["frame_id"].default_value = model.root_link
         DependencyInjection.mapping["robot_state"] = self.controller.robot_state
 
         # QT-Models
 
-        self.link_model = ObjectModel(
-            data=[*self.controller.robot_model.links.keys()]
-        )  # all robot links
+        self.link_model = ObjectModel(data=[*model.links.keys()])  # all robot links
 
         RobotRefFrame.class_traits()[
             "link_name"

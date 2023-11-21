@@ -27,6 +27,8 @@ MarkerRegister = Register("MarkerRegister")
 class IAMarker(ABCSoTHasTraits):
     name = ta.Str(value="")
 
+    frame_id = ta.Str()
+
     transform = ta.Array(
         shape=(4, 4), value=np.identity(4), comparison_mode=ta.ComparisonMode.none
     )
@@ -43,6 +45,7 @@ class IAMarker(ABCSoTHasTraits):
         self.marker = self._create_interactive_marker(
             name=self.name,
             scale=self.scale,
+            frame_id=self.frame_id,
             pose=matrix_to_pose(self.transform),
         )
 
@@ -69,14 +72,14 @@ class IAMarker(ABCSoTHasTraits):
         pass
 
     @staticmethod
-    def _create_interactive_marker(name: str, scale: float, pose):
+    def _create_interactive_marker(name: str, scale: float, frame_id: str, pose):
         im = InteractiveMarker(name=name, scale=scale)
 
         if isinstance(pose, PoseStamped):
             im.header.frame_id = pose.header.frame_id
             im.pose = pose.pose
         else:
-            im.header.frame_id = "world"
+            im.header.frame_id = frame_id
             im.pose = pose if isinstance(pose, Pose) else matrix_to_pose(pose)
 
         return im
@@ -194,7 +197,7 @@ class IAMarker(ABCSoTHasTraits):
         return Marker(type=Marker.ARROW, scale=scale, color=color, **kwargs)
 
     @staticmethod
-    def frame(T, scale=0.1, radius=None, frame_id="world", ns="frame"):
+    def frame(T, scale=0.1, radius=None, frame_id="", ns="frame"):
         """Create a frame composed from three cylinders"""
         markers = []
         p = T[0:3, 3]

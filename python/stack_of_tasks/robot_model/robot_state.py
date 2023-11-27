@@ -15,30 +15,14 @@ class RobotState(ABCSoTHasTraits):
     robot_model: RobotModel = ta.Instance(RobotModel)
     joint_values = ta.Array(comparison_mode=ta.ComparisonMode.none)
 
-    def __init__(
-        self, model: RobotModel, ns_prefix: str = "", init_joint_values=None
-    ) -> None:
+    def __init__(self, model: RobotModel) -> None:
         super().__init__(robot_model=model)
 
         # cache mapping joint -> (T, J)
         self._fk_cache: Dict[Joint, Tuple[numpy.ndarray, numpy.ndarray]] = {}
 
-        if init_joint_values is not None:
-            self.init_values = init_joint_values
-        elif rospy.has_param(ns_prefix + "initial_joints"):
-            init_pos = rospy.get_param(ns_prefix + "initial_joints")
-
-            if isinstance(init_pos, dict):
-                self.init_values = [
-                    init_pos[joint.name] for joint in self.robot_model.active_joints
-                ]
-            else:
-                self.init_values = init_pos
-        else:
-            self.init_values = 0.5 * (self.robot_model.mins + self.robot_model.maxs)
-
         # buffer for joint values received from sensors
-        self.incoming_joint_values = numpy.array(self.init_values)
+        self.incoming_joint_values = 0.5 * (self.robot_model.mins + self.robot_model.maxs)
         self.joint_values = self.incoming_joint_values
 
     @ta.observe("joint_values")
@@ -48,17 +32,8 @@ class RobotState(ABCSoTHasTraits):
     def update(self):
         self.joint_values = self.incoming_joint_values
 
-    def reset(self):
-        self.joint_values = self.init_values
-
     def clear_cache(self):
         self._fk_cache.clear()
-
-    def set_random_joints(self, randomness=0):
-        width = 0.5 * (self.robot_model.maxs - self.robot_model.mins) * randomness
-        self.joint_values = self.init_values + width * (
-            numpy.random.random_sample(width.shape) - 0.5
-        )
 
     def _fk(self, joint):
         """Recursively compute forward kinematics and Jacobian (w.r.t. base) for joint"""

@@ -5,7 +5,7 @@ import traits.api as ta
 
 import rospy
 
-from stack_of_tasks.robot_model.actuators import DummyActuator
+from stack_of_tasks.robot_model.actuators import DummyPublisherActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
@@ -29,7 +29,7 @@ class Controller(BaseSoTHasTraits):
 
         super().__init__()
 
-        self.actuator = DummyActuator(self.robot_state)
+        self.actuator = DummyPublisherActuator(self.robot_state)
 
         # collection of tasks
         self.hierarchy = TaskHierarchy()

@@ -60,23 +60,45 @@ class JointStateSubscriber:
         ]
 
 
-class JointStatePublisherActuator(DummyActuator, JointStateSubscriber):
+class JointStatePublisher:
     """Publish updated joint values to target_joint_states topic"""
 
     def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
-        DummyActuator.__init__(self, robot_state, ns_prefix)
-        JointStateSubscriber.__init__(self, robot_state, ns_prefix)
         self._pub = rospy.Publisher(
             ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
         )
         self.msg = JointState()
         self.msg.name = [j.name for j in robot_state.robot_model.active_joints]
-        self.actuate(numpy.zeros(robot_state.robot_model.N))
+        self.publish(robot_state.joint_values)
+
+    def publish(self, pos, vel=None):
+        self.msg.position = pos
+        self.msg.velocity = numpy.zeros_like(pos) if vel is None else vel
+        self._pub.publish(self.msg)
+
+
+class DummyPublisherActuator(DummyActuator, JointStatePublisher):
+    """Directly update joint values and publish them, but don't subscribe to /joint_states"""
+
+    def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
+        DummyActuator.__init__(self, robot_state, ns_prefix)
+        JointStatePublisher.__init__(self, robot_state, ns_prefix)
 
     def actuate(self, dq):
-        self.msg.position = self._robot_state.joint_values + dq
-        self.msg.velocity = dq
-        self._pub.publish(self.msg)
+        DummyActuator.actuate(self, dq)
+        self.publish(self._robot_state.joint_values, dq)
+
+
+class JointStatePublisherActuator(DummyActuator, JointStateSubscriber, JointStatePublisher):
+    """Publish updated joint values to target_joint_states topic"""
+
+    def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
+        DummyActuator.__init__(self, robot_state, ns_prefix)
+        JointStateSubscriber.__init__(self, robot_state, ns_prefix)
+        JointStatePublisher.__init__(self, robot_state, ns_prefix)
+
+    def actuate(self, dq):
+        self.publish(self._robot_state.joint_values + dq, dq)
 
 
 class VelocityCommandActuator(JointStateSubscriber):

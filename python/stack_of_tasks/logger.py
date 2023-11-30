@@ -13,6 +13,7 @@ def fix_rospy_logging(logger: logging.Logger):
     formatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
     console.setFormatter(formatter)
     logger.root.addHandler(console)
+    logger.root.setLevel(logging.WARNING)
 
 
 sot_logger = logging.getLogger("sot")

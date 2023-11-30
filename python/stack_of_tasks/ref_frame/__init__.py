@@ -41,6 +41,7 @@ class HasTransform(Protocol):
 class RefFrame(ABCSoTHasTraits):
     """The base class for all reference frames."""
 
+    name: str = ta.Str(None)
     T: Transform
 
     def transform(self, T_matrix: Transform) -> Offset:

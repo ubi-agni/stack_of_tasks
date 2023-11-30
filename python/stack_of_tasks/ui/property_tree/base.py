@@ -9,7 +9,7 @@ import traits.api as ta
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QStandardItem
 
-from stack_of_tasks.ui import DISPLAY_STRING_ATTR, RawDataRole
+from stack_of_tasks.ui import RawDataRole
 
 _DataType = TypeVar("_DataType")
 
@@ -50,9 +50,7 @@ class RawDataItem(Generic[_DataType], BaseItem):
                 return data.name
 
             elif isinstance(data, ta.HasTraits):
-                if len(name := getattr(data, DISPLAY_STRING_ATTR, "")) > 0:
-                    return name
-                elif len(name := getattr(data, "name", "")) > 0:
+                if name := getattr(data, "name", ""):
                     return name
                 else:
                     return data.__class__.__name__

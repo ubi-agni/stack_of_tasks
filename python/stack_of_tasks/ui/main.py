@@ -32,7 +32,6 @@ from stack_of_tasks.tasks import TaskRegister
 from stack_of_tasks.tasks.Eq_Tasks import PositionTask
 from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
-from stack_of_tasks.ui import DISPLAY_STRING_ATTR
 from stack_of_tasks.ui.mainwindow import Ui
 from stack_of_tasks.ui.model.object_model import ObjectModel
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
@@ -134,15 +133,12 @@ class Main(BaseSoTHasTraits):
     def __init__(self):
         super().__init__()
 
-        RefFrame.add_class_trait(DISPLAY_STRING_ATTR, ta.Str)
-        RobotRefFrame.class_traits()["_robot_state"].injected = "robot_state"
-        Task.add_class_trait(DISPLAY_STRING_ATTR, ta.Str)
-
         self.controller = Controller()
         self.marker_server = MarkerServer()
 
         model = self.controller.robot_model
         # IAMarker.class_traits()["frame_id"].default_value = model.root_link
+        RobotRefFrame.class_traits()["_robot_state"].injected = "robot_state"
         DependencyInjection.mapping["robot_state"] = self.controller.robot_state
 
         # QT-Models
@@ -196,8 +192,7 @@ class Main(BaseSoTHasTraits):
         o = Origin()
         off = Offset(frame=o)
 
-        frame = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp")
-        setattr(frame, DISPLAY_STRING_ATTR, "hand")
+        frame = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp", name="hand")
         self.refs.extend([o, off, frame])
 
         with self.controller.task_hierarchy.new_level() as level:

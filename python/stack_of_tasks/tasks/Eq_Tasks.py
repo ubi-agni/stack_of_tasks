@@ -38,7 +38,9 @@ class DistanceTask(RelativeTask, EqTask):
     def compute(self) -> Tuple[A, Bound]:
         delta = self.refA.T[0:3, 3] - self.refB.T[0:3, 3]
 
-        return np.array([delta.dot(self._J[:3])]), self.distance - np.linalg.norm(delta)
+        return np.array([delta.dot(self._J[:3])]), 0.1 * (
+            self.distance - np.linalg.norm(delta)
+        )
 
 
 class PlaneTask(TargetTask, EqTask):

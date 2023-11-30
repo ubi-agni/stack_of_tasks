@@ -42,17 +42,17 @@ class SOT_Model(QStandardItemModel):
             self.set_stack(stack_of_tasks)
 
     def set_stack(self, stack_of_tasks: TaskHierarchy):
+        self.beginResetModel()
+
         self.clear()
         self.stack_of_tasks = stack_of_tasks
         self.stack_of_tasks.observe(self._levels_changed, "layout_changed", dispatch="ui")
-
-        self.layoutAboutToBeChanged.emit()
 
         for level in stack_of_tasks.levels:
             l = self._create_level(level)
             self.appendRow([l, PlaceholderItem()])
 
-        self.layoutChanged.emit()
+        self.endResetModel()
 
     def _create_level(self, task_list: list[Task]):
         l = LevelItem()

@@ -45,7 +45,7 @@ class TraitTreeBase(BaseItem):
                 break
 
 
-class TraitItem(RawDataItem, TraitTreeBase):
+class TaskItem(RawDataItem, TraitTreeBase):
     def __init__(self, obj: ta.HasTraits):
         super().__init__(obj)
         self._setup_children(self._obj)

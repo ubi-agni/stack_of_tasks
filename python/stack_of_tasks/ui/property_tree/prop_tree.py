@@ -20,7 +20,7 @@ from stack_of_tasks.tasks.TaskHierarchy import (
 from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.property_tree.base import PlaceholderItem
 
-from .prop_item import AttrNameItem, AttrValueItem, LevelItem, RawDataItem, TraitItem
+from .prop_item import AttrNameItem, AttrValueItem, LevelItem, RawDataItem, TaskItem
 from .prop_item_delegate import PropItemDelegate
 
 logger = sot_logger.getChild("TaskView")
@@ -57,8 +57,7 @@ class SOT_Model(QStandardItemModel):
     def _create_level(self, task_list: list[Task]):
         l = LevelItem()
         for task in task_list:
-            tn = TraitItem(task)
-
+            tn = TaskItem(task)
             l.appendRow([tn, PlaceholderItem()])
 
         return l
@@ -79,7 +78,7 @@ class SOT_Model(QStandardItemModel):
 
             if evt.type is ChangeType.added:
                 for task in evt.tasks:
-                    task_item = TraitItem(task)
+                    task_item = TaskItem(task)
                     levelItem.appendRow([task_item, PlaceholderItem()])
 
             if evt.type is ChangeType.removed:
@@ -96,7 +95,7 @@ class SOT_Model(QStandardItemModel):
             level = item.row()
             self.stack_of_tasks.remove_level(level)
 
-        elif isinstance(item, RawDataItem):
+        elif isinstance(item, TaskItem):
             task = item.data(RawDataRole)
             self.stack_of_tasks.remove_task(task)
 
@@ -110,7 +109,7 @@ class SOT_Model(QStandardItemModel):
             if parent_item is not None:
                 if isinstance(parent_item, LevelItem):
                     self.stack_of_tasks.levels[parent_item.row()].append(task)
-                elif isinstance(parent_item, TraitItem):
+                elif isinstance(parent_item, TaskItem):
                     self.stack_of_tasks.levels[parent_item.parent().row()].append(task)
 
     def mimeData(self, indexes: typing.Iterable[QModelIndex]) -> QMimeData:
@@ -147,7 +146,7 @@ class SOT_Model(QStandardItemModel):
             if isinstance(source_item, LevelItem) and dest_item is None:
                 self.stack_of_tasks.move_level(source_item.row(), row)
 
-            elif isinstance(source_item, RawDataItem):
+            elif isinstance(source_item, TaskItem):
                 task = source_item.data(RawDataRole)
 
                 if isinstance(dest_item, LevelItem):

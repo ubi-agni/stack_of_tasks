@@ -288,5 +288,5 @@ def main():
 if __name__ == "__main__":
     rospy.init_node("ik")
     fix_rospy_logging(sot_logger)
-    logging.root.setLevel(logging.DEBUG)
+    sot_logger.setLevel(logging.DEBUG)
     main()

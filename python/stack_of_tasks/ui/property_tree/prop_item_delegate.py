@@ -3,21 +3,17 @@ from __future__ import annotations
 
 import typing
 
-import numpy as np
 import traits.api as ta
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QModelIndex, QPersistentModelIndex, QSize, Qt
-from PyQt5.QtGui import QStandardItem
-from PyQt5.QtWidgets import QStyle, QStyleOptionViewItem, QWidget
+from PyQt5.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem, QWidget
 
 from stack_of_tasks.ui import MappingEntryRole, RawDataRole, TraitRole
 from stack_of_tasks.ui.traits_mapping.bindings import get_user_property, set_user_property
 from stack_of_tasks.ui.traits_mapping.ui_mapping import MappingEntry
 
-from .has_traits_delegate import HasTraitsDelegate
 
-
-class PropItemDelegate(HasTraitsDelegate):
+class PropItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._current_editor = None

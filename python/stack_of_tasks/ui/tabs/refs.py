@@ -18,7 +18,7 @@ class RefFrames(Base):
     def __init__(self) -> None:
         super().__init__()
 
-        self.horizontalLayout = QHBoxLayout(self)
+        self.horizontalLayout = QHBoxLayout()
         self.ref_view = QListView(self)
         self.horizontalLayout.addWidget(self.ref_view)
 

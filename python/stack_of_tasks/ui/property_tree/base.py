@@ -9,7 +9,7 @@ import traits.api as ta
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QStandardItem
 
-from stack_of_tasks.ui import DISPLAY_STRING_ATTR, ItemRole, RawDataRole
+from stack_of_tasks.ui import DISPLAY_STRING_ATTR, RawDataRole
 
 _DataType = TypeVar("_DataType")
 
@@ -21,9 +21,6 @@ class BaseItem(QStandardItem):
     def data(self, role: int = Qt.DisplayRole) -> Any:
         if role == RawDataRole:
             return self.raw_data()
-
-        elif role == ItemRole:
-            return self
 
         return super().data(role)
 

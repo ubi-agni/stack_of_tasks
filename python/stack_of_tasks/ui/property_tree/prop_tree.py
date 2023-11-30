@@ -20,7 +20,7 @@ from stack_of_tasks.tasks.TaskHierarchy import (
 from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.property_tree.base import PlaceholderItem
 
-from .prop_item import AttrNameItem, AttrValueItem, LevelItem, RawDatatItem, TraitItem
+from .prop_item import AttrNameItem, AttrValueItem, LevelItem, RawDataItem, TraitItem
 from .prop_item_delegate import PropItemDelegate
 
 logger = sot_logger.getChild("TaskView")
@@ -96,7 +96,7 @@ class SOT_Model(QStandardItemModel):
             level = item.row()
             self.stack_of_tasks.remove_level(level)
 
-        elif isinstance(item, RawDatatItem):
+        elif isinstance(item, RawDataItem):
             task = item.data(RawDataRole)
             self.stack_of_tasks.remove_task(task)
 
@@ -147,7 +147,7 @@ class SOT_Model(QStandardItemModel):
             if isinstance(source_item, LevelItem) and dest_item is None:
                 self.stack_of_tasks.move_level(source_item.row(), row)
 
-            elif isinstance(source_item, RawDatatItem):
+            elif isinstance(source_item, RawDataItem):
                 task = source_item.data(RawDataRole)
 
                 if isinstance(dest_item, LevelItem):

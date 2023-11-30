@@ -6,7 +6,7 @@ from typing_extensions import Self
 from PyQt5.QtCore import QModelIndex, QObject, QSortFilterProxyModel
 from PyQt5.QtGui import QStandardItemModel
 
-from stack_of_tasks.ui.property_tree.base import RawDataRole, RawDatatItem
+from stack_of_tasks.ui.property_tree.base import RawDataItem, RawDataRole
 from stack_of_tasks.ui.utils.class_register import Register
 
 ObjectType = TypeVar("ObjectType")
@@ -29,11 +29,11 @@ class ObjectModel(Generic[ObjectType], QStandardItemModel):
         return cls(register.concrete_classes)
 
     def append(self, obj: ObjectType):
-        self.appendRow(RawDatatItem(obj))
+        self.appendRow(RawDataItem(obj))
 
     def extend(self, objs: list[ObjectType]):
         for obj in objs:
-            self.appendRow(RawDatatItem(obj))
+            self.appendRow(RawDataItem(obj))
 
 
 class FilterObjectModel(

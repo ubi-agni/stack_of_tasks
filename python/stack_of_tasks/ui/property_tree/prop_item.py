@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt
 from stack_of_tasks.ui import DISPLAY_STRING_ATTR, MappingEntryRole, RawDataRole, TraitRole
 from stack_of_tasks.ui.traits_mapping.ui_mapping import Mapping, MappingEntry
 
-from .base import BaseItem, PlaceholderItem, RawDatatItem
+from .base import BaseItem, PlaceholderItem, RawDataItem
 
 
 class LevelItem(BaseItem):
@@ -45,7 +45,7 @@ class TraitTreeBase(BaseItem):
                 break
 
 
-class TraitItem(RawDatatItem, TraitTreeBase):
+class TraitItem(RawDataItem, TraitTreeBase):
     def __init__(self, obj: ta.HasTraits):
         super().__init__(obj)
         self._setup_children(self._obj)
@@ -70,7 +70,7 @@ class AttrNameItem(TraitTreeBase):
         self._setup_children(evt.new)
 
 
-class AttrValueItem(RawDatatItem):
+class AttrValueItem(RawDataItem):
     def __init__(self, obj: ta.HasTraits, attr_name: str):
         super().__init__(obj)
         self._attr_name = attr_name

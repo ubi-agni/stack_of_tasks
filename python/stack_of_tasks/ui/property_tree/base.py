@@ -33,7 +33,7 @@ class PlaceholderItem(QStandardItem):
         self.setDropEnabled(False)
 
 
-class RawDatatItem(Generic[_DataType], BaseItem):
+class RawDataItem(Generic[_DataType], BaseItem):
     def __init__(self, obj: _DataType):
         super().__init__()
 

@@ -35,6 +35,7 @@ class NewInstanceWidget(QWidget):
         self.setLayout(self.fl)
 
     def _setup_widgets(self):
+        old_args = {k: get_user_property(v) for k, v in self.args.items()}
         self.args.clear()
 
         while self.fl.rowCount() > 0:
@@ -54,13 +55,10 @@ class NewInstanceWidget(QWidget):
             if me is not None:
                 widget = me.widget()
                 me.setup_function(trait, widget)
-                set_user_property(widget, trait.trait_type.default_value)
-
-            else:
-                continue
-
-            self.fl.addRow(name, widget)
-            self.args[name] = widget
+                value = old_args.get(name, trait.trait_type.default_value)
+                set_user_property(widget, value)
+                self.fl.addRow(name, widget)
+                self.args[name] = widget
 
     def get_arguments(self) -> dict["str", Any]:
         r = {}

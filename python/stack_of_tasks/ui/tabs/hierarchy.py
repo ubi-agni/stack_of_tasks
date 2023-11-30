@@ -34,10 +34,8 @@ class Hierarchy(Base):
             self.treeView.add_task(task)
 
     def remove_action_callback(self):
-        self.treeView.remove_selected_task()
+        self.treeView.remove_selected()
 
     def tasks_selected(self):
-        if len(self.treeView.selectedIndexes()) > 0:
-            self.remove_action.setDisabled(False)
-        else:
-            self.remove_action.setDisabled(True)
+        have_selection = len(self.treeView.selectedIndexes()) > 0
+        self.remove_action.setEnabled(have_selection)

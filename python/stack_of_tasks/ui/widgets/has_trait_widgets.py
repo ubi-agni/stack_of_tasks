@@ -79,7 +79,7 @@ class HasTraitsFormLayout(QFormLayout):
         super().__init__(parent)
         self.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
 
-    def setHastTrait(self, inst: ta.HasTraits):
+    def fill(self, inst: ta.HasTraits):
         for name in inst.visible_traits():
             trait = inst.trait(name)
             if trait.injected:
@@ -96,7 +96,7 @@ class HasTraitsFormLayout(QFormLayout):
                 trait_widget_binding(inst, name, widget)
                 self.addRow(name, widget)
 
-    def clear_widget(self):
+    def clear(self):
         while self.rowCount() > 0:
             self.removeRow(0)
 
@@ -123,9 +123,9 @@ class HasTraitWidget(QWidget):
         self.setLayout(self.trait_form_layout)
 
     def set_trait_object(self, obj):
-        self.trait_form_layout.clear_widget()
+        self.trait_form_layout.clear()
         if obj is not None:
-            self.trait_form_layout.setHastTrait(obj)
+            self.trait_form_layout.fill(obj)
 
     trait_object = pyqtProperty(ta.HasTraits, fset=set_trait_object)
 

@@ -194,7 +194,6 @@ class SOT_View(QtW.QTreeView):
             task, None if len(selected_indices) == 0 else selected_indices[0]
         )
 
-    def remove_selected_task(self):
+    def remove_selected(self):
         selected_indices = self.selectedIndexes()
-        index_to_remove = selected_indices[0]
-        self.model().remove_item_at_index(index_to_remove)
+        self.model().remove_item_at_index(selected_indices[0])

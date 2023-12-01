@@ -108,7 +108,7 @@ class MatrixPainter(Delegate_Painter):
                     Qt.AlignCenter,
                     option.palette,
                     True,
-                    f"{data[j, i]:.2e}",
+                    f"{data[j, i]:.4g}",
                     text_role,
                 )
 

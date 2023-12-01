@@ -164,7 +164,7 @@ class TargetTask(Task, ABC):
 
 class EqTask(Task, ABC):
     bound = ta.Property(trait=ta.Array, depends_on="_recompute", visible=False)
-    residual = ta.Property(trait=ta.Array, visible=False)
+    residual = ta.Property(trait=ta.Array, visible=False, depends_on="bound")
 
     def _get_bound(self):
         return self._compute_val[1]
@@ -180,7 +180,7 @@ class EqTask(Task, ABC):
 class IeqTask(Task, ABC):
     upper_bound = ta.Property(observe="_compute_val")
     lower_bound = ta.Property(observe="_compute_val")
-    residual = ta.Property(trait=ta.Array, visible=False)
+    residual = ta.Property(trait=ta.Array, visible=False, depends_on="lower_bound")
 
     def _get_lower_bound(self) -> LowerBound:
         return self._compute_val[1]

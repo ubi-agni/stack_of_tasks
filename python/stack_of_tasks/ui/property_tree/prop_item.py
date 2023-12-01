@@ -10,6 +10,7 @@ import traits.api as ta
 from PyQt5.QtCore import Qt
 
 from stack_of_tasks.ui import DISPLAY_STRING_ATTR, MappingEntryRole, RawDataRole, TraitRole
+from stack_of_tasks.ui.traits_mapping import is_editable_trait
 from stack_of_tasks.ui.traits_mapping.ui_mapping import Mapping, MappingEntry
 
 from .base import BaseItem, PlaceholderItem, RawDatatItem
@@ -74,15 +75,13 @@ class AttrValueItem(RawDatatItem):
     def __init__(self, obj: ta.HasTraits, attr_name: str):
         super().__init__(obj)
         self._attr_name = attr_name
-
-        self.setSelectable(False)
-        self.setEditable(True)
         self._trait: ta.CTrait = obj.trait(attr_name)
         self._trait_map_entry: MappingEntry = Mapping.find_entry(self._trait)
 
+        self.setSelectable(False)
+        self.setEditable(is_editable_trait(attr_name, self._trait))
         self.setDragEnabled(False)
         self.setDropEnabled(False)
-        self.setEditable(True)
 
         obj.observe(self._data_changed, attr_name)
 

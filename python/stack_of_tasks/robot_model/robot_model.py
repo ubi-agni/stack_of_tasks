@@ -151,8 +151,14 @@ class RobotModel:
         for tag in getElementsByTag(robot, "joint"):  # process all joint tags
             pending = self._add_joint(*self._create_joint(tag))  # create and add joint
             unlinked.update(pending)
+        roots = {}
         for joint, parent in unlinked.items():  # find parent for all not yet linked joints
             joint.parent = self.links.get(parent, None)
+            if joint.parent is None:
+                roots[parent] = joint
+        if len(roots) > 1:
+            raise RuntimeError("Robot has more than one root link: {roots.keys()}")
+        self.root_link = list(roots.keys())[0]
 
         # store list of active joints. Attention: Mimic joints are no true active joints!
         self.active_joints = [j for j in self.joints.values() if type(j) is ActiveJoint]

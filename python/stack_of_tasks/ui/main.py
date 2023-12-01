@@ -23,7 +23,7 @@ from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.ref_frame import Offset, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
-from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
+from stack_of_tasks.robot_model.actuators import DummyPublisherActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
@@ -102,7 +102,7 @@ class Controller(BaseSoTHasTraits):
 
         self.robot_model = RobotModel()
         self.robot_state = RobotState(self.robot_model)
-        self.actuator = JointStatePublisherActuator(self.robot_state)
+        self.actuator = DummyPublisherActuator(self.robot_state)
 
         self.task_hierarchy = TaskHierarchy()
 
@@ -141,13 +141,13 @@ class Main(BaseSoTHasTraits):
         self.controller = Controller()
         self.marker_server = MarkerServer()
 
+        model = self.controller.robot_model
+        # IAMarker.class_traits()["frame_id"].default_value = model.root_link
         DependencyInjection.mapping["robot_state"] = self.controller.robot_state
 
         # QT-Models
 
-        self.link_model = ObjectModel(
-            data=[*self.controller.robot_model.links.keys()]
-        )  # all robot links
+        self.link_model = ObjectModel(data=[*model.links.keys()])  # all robot links
 
         RobotRefFrame.class_traits()[
             "link_name"
@@ -288,5 +288,5 @@ def main():
 if __name__ == "__main__":
     rospy.init_node("ik")
     fix_rospy_logging(sot_logger)
-    logging.root.setLevel(logging.DEBUG)
+    sot_logger.setLevel(logging.DEBUG)
     main()

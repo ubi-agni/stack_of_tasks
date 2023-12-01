@@ -71,7 +71,10 @@ class ConeMarker(IAMarker):
         self._add_movement_control(self.marker, "_rot", InteractiveMarkerControl.ROTATE_AXIS)
 
         self.handle_marker = self._create_interactive_marker(
-            f"{self.name}_Handle", scale=0.05, pose=tf.translation_matrix([0, 0, 0])
+            f"{self.name}_Handle",
+            scale=0.05,
+            frame_id=self.frame_id,
+            pose=tf.translation_matrix([0, 0, 0]),
         )
 
         self._add_movement_marker(

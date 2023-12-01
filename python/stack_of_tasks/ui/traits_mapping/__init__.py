@@ -39,7 +39,7 @@ def get_editable_trait_names(obj: ta.HasTraits):
 
 
 def get_init_arg_trait_names(cls: type[ta.HasTraits]):
-    visible_trait_names = sorted(cls.class_visible_traits())
+    visible_trait_names = cls.class_visible_traits()
 
     cls_trts = cls.class_traits()
 
@@ -50,7 +50,7 @@ def get_init_arg_trait_names(cls: type[ta.HasTraits]):
         if is_editable_trait(name, cls_trts[name]):
             trait_names.add(name)
 
-    return list(trait_names)
+    return sorted(trait_names)
 
 
 def is_valid_value(obj: ta.HasTraits | ta.MetaHasTraits, name: str, val: Any) -> bool:

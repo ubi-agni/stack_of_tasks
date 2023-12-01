@@ -8,11 +8,36 @@ from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 from .robot_state import RobotState
 
 
+def initial_joint_values(state: RobotState, ns="", param="initial_joints"):
+    values = rospy.get_param(ns + "/" + param, {})
+
+    if isinstance(values, dict):
+        return [
+            values.get(joint.name, 0.5 * (joint.min + joint.max))
+            for joint in state.robot_model.active_joints
+        ]
+    elif isinstance(values, list):
+        return values
+    else:
+        raise TypeError(f"Invalid type for {param}: {type(values)}")
+
+
 class DummyActuator:
     """Directly update current joint values with deltas"""
 
-    def __init__(self, robot_state: RobotState) -> None:
+    def __init__(self, robot_state: RobotState, ns_prefix="") -> None:
         self._robot_state = robot_state
+        self.initial_values = initial_joint_values(robot_state, ns_prefix)
+        robot_state.incoming_joint_values = self.initial_values
+        robot_state.update()
+
+    def set_random_joints(self, randomness=0):
+        model = self._robot_state.robot_model
+        width = 0.5 * (model.maxs - model.mins) * randomness
+        self._robot_state.incoming_joint_values = self.initial_values + width * (
+            numpy.random.random_sample(width.shape) - 0.5
+        )
+        self._robot_state.update()
 
     def actuate(self, dq):
         self._robot_state.incoming_joint_values = self._robot_state.joint_values + dq
@@ -35,20 +60,45 @@ class JointStateSubscriber:
         ]
 
 
-class JointStatePublisherActuator(JointStateSubscriber):
+class JointStatePublisher:
     """Publish updated joint values to target_joint_states topic"""
 
     def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
-        super().__init__(robot_state, ns_prefix)
         self._pub = rospy.Publisher(
             ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
         )
         self.msg = JointState()
         self.msg.name = [j.name for j in robot_state.robot_model.active_joints]
+        self.publish(robot_state.joint_values)
+
+    def publish(self, pos, vel=None):
+        self.msg.position = pos
+        self.msg.velocity = numpy.zeros_like(pos) if vel is None else vel
+        self._pub.publish(self.msg)
+
+
+class DummyPublisherActuator(DummyActuator, JointStatePublisher):
+    """Directly update joint values and publish them, but don't subscribe to /joint_states"""
+
+    def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
+        DummyActuator.__init__(self, robot_state, ns_prefix)
+        JointStatePublisher.__init__(self, robot_state, ns_prefix)
 
     def actuate(self, dq):
-        self.msg.position = self._robot_state.joint_values + dq
-        self._pub.publish(self.msg)
+        DummyActuator.actuate(self, dq)
+        self.publish(self._robot_state.joint_values, dq)
+
+
+class JointStatePublisherActuator(DummyActuator, JointStateSubscriber, JointStatePublisher):
+    """Publish updated joint values to target_joint_states topic"""
+
+    def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
+        DummyActuator.__init__(self, robot_state, ns_prefix)
+        JointStateSubscriber.__init__(self, robot_state, ns_prefix)
+        JointStatePublisher.__init__(self, robot_state, ns_prefix)
+
+    def actuate(self, dq):
+        self.publish(self._robot_state.joint_values + dq, dq)
 
 
 class VelocityCommandActuator(JointStateSubscriber):

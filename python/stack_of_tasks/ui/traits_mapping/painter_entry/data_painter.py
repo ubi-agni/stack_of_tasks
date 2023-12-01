@@ -26,7 +26,7 @@ class Delegate_Painter(object):
 class MatrixPainter(Delegate_Painter):
     @classmethod
     def size_hint(cls, option: QStyleOptionViewItem, data: np.ndarray):
-        if data is None:
+        if data is None or not data.shape:
             return super().size_hint(option, data)
 
         style = QApplication.style()
@@ -46,7 +46,7 @@ class MatrixPainter(Delegate_Painter):
     @classmethod
     def paint(cls, painter: QPainter, option: QStyleOptionViewItem, data: np.ndarray) -> None:
         super().paint(painter, option, data)
-        if data is None or data.size == 0:
+        if data is None or not data.shape:
             return
 
         painter.save()

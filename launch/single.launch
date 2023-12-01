@@ -15,8 +15,8 @@
     <!-- Load URDF -->
     <param name="robot_description" textfile="$(find agni_description)/robots/sfb.urdf" />
     <rosparam param="initial_joints">{
-      ra_S1: 1.57, ra_S2: 1.1868, ra_S3: 0.0, ra_E1: -1.4486, ra_E2: 1.3963, ra_W1: -1.4835, ra_W2: 0.0,
-      la_S1: 1.57, la_S2: 1.294, la_S3: 0.0, la_E1: -1.517, la_E2: -1.4, la_W1: -1.4835, la_W2: 0.0
+      ra_S1: 1.57, ra_S2: 1.1868, ra_S3: 0.0, ra_E1: -1.4486, ra_E2: 1.3963, ra_W1: -1.4835, ra_W2: 1.57,
+      la_S1: 1.57, la_S2: 1.294, la_S3: 0.0, la_E1: -1.517, la_E2: -1.4, la_W1: -1.4835, la_W2: 1.57
     }</rosparam>
   </group>
 

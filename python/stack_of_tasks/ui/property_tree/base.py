@@ -43,20 +43,20 @@ class RawDataItem(Generic[_DataType], BaseItem):
 
     def data(self, role: int = Qt.DisplayRole) -> Any:
         if role in [Qt.DisplayRole, Qt.EditRole]:  # return name of object
-            data = self.raw_data()
+            obj = self._obj
 
-            if isinstance(data, enum.Enum):
-                return data.name
+            if isinstance(obj, enum.Enum):
+                return obj.name
 
-            elif isinstance(data, ta.HasTraits):
-                if name := getattr(data, "name", ""):
+            elif isinstance(obj, ta.HasTraits):
+                if name := getattr(obj, "name", ""):
                     return name
                 else:
-                    return data.__class__.__name__
-            elif isinstance(data, type):
-                return data.__name__
+                    return obj.__class__.__name__
+            elif isinstance(obj, type):
+                return obj.__name__
             else:
-                return str(data)
+                return str(obj)
 
         return super().data(role)
 

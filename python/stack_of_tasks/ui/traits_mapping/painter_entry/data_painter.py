@@ -10,12 +10,10 @@ from PyQt5.QtGui import QPainter, QPen
 from PyQt5.QtWidgets import QApplication, QStyle, QStyleOptionViewItem
 
 
-class Delegate_Painter:
+class Delegate_Painter(object):
     @classmethod
     def size_hint(cls, option: QStyleOptionViewItem, data: Any):
         return QSize()
-
-    has_Painter = False
 
     @classmethod
     def paint(cls, painter: QPainter, option: QStyleOptionViewItem, data: Any):
@@ -26,8 +24,6 @@ class Delegate_Painter:
 
 
 class MatrixPainter(Delegate_Painter):
-    has_Painter = True
-
     @classmethod
     def size_hint(cls, option: QStyleOptionViewItem, data: np.ndarray):
         if data is None:

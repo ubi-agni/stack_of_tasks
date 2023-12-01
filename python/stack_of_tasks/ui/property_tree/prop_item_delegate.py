@@ -24,12 +24,9 @@ class PropItemDelegate(QStyledItemDelegate):
             return self._current_editor.sizeHint()
 
         me: MappingEntry = index.data(MappingEntryRole)
-        if me is not None:
+        if me is not None and me.painter is not None:
             data = index.data(RawDataRole)
-            size_hint: QSize = me.painter.size_hint(option, data)
-
-            if size_hint.isValid():
-                return size_hint
+            return me.painter.size_hint(option, data)
 
         return super().sizeHint(option, index)
 
@@ -74,7 +71,7 @@ class PropItemDelegate(QStyledItemDelegate):
         self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         me: MappingEntry = index.data(MappingEntryRole)
-        if me is not None and me.painter.has_Painter:
+        if me is not None and me.painter is not None:
             data = index.data(RawDataRole)
             me.painter.paint(painter, option, data)
 

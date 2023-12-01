@@ -41,7 +41,7 @@ MappingType = TypeVar("MappingType")
 class MappingEntry(Generic[MappingType]):
     traits: List[ta.CTrait]
 
-    painter: Type[Delegate_Painter] = Delegate_Painter
+    painter: Type[Delegate_Painter | None] = None
     widget: Type[QWidget] = None
 
     def __init_subclass__(cls, *args, **kwargs) -> None:

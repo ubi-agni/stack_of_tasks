@@ -36,14 +36,13 @@ class PlaceholderItem(QStandardItem):
 class RawDataItem(Generic[_DataType], BaseItem):
     def __init__(self, obj: _DataType):
         super().__init__()
-
         self._obj: _DataType = obj
 
     def raw_data(self):
         return self._obj
 
     def data(self, role: int = Qt.DisplayRole) -> Any:
-        if role == Qt.DisplayRole:
+        if role in [Qt.DisplayRole, Qt.EditRole]:  # return name of object
             data = self.raw_data()
 
             if isinstance(data, enum.Enum):
@@ -60,3 +59,14 @@ class RawDataItem(Generic[_DataType], BaseItem):
                 return str(data)
 
         return super().data(role)
+
+    def setData(self, value: Any, role: int) -> None:
+        if role == Qt.EditRole:  # set name of object
+            obj = self._obj
+            if hasattr(obj, "name") and obj.name != value:
+                obj.name = value
+                self.emitDataChanged()
+        elif role == RawDataRole:
+            setattr(self._obj, self._attr_name, value)
+        else:
+            return super().setData(value, role)

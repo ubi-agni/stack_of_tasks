@@ -18,6 +18,7 @@ class PropItemDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self._current_editor = None
         self._current_editor_index = None
+        self._edit_role = Qt.EditRole
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QtCore.QSize:
         if self._current_editor_index is not None and self._current_editor_index == index:
@@ -44,6 +45,8 @@ class PropItemDelegate(QStyledItemDelegate):
 
             self._current_editor = widget
             self._current_editor_index = QPersistentModelIndex(index)
+            # column 1 changes raw data value, column 0 changes name
+            self._edit_role = RawDataRole if index.column() == 1 else Qt.EditRole
             self.sizeHintChanged.emit(index)
 
             return widget
@@ -58,14 +61,14 @@ class PropItemDelegate(QStyledItemDelegate):
         self.sizeHintChanged.emit(index)
 
     def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
-        value = index.data(RawDataRole)
+        value = index.data(self._edit_role)
         set_user_property(editor, value)
 
     def setModelData(
         self, editor: QWidget, model: QtCore.QAbstractItemModel, index: QModelIndex
     ) -> None:
         val = get_user_property(editor)
-        model.setData(index, val, RawDataRole)
+        model.setData(index, val, self._edit_role)
 
     def paint(
         self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex

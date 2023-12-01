@@ -19,11 +19,11 @@ from .base import BaseItem, PlaceholderItem, RawDataItem
 class LevelItem(BaseItem):
     def __init__(self):
         super().__init__()
+        self.setEditable(True)  # editable name in DisplayRole
 
     def data(self, role: int = Qt.DisplayRole) -> Any:
-        if role == Qt.DisplayRole:
-            return f"Level {self.row() + 1}"
-
+        if role in [Qt.DisplayRole, Qt.EditRole]:
+            return super().data(role=Qt.DisplayRole) or f"Level {self.row() + 1}"
         return super().data(role)
 
 
@@ -32,7 +32,8 @@ class TraitTreeBase(BaseItem):
         self.removeRows(0, self.rowCount())
 
         for name in obj.visible_traits():
-            self._add_child(obj, name)
+            if name != "name":  # hide name traits
+                self._add_child(obj, name)
 
     def _add_child(self, obj, name):
         if (me := Mapping.find_entry(obj.trait(name))) is not None:
@@ -86,17 +87,14 @@ class AttrValueItem(RawDataItem):
 
         obj.observe(self._data_changed, attr_name)
 
-    def _data_changed(self, obj):
+    def __del__(self):
+        self._obj.observe(self._data_changed, self._attr_name, remove=True)
+
+    def _data_changed(self, evt):
         self.emitDataChanged()
 
     def raw_data(self):
         return getattr(self._obj, self._attr_name)
-
-    def setData(self, data: Any, role: int = Qt.DisplayRole):
-        if role == RawDataRole:
-            setattr(self._obj, self._attr_name, data)
-        super().setData(data, role)
-        self.emitDataChanged()
 
     def data(self, role: int = Qt.DisplayRole) -> Any:
         if role == MappingEntryRole:

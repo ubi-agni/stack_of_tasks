@@ -20,7 +20,7 @@ from stack_of_tasks.tasks.TaskHierarchy import (
 from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.property_tree.base import PlaceholderItem
 
-from .prop_item import LevelItem, TaskItem
+from .prop_item import AttrValueItem, LevelItem, TaskItem
 from .prop_item_delegate import PropItemDelegate
 
 logger = sot_logger.getChild("TaskView")
@@ -57,8 +57,7 @@ class SOT_Model(QStandardItemModel):
     def _create_level(self, task_list: list[Task]):
         l = LevelItem()
         for task in task_list:
-            tn = TaskItem(task)
-            l.appendRow([tn, PlaceholderItem()])
+            l.appendRow([TaskItem(task), AttrValueItem(task, "residual")])
 
         return l
 

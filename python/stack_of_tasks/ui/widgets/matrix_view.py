@@ -13,7 +13,7 @@ from PyQt5.QtCore import (
     pyqtProperty,
     pyqtSignal,
 )
-from PyQt5.QtGui import QClipboard, QKeyEvent, QStandardItemModel
+from PyQt5.QtGui import QClipboard, QKeyEvent, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import (
     QApplication,
     QDoubleSpinBox,
@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from stack_of_tasks.ui.property_tree.base import BaseItem, RawDataRole
+from stack_of_tasks.ui.property_tree.base import RawDataRole
 
 FloatDataRole = Qt.UserRole + 1
 
@@ -42,7 +42,7 @@ if not hasattr(QSize, "grownBy"):
     setattr(QSize, "grownBy", grownBy)
 
 
-class MatrixItem(BaseItem):
+class MatrixItem(QStandardItem):
     def __init__(self, i, j):
         super().__init__()
         self._i = i
@@ -51,12 +51,12 @@ class MatrixItem(BaseItem):
     def model(self) -> NumpyTableModel:
         return super().model()
 
-    def raw_data(self):
+    def element(self):
         return self.model().matrix()[self._i, self._j]
 
     def data(self, role: int = ...) -> Any:
         if role == Qt.DisplayRole:
-            return f"{self.raw_data():.2f}"
+            return f"{self.element():.2f}"
 
         return super().data(role)
 

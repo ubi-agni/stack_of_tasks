@@ -20,7 +20,7 @@ from stack_of_tasks.tasks.TaskHierarchy import (
 from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.property_tree.base import PlaceholderItem
 
-from .prop_item import AttrNameItem, AttrValueItem, LevelItem, RawDataItem, TaskItem
+from .prop_item import LevelItem, TaskItem
 from .prop_item_delegate import PropItemDelegate
 
 logger = sot_logger.getChild("TaskView")

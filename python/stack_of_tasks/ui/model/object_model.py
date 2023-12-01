@@ -33,7 +33,7 @@ class ObjectModel(Generic[ObjectType], QStandardItemModel):
 
     def extend(self, objs: list[ObjectType]):
         for obj in objs:
-            self.appendRow(RawDataItem(obj))
+            self.append(obj)
 
 
 class FilterObjectModel(

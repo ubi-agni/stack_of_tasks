@@ -14,17 +14,6 @@ from stack_of_tasks.ui import RawDataRole
 _DataType = TypeVar("_DataType")
 
 
-class BaseItem(QStandardItem):
-    def raw_data(self):
-        return None
-
-    def data(self, role: int = Qt.DisplayRole) -> Any:
-        if role == RawDataRole:
-            return self.raw_data()
-
-        return super().data(role)
-
-
 class PlaceholderItem(QStandardItem):
     def __init__(self):
         super().__init__()
@@ -33,29 +22,13 @@ class PlaceholderItem(QStandardItem):
         self.setDropEnabled(False)
 
 
-class RawDataItem(Generic[_DataType], BaseItem):
-    def __init__(self, obj: _DataType):
-        super().__init__()
-        self._obj: _DataType = obj
-        if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
-            print("Adding observer for ", self, obj, obj.name)
-            self._obj.observe(self._nameChanged, "name")
-
-    def __del__(self):
-        if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
-            print("Removing observer for ", self._obj, self._obj.name)
-            self._obj.observe(self._nameChanged, "name", remove=True)
-
-    def _nameChanged(self, event):
-        print("name changed", event.new)
-        self.emitDataChanged()
-
+class RawDataBase(QStandardItem):
     def raw_data(self):
-        return self._obj
+        raise NotImplementedError
 
     def data(self, role: int = Qt.DisplayRole) -> Any:
         if role in [Qt.DisplayRole, Qt.EditRole]:  # return name of object
-            obj = self._obj
+            obj = self.raw_data()
 
             if isinstance(obj, enum.Enum):
                 return obj.name
@@ -70,7 +43,28 @@ class RawDataItem(Generic[_DataType], BaseItem):
             else:
                 return str(obj)
 
+        elif role == RawDataRole:
+            return self.raw_data()
+
         return super().data(role)
+
+
+class RawDataItem(Generic[_DataType], RawDataBase):
+    def __init__(self, obj: _DataType):
+        super().__init__()
+        self._obj: _DataType = obj
+        if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
+            self._obj.observe(self._nameChanged, "name")
+
+    def __del__(self):
+        if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
+            self._obj.observe(self._nameChanged, "name", remove=True)
+
+    def _nameChanged(self, event):
+        self.emitDataChanged()
+
+    def raw_data(self):
+        return self._obj
 
     def setData(self, value: Any, role: int) -> None:
         if role == Qt.EditRole:  # set name of object

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import enum
-
 import typing
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 import traits.api as ta
 from PyQt5.QtCore import Qt
@@ -13,10 +11,10 @@ from stack_of_tasks.ui import MappingEntryRole, RawDataRole, TraitRole
 from stack_of_tasks.ui.traits_mapping import is_editable_trait
 from stack_of_tasks.ui.traits_mapping.ui_mapping import Mapping, MappingEntry
 
-from .base import BaseItem, PlaceholderItem, RawDataItem
+from .base import QStandardItem, RawDataBase, RawDataItem
 
 
-class LevelItem(BaseItem):
+class LevelItem(QStandardItem):
     def __init__(self):
         super().__init__()
         self.setEditable(True)  # editable name in DisplayRole
@@ -27,7 +25,7 @@ class LevelItem(BaseItem):
         return super().data(role)
 
 
-class TraitTreeBase(BaseItem):
+class TraitTreeBase(QStandardItem):
     def _setup_children(self, obj: ta.HasTraits):
         self.removeRows(0, self.rowCount())
 
@@ -73,9 +71,10 @@ class AttrNameItem(TraitTreeBase):
         self._setup_children(evt.new)
 
 
-class AttrValueItem(RawDataItem):
+class AttrValueItem(RawDataBase):
     def __init__(self, obj: ta.HasTraits, attr_name: str):
-        super().__init__(obj)
+        super().__init__()
+        self._obj = obj
         self._attr_name = attr_name
         self._trait: ta.CTrait = obj.trait(attr_name)
         self._trait_map_entry: MappingEntry = Mapping.find_entry(self._trait)
@@ -99,8 +98,13 @@ class AttrValueItem(RawDataItem):
     def data(self, role: int = Qt.DisplayRole) -> Any:
         if role == MappingEntryRole:
             return self._trait_map_entry
-
         elif role == TraitRole:
             return self._trait
 
         return super().data(role)
+
+    def setData(self, value: Any, role: int) -> None:
+        if role == RawDataRole:
+            setattr(self._obj, self._attr_name, value)
+        else:
+            return super().setData(value, role)

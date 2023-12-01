@@ -57,7 +57,7 @@ TaskRegister = Register("TaskRegister", register_base=False)
 
 @TaskRegister.register_base
 class Task(ABCSoTHasTraits):
-    name = ""
+    name = ta.Str()
     task_size = -1
 
     # universal task properties

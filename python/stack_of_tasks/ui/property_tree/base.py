@@ -37,6 +37,18 @@ class RawDataItem(Generic[_DataType], BaseItem):
     def __init__(self, obj: _DataType):
         super().__init__()
         self._obj: _DataType = obj
+        if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
+            print("Adding observer for ", self, obj, obj.name)
+            self._obj.observe(self._nameChanged, "name")
+
+    def __del__(self):
+        if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
+            print("Removing observer for ", self._obj, self._obj.name)
+            self._obj.observe(self._nameChanged, "name", remove=True)
+
+    def _nameChanged(self, event):
+        print("name changed", event.new)
+        self.emitDataChanged()
 
     def raw_data(self):
         return self._obj
@@ -63,9 +75,8 @@ class RawDataItem(Generic[_DataType], BaseItem):
     def setData(self, value: Any, role: int) -> None:
         if role == Qt.EditRole:  # set name of object
             obj = self._obj
-            if hasattr(obj, "name") and obj.name != value:
+            if hasattr(obj, "name"):
                 obj.name = value
-                self.emitDataChanged()
         elif role == RawDataRole:
             setattr(self._obj, self._attr_name, value)
         else:

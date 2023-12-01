@@ -35,9 +35,10 @@ class TraitTreeBase(BaseItem):
             self._add_child(obj, name)
 
     def _add_child(self, obj, name):
-        attr_name = AttrNameItem(obj, name)
-        attr_value = AttrValueItem(obj, name)
-        self.appendRow([attr_name, attr_value])
+        if (me := Mapping.find_entry(obj.trait(name))) is not None:
+            attr_name = AttrNameItem(obj, name)
+            attr_value = AttrValueItem(obj, name)
+            self.appendRow([attr_name, attr_value])
 
     def _remove_child(self, name):
         for i in self.rowCount():

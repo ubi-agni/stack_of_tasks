@@ -231,13 +231,6 @@ def _ui_handler(handler, *args, **kwargs):
 
 
 def main():
-    logger.info("Setup application")
-    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
-    os.environ["QT_SCALE_FACTOR"] = "2"
-
-    QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
-
     logger.info("create main")
     set_ui_handler(_ui_handler)
 

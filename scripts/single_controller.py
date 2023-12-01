@@ -5,7 +5,8 @@ from app import Application
 import rospy
 
 from stack_of_tasks.marker.trait_marker import FullMovementMarker
-from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
+from stack_of_tasks.ref_frame import MarkerFrame
+from stack_of_tasks.ref_frame.frames import RobotRefFrame
 from stack_of_tasks.solver import OSQPSolver
 from stack_of_tasks.tasks.Eq_Tasks import (
     DistanceTask,
@@ -20,28 +21,32 @@ np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed"
 
 
 def setup(app: Application):
-    marker = FullMovementMarker("marker")
-    app.marker_server.add_marker(marker)
+    rospy.sleep(0.1)  # wait for joint_states message
+    app.controller.robot_state.update()
 
-    marker_frame = Origin().translate(0.5, 0, 0.5)
-    marker_frame.sync_trait("offset", marker, "transform")
+    eef = RobotRefFrame(app.controller.robot_state, "panda_hand_tcp")
 
-    robot_frame = RobotRefFrame(app.controller.robot_state, "panda_hand_tcp")
+    app.marker_server.add_marker(
+        marker := FullMovementMarker(
+            name="pose", frame_id=app.controller.robot_model.root_link, transform=eef.T
+        )
+    )
+    marker = MarkerFrame(marker)
 
-    posTask = PositionTask(marker_frame, robot_frame, TaskSoftnessType.linear)
-    oriTask = OrientationTask(marker_frame, robot_frame, TaskSoftnessType.linear, weight=1)
+    posTask = PositionTask(marker, eef, TaskSoftnessType.linear)
+    oriTask = OrientationTask(marker, eef, TaskSoftnessType.linear, weight=1)
 
-    planeTask = PlaneTask(marker_frame, robot_frame, TaskSoftnessType.linear)
+    planeTask = PlaneTask(marker, eef, TaskSoftnessType.linear)
     distTask = DistanceTask(
-        marker_frame,
-        robot_frame,
+        marker,
+        eef,
         softness_type=TaskSoftnessType.linear,
         weight=0.1,
         distance=0.2,
     )
     axis = np.array([0, 0, 1])
     axisTask = ParallelTask(
-        marker_frame, robot_frame, TaskSoftnessType.linear, robot_axis=axis, target_axis=axis
+        marker, eef, TaskSoftnessType.linear, robot_axis=axis, target_axis=axis
     )
 
     with app.task_hierarchy.new_level() as level:
@@ -51,5 +56,5 @@ def setup(app: Application):
 
 if __name__ == "__main__":
     rospy.init_node("sot")
-    app = Application(setup, OSQPSolver, True, rho=0.1)
+    app = Application(setup, OSQPSolver, rho=0.1)
     app.controller.control_loop(rospy.is_shutdown, 50)

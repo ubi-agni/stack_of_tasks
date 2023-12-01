@@ -21,7 +21,8 @@ import rospy
 from stack_of_tasks.logger import fix_rospy_logging, sot_logger
 from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
-from stack_of_tasks.ref_frame import Offset, RefFrame, RefFrameRegister
+from stack_of_tasks.marker.trait_marker import FullMovementMarker
+from stack_of_tasks.ref_frame import MarkerFrame, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
 from stack_of_tasks.robot_model.actuators import DummyPublisherActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
@@ -29,7 +30,7 @@ from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import TaskRegister
-from stack_of_tasks.tasks.Eq_Tasks import PositionTask
+from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, PositionTask
 from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui.mainwindow import Ui
@@ -189,15 +190,20 @@ class Main(BaseSoTHasTraits):
     def setup(self):
         self.task_hierachy_model.set_stack(self.controller.task_hierarchy)
 
-        o = Origin()
-        off = Offset(frame=o)
+        rospy.sleep(0.1)  # wait for joint_states message
+        self.controller.robot_state.update()
+        root_link = self.controller.robot_model.root_link
 
-        frame = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp", name="hand")
-        self.refs.extend([o, off, frame])
+        eef = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp")
+        self.new_marker(
+            FullMovementMarker, dict(name="pose", frame_id=root_link, transform=eef.T)
+        )
+
+        self.refs.extend([Origin(), goal := MarkerFrame(self.marker[-1]), eef])
 
         with self.controller.task_hierarchy.new_level() as level:
-            task = PositionTask(off, frame, TaskSoftnessType.linear)
-            level.append(task)
+            level.append(PositionTask(goal, eef, TaskSoftnessType.linear))
+            level.append(OrientationTask(goal, eef, TaskSoftnessType.linear))
 
     def new_ref(self, cls, args):
         new_ref = DependencyInjection.create_instance(cls, args)

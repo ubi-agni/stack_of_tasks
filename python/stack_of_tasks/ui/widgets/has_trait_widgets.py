@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import qtawesome
 import traits.api as ta
 from PyQt5.QtCore import pyqtProperty
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QFormLayout,
     QGroupBox,
@@ -103,12 +103,8 @@ class LinkButtonWrapper(QHBoxLayout):
     def __init__(self, widget):
         super().__init__()
 
-        self.link_icon = qtawesome.icon("fa.link")
-        self.unlink_icon = qtawesome.icon("fa.unlink")
-
         self.addWidget(widget)
-
-        self.link_button = QPushButton(icon=self.link_icon)
+        self.link_button = QPushButton(icon=QIcon.fromTheme("insert-link"))
         self.link_button.setContentsMargins(0, 0, 0, 0)
         self.addWidget(self.link_button)
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from logging import Logger
 
-import qtawesome as qta
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QVariant, pyqtProperty, pyqtSignal
 from PyQt5.QtGui import QPainter, QPaintEvent
@@ -113,10 +112,8 @@ class AddableObjectDropdown(ObjectDropdown):
         button_option = QStyleOptionButton()
         button_option.initFrom(self)
 
-        button_option.icon = qta.icon("fa.plus")
+        button_option.icon = QtGui.QIcon.fromTheme("add")
         button_option.iconSize = cb_option.iconSize
-
-        button_option.palette.setColor(QtGui.QPalette.Button, QtGui.QColor(19, 174, 75))
 
         button_option.state |= self._button_state
         button_option.rect = QtCore.QRect(

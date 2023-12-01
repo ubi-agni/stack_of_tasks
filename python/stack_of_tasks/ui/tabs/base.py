@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import qtawesome as qta
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QToolBar, QVBoxLayout, QWidget
 
 
@@ -15,8 +15,8 @@ class Base(QWidget):
 
         self.verticalLayout.addWidget(self.tool_bar)
 
-        self.add_action = self.tool_bar.addAction(qta.icon("fa.plus"), "add")
-        self.remove_action = self.tool_bar.addAction(qta.icon("fa.trash-o"), "remove")
+        self.add_action = self.tool_bar.addAction(QIcon.fromTheme("add"), "add")
+        self.remove_action = self.tool_bar.addAction(QIcon.fromTheme("remove"), "remove")
         self.remove_action.setDisabled(True)
 
         self.add_action.triggered.connect(self.add_action_callback)

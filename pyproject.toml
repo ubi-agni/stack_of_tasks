@@ -8,14 +8,13 @@ dependencies = [
     'numpy',
     'osqp',
     'PyQt5',
-    'QtAwesome',
     'rospy',
     'scipy',
     'scipy',
     'scs',
     'scs',
     'traits',
-    'typing_extensions'
+    'typing_extensions',
 ]
 
 [tool.black]

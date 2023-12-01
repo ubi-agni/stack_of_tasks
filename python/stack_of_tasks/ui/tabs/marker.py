@@ -23,7 +23,7 @@ class Marker(Base):
         self.horizontalLayout.addWidget(self.marker_view)
 
         self.edit_marker = EditorGroupBox()
-
+        self.edit_marker.setTitle("properties:")
         self.horizontalLayout.addWidget(self.edit_marker)
 
         model = ModelMapping.get_mapping(IAMarker)

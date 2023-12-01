@@ -23,7 +23,7 @@ class RefFrames(Base):
         self.horizontalLayout.addWidget(self.ref_view)
 
         self.edit_ref = EditorGroupBox(self)
-        self.edit_ref.setTitle("Edit Ref:")
+        self.edit_ref.setTitle("properties:")
         self.horizontalLayout.addWidget(self.edit_ref)
 
         model = ModelMapping.get_mapping(RefFrame)

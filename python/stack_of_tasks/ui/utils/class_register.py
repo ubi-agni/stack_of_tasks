@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from functools import wraps
 
-from typing import Any, Generic, Type
+from typing import Generic, Type, TypeVar
 
 
 class RegisterBaseError(Exception):
@@ -15,8 +15,6 @@ class RegisterBaseError(Exception):
         super().__init__(tr)
 
 
-from typing import TypeVar
-
 ClassType = TypeVar("ClassType")
 
 
@@ -26,16 +24,17 @@ class Register(Generic[ClassType]):
         self._base_cls: ClassType = None
         self._register: list[ClassType] = []
 
-        self._abstract = register_abstract
-        self._base = register_base
+        self._abstract = register_abstract  # register abstract classes too?
+        self._base = register_base  # register the base class too?
 
     def register_base(self, cls: ClassType):
+        """decorator to mark a base class (and all its subclasses) for registration with this Register"""
         if self._base_cls is not None:
             raise RegisterBaseError(self._base_cls, cls, self)
 
         self._base_cls = cls
 
-        old_init = getattr(cls, "__init_subclass__")
+        old_init = cls.__init_subclass__
 
         @classmethod
         @wraps(old_init)
@@ -52,6 +51,7 @@ class Register(Generic[ClassType]):
         return cls
 
     def skip_register(self, cls):
+        """decorator to skip a class from registration with this Register"""
         if cls in self._register:
             self._register.remove(cls)
         return cls

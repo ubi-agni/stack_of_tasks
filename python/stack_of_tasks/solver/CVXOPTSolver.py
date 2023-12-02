@@ -72,6 +72,6 @@ class CVXOPTSolver(HqpSolver):
             cvxopt.matrix(np.array(A)),
             cvxopt.matrix(np.array(b)),
             initvals=initvals,
-            verbose=False,
+            options=dict(show_progress=False),
         )
         return sol

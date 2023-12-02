@@ -26,11 +26,7 @@ def setup(app: Application):
 
     eef = RobotRefFrame(app.controller.robot_state, "panda_hand_tcp")
 
-    app.marker_server.add_marker(
-        marker := FullMovementMarker(
-            name="pose", frame_id=app.controller.robot_model.root_link, transform=eef.T
-        )
-    )
+    app.marker_server.add_marker(marker := FullMovementMarker(name="pose", transform=eef.T))
     marker = MarkerFrame(marker)
 
     posTask = PositionTask(marker, eef, TaskSoftnessType.linear)

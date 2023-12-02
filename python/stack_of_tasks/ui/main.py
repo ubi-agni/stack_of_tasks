@@ -138,7 +138,7 @@ class Main(BaseSoTHasTraits):
         self.marker_server = MarkerServer()
 
         model = self.controller.robot_model
-        # IAMarker.class_traits()["frame_id"].default_value = model.root_link
+        IAMarker._default_frame_id = model.root_link
         RobotRefFrame.class_traits()["_robot_state"].injected = "robot_state"
         DependencyInjection.mapping["robot_state"] = self.controller.robot_state
 
@@ -192,12 +192,9 @@ class Main(BaseSoTHasTraits):
 
         rospy.sleep(0.1)  # wait for joint_states message
         self.controller.robot_state.update()
-        root_link = self.controller.robot_model.root_link
 
         eef = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp")
-        self.new_marker(
-            FullMovementMarker, dict(name="pose", frame_id=root_link, transform=eef.T)
-        )
+        self.new_marker(FullMovementMarker, dict(name="pose", transform=eef.T))
 
         self.refs.extend([Origin(), goal := MarkerFrame(self.marker[-1]), eef])
 

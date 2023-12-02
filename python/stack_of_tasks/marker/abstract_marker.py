@@ -27,6 +27,7 @@ MarkerRegister = Register("MarkerRegister")
 class IAMarker(ABCSoTHasTraits):
     name = ta.Str(value="")
 
+    _default_frame_id = ""
     frame_id = ta.Str()
 
     transform = ta.Array(
@@ -50,6 +51,10 @@ class IAMarker(ABCSoTHasTraits):
         )
 
         self.markers.append(self.marker)
+
+    # trait method for dynamic default
+    def _frame_id_default(self):
+        return self._default_frame_id
 
     @ta.observe("name", post_init=True)
     def _name_changed(self, evt: TraitChangeEvent):

@@ -19,13 +19,13 @@ ClassType = TypeVar("ClassType")
 
 
 class Register(Generic[ClassType]):
-    def __init__(self, name: str, register_abstract=False, register_base=True) -> None:
+    def __init__(self, name: str, *, include_abstract=False, include_base=False) -> None:
         self.name: str = name
         self._base_cls: ClassType = None
         self._register: list[ClassType] = []
 
-        self._abstract = register_abstract  # register abstract classes too?
-        self._base = register_base  # register the base class too?
+        self._include_abstract = include_abstract  # register abstract classes too?
+        self._include_base = include_base  # register the base class too?
 
     def register_base(self, cls: ClassType):
         """decorator to mark a base class (and all its subclasses) for registration with this Register"""
@@ -41,11 +41,11 @@ class Register(Generic[ClassType]):
         def _init_subclass(sub_cls) -> None:
             old_init()
 
-            if self._abstract or not inspect.isabstract(sub_cls):
+            if self._include_abstract or not inspect.isabstract(sub_cls):
                 self._register.append(sub_cls)
 
         cls.__init_subclass__ = _init_subclass
-        if self._base:
+        if self._include_base:
             cls.__init_subclass__()
 
         return cls
@@ -66,12 +66,12 @@ class Register(Generic[ClassType]):
 
     @property
     def concrete_class_names(self):
-        if self._abstract:
+        if self._include_abstract:
             return [cls.__name__ for cls in self._register if not inspect.isabstract(cls)]
         return self.class_names
 
     @property
     def concrete_classes(self):
-        if self._abstract:
+        if self._include_abstract:
             return [cls for cls in self._register if not inspect.isabstract(cls)]
         return self.classes

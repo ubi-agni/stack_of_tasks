@@ -52,7 +52,7 @@ def task_kind_check(task: Task, *types):
     return True
 
 
-TaskRegister = Register("TaskRegister", register_base=False)
+TaskRegister = Register("TaskRegister")
 
 
 @TaskRegister.register_base

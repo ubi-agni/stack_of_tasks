@@ -5,7 +5,7 @@ import traits.api as ta
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui.utils.class_register import Register
 
-SolverRegister = Register("SolverRegister", register_base=False)
+SolverRegister = Register("SolverRegister")
 
 
 @SolverRegister.register_base

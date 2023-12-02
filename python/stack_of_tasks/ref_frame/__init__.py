@@ -14,7 +14,7 @@ Transform = np.ndarray
 Jacobian = np.ndarray
 
 
-RefFrameRegister = Register("RefFrameRegister", register_base=False)
+RefFrameRegister = Register("RefFrameRegister")
 
 
 @runtime_checkable

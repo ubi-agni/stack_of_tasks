@@ -3,9 +3,9 @@ from abc import abstractmethod
 import traits.api as ta
 
 from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
-from stack_of_tasks.ui.utils.class_register import Register
+from stack_of_tasks.utils import ClassRegister
 
-SolverRegister = Register("SolverRegister")
+SolverRegister = ClassRegister("SolverRegister")
 
 
 @SolverRegister.base

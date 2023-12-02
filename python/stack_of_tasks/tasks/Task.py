@@ -14,7 +14,7 @@ import traits.observation.expression as te
 
 from stack_of_tasks.ref_frame import Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame, RobotRefFrame
-from stack_of_tasks.ui.utils.class_register import Register
+from stack_of_tasks.utils import ClassRegister
 from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
 UpperBound = NDArray
@@ -52,7 +52,7 @@ def task_kind_check(task: Task, *types):
     return True
 
 
-TaskRegister = Register("TaskRegister")
+TaskRegister = ClassRegister("TaskRegister")
 
 
 @TaskRegister.base

@@ -6,9 +6,9 @@ from functools import wraps
 from typing import Generic, Type, TypeVar
 
 
-class RegisterBaseError(Exception):
+class ClassRegisterBaseError(Exception):
     def __init__(
-        self, first_cls: Type[object], second_cls: Type[object], register: Register
+        self, first_cls: Type[object], second_cls: Type[object], register: ClassRegister
     ) -> None:
         tr = f"{register.name} can't set {second_cls.__name__} as base.\n"
         tr += f"Base was already set in {inspect.getfile(first_cls)}, line {inspect.getsourcelines(first_cls)[1]}."
@@ -18,7 +18,7 @@ class RegisterBaseError(Exception):
 ClassType = TypeVar("ClassType")
 
 
-class Register(Generic[ClassType]):
+class ClassRegister(Generic[ClassType]):
     def __init__(self, name: str, *, include_abstract=False, include_base=False) -> None:
         self.name: str = name
         self._base_cls: ClassType = None
@@ -30,7 +30,7 @@ class Register(Generic[ClassType]):
     def base(self, cls: ClassType):
         """decorator to mark a base class (and all its subclasses) for registration with this Register"""
         if self._base_cls is not None:
-            raise RegisterBaseError(self._base_cls, cls, self)
+            raise ClassRegisterBaseError(self._base_cls, cls, self)
 
         self._base_cls = cls
 

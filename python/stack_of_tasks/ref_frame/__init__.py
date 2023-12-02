@@ -7,14 +7,14 @@ import traits.api as ta
 
 import tf.transformations as tfs
 
-from stack_of_tasks.ui.utils.class_register import Register
+from stack_of_tasks.utils import ClassRegister
 from stack_of_tasks.utils.traits import ABCSoTHasTraits, matrix_edit
 
 Transform = np.ndarray
 Jacobian = np.ndarray
 
 
-RefFrameRegister = Register("RefFrameRegister")
+RefFrameRegister = ClassRegister("RefFrameRegister")
 
 
 @runtime_checkable

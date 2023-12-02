@@ -1,5 +1,7 @@
 from numpy.typing import NDArray
 
+from .class_register import ClassRegister, ClassRegisterBaseError
+
 
 def prettyprintMatrix(matrix: NDArray, fmt=".2"):
     if len(matrix.shape) == 1:

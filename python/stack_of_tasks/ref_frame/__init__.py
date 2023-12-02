@@ -7,14 +7,14 @@ import traits.api as ta
 
 import tf.transformations as tfs
 
-from stack_of_tasks.ui.utils.class_register import Register
+from stack_of_tasks.utils import ClassRegister
 from stack_of_tasks.utils.traits import ABCSoTHasTraits, matrix_edit
 
 Transform = np.ndarray
 Jacobian = np.ndarray
 
 
-RefFrameRegister = Register("RefFrameRegister", register_base=False)
+RefFrameRegister = ClassRegister("RefFrameRegister")
 
 
 @runtime_checkable
@@ -37,7 +37,7 @@ class HasTransform(Protocol):
     T: Transform
 
 
-@RefFrameRegister.register_base
+@RefFrameRegister.base
 class RefFrame(ABCSoTHasTraits):
     """The base class for all reference frames."""
 

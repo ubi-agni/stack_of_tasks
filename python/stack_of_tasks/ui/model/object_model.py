@@ -7,7 +7,7 @@ from PyQt5.QtCore import QModelIndex, QObject, QSortFilterProxyModel
 from PyQt5.QtGui import QStandardItemModel
 
 from stack_of_tasks.ui.property_tree.base import RawDataItem, RawDataRole
-from stack_of_tasks.ui.utils.class_register import Register
+from stack_of_tasks.utils import ClassRegister
 
 ObjectType = TypeVar("ObjectType")
 
@@ -25,7 +25,7 @@ class ObjectModel(Generic[ObjectType], QStandardItemModel):
                 return i
 
     @classmethod
-    def from_class_register(cls: Type[Self], register: Register) -> Self:
+    def from_class_register(cls: Type[Self], register: ClassRegister) -> Self:
         return cls(register.concrete_classes)
 
     def append(self, obj: ObjectType):

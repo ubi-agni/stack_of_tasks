@@ -16,14 +16,14 @@ from visualization_msgs.msg import (
     Marker,
 )
 
-from stack_of_tasks.ui.utils.class_register import Register
+from stack_of_tasks.utils import ClassRegister
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose
 from stack_of_tasks.utils.traits import ABCSoTHasTraits, Guard
 
-MarkerRegister = Register("MarkerRegister")
+MarkerRegister = ClassRegister("MarkerRegister")
 
 
-@MarkerRegister.register_base
+@MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
     name = ta.Str(value="")
 

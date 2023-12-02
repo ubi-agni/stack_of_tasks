@@ -28,7 +28,7 @@ class ClassRegister(Generic[ClassType]):
         self._include_base = include_base  # register the base class too?
 
     def base(self, cls: ClassType):
-        """decorator to mark a base class (and all its subclasses) for registration with this Register"""
+        """decorator to mark a base class (and all its subclasses) for registration with this register"""
         if self._base_cls is not None:
             raise ClassRegisterBaseError(self._base_cls, cls, self)
 
@@ -51,7 +51,7 @@ class ClassRegister(Generic[ClassType]):
         return cls
 
     def skip(self, cls):
-        """decorator to skip a class from registration with this Register"""
+        """decorator to skip a class from registration with this register"""
         if cls in self._register:
             self._register.remove(cls)
         return cls

@@ -51,6 +51,11 @@ class TaskHierarchy(BaseSoTHasTraits):
     def __getitem__(self, index):
         return self.levels[index]
 
+    def tasks(self):
+        """Iterate over all tasks in the hierarchy"""
+        for level in self.levels:
+            yield from level
+
     stack_changed = ta.Event()
     layout_changed = ta.Event()
 

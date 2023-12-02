@@ -79,15 +79,15 @@ class Task(ABCSoTHasTraits):
         self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits
     ) -> None:
         super().__init__(softness_type=softness_type, weight=weight, **traits)
-        self.observe(
-            self._trigger_recompute, "weight"
-        )  # what properties should trigger recomputation
+        # define which properties trigger recomputation
+        self.observe(self._trigger_recompute, "weight")
 
     _recompute = ta.Event()
+    _residual_update = ta.Event()
 
     # function to trigger computation
-    def _trigger_recompute(self, event_data=None):
-        self._recompute = event_data
+    def _trigger_recompute(self, *args):
+        self._recompute = True
 
     _compute_val = ta.Property()
 
@@ -164,7 +164,7 @@ class TargetTask(Task, ABC):
 
 class EqTask(Task, ABC):
     bound = ta.Property(trait=ta.Array, depends_on="_recompute", visible=False)
-    residual = ta.Property(trait=ta.Array, visible=False, depends_on="bound")
+    residual = ta.Property(trait=ta.Array, visible=False, depends_on="_residual_update")
 
     def _get_bound(self):
         return self._compute_val[1]
@@ -180,7 +180,7 @@ class EqTask(Task, ABC):
 class IeqTask(Task, ABC):
     upper_bound = ta.Property(observe="_compute_val")
     lower_bound = ta.Property(observe="_compute_val")
-    residual = ta.Property(trait=ta.Array, visible=False, depends_on="lower_bound")
+    residual = ta.Property(trait=ta.Array, visible=False, depends_on="_residual_update")
 
     def _get_lower_bound(self) -> LowerBound:
         return self._compute_val[1]

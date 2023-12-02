@@ -186,6 +186,13 @@ class Main(BaseSoTHasTraits):
             self.task_hierachy_model.endResetModel()
 
         self.controller.task_hierarchy.observe(_reset_th, "stack_changed, layout_changed")
+        self.residual_update_timer = QtCore.QTimer()
+
+        def update_residuals():
+            for task in self.controller.task_hierarchy.tasks():
+                task._residual_update = True
+
+        self.residual_update_timer.timeout.connect(update_residuals)
 
     def setup(self):
         self.task_hierachy_model.set_stack(self.controller.task_hierarchy)
@@ -260,18 +267,18 @@ def main():
     ui_window.tab_widget.refs.new_ref_signal.connect(main_app.new_ref)
     ui_window.tab_widget.marker.new_marker_signal.connect(main_app.new_marker)
 
-    def button():
-        state = main_app.controller.toggle_solver_state()
-
-        if state:
+    def toggle_start_stop():
+        if main_app.controller.toggle_solver_state():
             ui_window.run_Button.setText("Stop")
+            main_app.residual_update_timer.start(100)
         else:
             ui_window.run_Button.setText("Start")
+            main_app.residual_update_timer.stop()
 
     def debug_button():
         print(main_app.controller.task_hierarchy.levels)
 
-    ui_window.run_Button.clicked.connect(button)
+    ui_window.run_Button.clicked.connect(toggle_start_stop)
 
     app.exec()
 

@@ -8,7 +8,7 @@ from stack_of_tasks.ui.utils.class_register import Register
 SolverRegister = Register("SolverRegister")
 
 
-@SolverRegister.register_base
+@SolverRegister.base
 class Solver(ta.ABCHasTraits):
     def __init__(
         self, number_of_joints: int, stack_of_tasks: TaskHierarchy, **options

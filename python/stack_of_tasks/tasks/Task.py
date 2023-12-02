@@ -55,7 +55,7 @@ def task_kind_check(task: Task, *types):
 TaskRegister = Register("TaskRegister")
 
 
-@TaskRegister.register_base
+@TaskRegister.base
 class Task(ABCSoTHasTraits):
     name = ta.Str()
     task_size = -1

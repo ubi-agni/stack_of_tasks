@@ -37,7 +37,7 @@ class HasTransform(Protocol):
     T: Transform
 
 
-@RefFrameRegister.register_base
+@RefFrameRegister.base
 class RefFrame(ABCSoTHasTraits):
     """The base class for all reference frames."""
 

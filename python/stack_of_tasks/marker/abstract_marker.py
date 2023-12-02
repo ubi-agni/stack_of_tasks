@@ -23,7 +23,7 @@ from stack_of_tasks.utils.traits import ABCSoTHasTraits, Guard
 MarkerRegister = Register("MarkerRegister")
 
 
-@MarkerRegister.register_base
+@MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
     name = ta.Str(value="")
 

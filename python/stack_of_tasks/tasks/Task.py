@@ -67,7 +67,7 @@ class Task(ABCSoTHasTraits):
         low=0.0,
         value=1.0,
         exclude_low=True,
-        desc="The weight of this task in its task-level.",
+        desc="weight of this task w.r.t. other tasks in the same level",
     )
 
     A: A = ta.Property(depends_on="_recompute", trait=ta.Array, visible=False)
@@ -103,8 +103,8 @@ class Task(ABCSoTHasTraits):
 class RelativeTask(Task, ABC):
     relType: RelativeType = ta.Enum(RelativeType, default=RelativeType.A_FIXED)
 
-    refA: RefFrame = ta.Instance(RefFrame)
-    refB: RefFrame = ta.Instance(RefFrame)
+    refA: RefFrame = ta.Instance(RefFrame, label="frame A")
+    refB: RefFrame = ta.Instance(RefFrame, label="frame B")
 
     _J: Jacobian = ta.Property(
         observe=(maybe_child("refA", "J") | maybe_child("refB", "J") | te.trait("relType"))

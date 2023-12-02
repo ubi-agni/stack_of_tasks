@@ -92,7 +92,8 @@ class HasTraitsFormLayout(QFormLayout):
                 set_user_property(widget, getattr(inst, name))
 
                 trait_widget_binding(inst, name, widget)
-                self.addRow(name, widget)
+                widget.setToolTip(trait.desc)
+                self.addRow(trait.label or name, widget)
 
     def clear(self):
         while self.rowCount() > 0:

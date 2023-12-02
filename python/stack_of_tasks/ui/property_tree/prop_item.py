@@ -60,7 +60,9 @@ class AttrNameItem(TraitTreeBase):
         self.setSelectable(False)
         self.setEditable(False)
 
-        self.setText(attr_name)
+        trait = obj.trait(attr_name)
+        self.setText(trait.label or attr_name)
+        self.setToolTip(trait.desc)
 
         data = getattr(obj, attr_name)
         if isinstance(data, ta.HasTraits):
@@ -83,6 +85,7 @@ class AttrValueItem(RawDataBase):
         self.setEditable(is_editable_trait(attr_name, self._trait))
         self.setDragEnabled(False)
         self.setDropEnabled(False)
+        self.setToolTip(self._trait.desc)
 
         obj.observe(self._data_changed, attr_name)
 

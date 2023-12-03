@@ -10,7 +10,7 @@ from stack_of_tasks.robot_model.robot_state import RobotState
 class Origin(RefFrame):
     """Defines the origin. T is the identity and can not be changed."""
 
-    T: Transform = ta.ReadOnly(np.identity(4))
+    T: Transform = ta.ReadOnly(np.identity(4), transient=True)
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)

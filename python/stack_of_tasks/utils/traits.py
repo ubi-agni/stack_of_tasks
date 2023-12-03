@@ -3,6 +3,8 @@ from contextlib import contextmanager
 
 import traits.api as ta
 
+from stack_of_tasks.ui.utils.class_register import Register
+
 
 @contextmanager
 def matrix_edit(obj: ta.HasTraits, trait: str, capture_old=True):
@@ -11,11 +13,22 @@ def matrix_edit(obj: ta.HasTraits, trait: str, capture_old=True):
     obj.trait_property_changed(trait, old, obj.trait_get(trait))
 
 
+register_all = Register("all", register_base=False)
+
+
+@register_all.register_base
 class BaseSoTHasTraits(ta.HasTraits):
+    __init_subclass_hooks__ = []
+
     # Make 'private' traits (leading '_') have no type checking:
     __ = ta.Any(private=True, transient=True)
 
     trait_removed = ta.Event()
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for f in cls.__init_subclass_hooks__:
+            f(cls)
 
     def remove_trait(self, name):
         r = super().remove_trait(name)

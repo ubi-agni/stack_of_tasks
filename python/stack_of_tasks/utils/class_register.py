@@ -34,19 +34,13 @@ class ClassRegister(Generic[ClassType]):
 
         self._base_cls = cls
 
-        old_init = cls.__init_subclass__
-
-        @classmethod
-        @wraps(old_init)
-        def _init_subclass(sub_cls) -> None:
-            old_init()
-
-            if self._include_abstract or not inspect.isabstract(sub_cls):
+        def hook(sub_cls):
+            if (
+                self._abstract or not inspect.isabstract(sub_cls)
+            ) and sub_cls not in self._register:
                 self._register.append(sub_cls)
 
-        cls.__init_subclass__ = _init_subclass
-        if self._include_base:
-            cls.__init_subclass__()
+        cls.__init_subclass_hooks__.append(hook)
 
         return cls
 
@@ -75,3 +69,8 @@ class ClassRegister(Generic[ClassType]):
         if self._include_abstract:
             return [cls for cls in self._register if not inspect.isabstract(cls)]
         return self.classes
+
+    def find_class_by_name(self, name: str):
+        for c in self.classes:
+            if c.__name__ == name:
+                return c

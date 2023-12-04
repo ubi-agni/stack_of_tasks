@@ -119,7 +119,7 @@ class SOT_Model(QStandardItemModel):
         if isinstance(data, InternalMoveMimeData):
             parent = self.itemFromIndex(parent)
             movable = any(isinstance(item, (LevelItem, TaskItem)) for item in data.items)
-            print(movable, "->", parent, row, column)
+            # print(movable, "->", parent, row, column)
             return (
                 column <= 0 and (isinstance(parent, LevelItem) or parent is None) and movable
             )
@@ -140,18 +140,14 @@ class SOT_Model(QStandardItemModel):
 
             def insert(tasks: list[Task], append_on_level=False):
                 if dest is None:  # drop on root
-                    # BUG: list insertion disables trait notifications
-                    # idx = len(levels) if row < 0 else row
-                    # levels.insert(idx, tasks)
-                    idx = len(levels)
-                    levels.append(tasks)
+                    idx = len(levels) if row < 0 else row
+                    levels.insert(idx, tasks)
                     return self.itemFromIndex(self.index(idx, 0))
                 elif isinstance(dest, LevelItem):
                     if row < 0:  # drop on level
                         if append_on_level:
                             self.insert_into_level(levels[dest.row()], tasks)
                         else:  # insert after
-                            return None  # BUG: list insertion disables trait notifications
                             idx = dest.row() + 1
                             levels.insert(idx, tasks)
                             return self.itemFromIndex(self.index(idx, 0))

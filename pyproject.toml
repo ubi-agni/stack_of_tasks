@@ -7,13 +7,12 @@ dependencies = [
     'cvxopt',
     'numpy',
     'osqp',
-    'PyQt5',
+    # 'PyQt5',
     'rospy',
     'scipy',
-    'scipy',
     'scs',
-    'scs',
-    'traits',
+    # 'traits',
+    'https://github.com/rhaschke/traits#egg=maint/6.4',
     'typing_extensions',
 ]
 

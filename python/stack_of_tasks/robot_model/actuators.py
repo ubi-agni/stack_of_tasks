@@ -22,7 +22,14 @@ def initial_joint_values(state: RobotState, ns="", param="initial_joints"):
         raise TypeError(f"Invalid type for {param}: {type(values)}")
 
 
-class DummyActuator:
+class Actuator:
+    """Base class for actuators"""
+
+    def actuate(self, dq):
+        raise NotImplementedError()
+
+
+class DummyActuator(Actuator):
     """Directly update current joint values with deltas"""
 
     def __init__(self, robot_state: RobotState, ns_prefix="") -> None:
@@ -101,7 +108,7 @@ class JointStatePublisherActuator(DummyActuator, JointStateSubscriber, JointStat
         self.publish(self._robot_state.joint_values + dq, dq)
 
 
-class VelocityCommandActuator(JointStateSubscriber):
+class VelocityCommandActuator(Actuator, JointStateSubscriber):
     """Publish joint state deltas to velocity controller"""
 
     def __init__(

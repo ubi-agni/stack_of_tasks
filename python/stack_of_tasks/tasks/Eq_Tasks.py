@@ -3,7 +3,7 @@ import traits.api as ta
 
 from tf.transformations import rotation_from_matrix
 
-from stack_of_tasks.tasks.Task import A, Bound, EqTask, RelativeTask, TargetTask, Tuple
+from stack_of_tasks.tasks.base import A, Bound, EqTask, RelativeTask, TargetTask, Tuple
 from stack_of_tasks.utils.transform_math import skew
 
 

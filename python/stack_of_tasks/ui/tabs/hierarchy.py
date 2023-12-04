@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QToolBar, QVBoxLayout, QWidget
-
-from stack_of_tasks.tasks.Task import Task
+from stack_of_tasks.tasks import Task
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
 from stack_of_tasks.ui.property_tree.prop_tree import SOT_View
 from stack_of_tasks.ui.utils.dependency_injection import DependencyInjection
@@ -31,7 +29,7 @@ class Hierarchy(Base):
             args = dialog.traits.get_arguments()
             task = DependencyInjection.create_instance(cls, args)
 
-            self.treeView.add_task(task)
+            self.treeView.add_tasks([task])
 
     def remove_action_callback(self):
         self.treeView.remove_selected()

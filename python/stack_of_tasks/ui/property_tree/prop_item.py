@@ -20,8 +20,8 @@ class LevelItem(QStandardItem):
         self.setEditable(True)  # editable name in DisplayRole
 
     def data(self, role: int = Qt.DisplayRole) -> Any:
-        if role in [Qt.DisplayRole, Qt.EditRole]:
-            return super().data(role=Qt.DisplayRole) or f"Level {self.row() + 1}"
+        if role == Qt.DisplayRole:
+            return super().data(role=Qt.EditRole) or f"Level {self.row() + 1}"
         return super().data(role)
 
 
@@ -59,6 +59,7 @@ class AttrNameItem(TraitTreeBase):
 
         self.setSelectable(False)
         self.setEditable(False)
+        self.setTextAlignment(Qt.AlignLeft | Qt.AlignTop)
 
         trait = obj.trait(attr_name)
         self.setText(trait.label or attr_name)

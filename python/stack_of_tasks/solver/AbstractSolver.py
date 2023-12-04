@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 import traits.api as ta
 
-from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
+from stack_of_tasks.tasks import TaskHierarchy
 from stack_of_tasks.utils import ClassRegister
 
 SolverRegister = ClassRegister("SolverRegister")
@@ -11,18 +11,17 @@ SolverRegister = ClassRegister("SolverRegister")
 @SolverRegister.base
 class Solver(ta.ABCHasTraits):
     def __init__(
-        self, number_of_joints: int, stack_of_tasks: TaskHierarchy, **options
+        self, number_of_joints: int, task_hierarchy: TaskHierarchy, **options
     ) -> None:
         super().__init__(**options)
         self.N = number_of_joints
-        self._stack_of_tasks = stack_of_tasks
+        self._task_hierarchy = task_hierarchy
 
-    def set_stack_of_tasks(self, stack_of_tasks: TaskHierarchy):
-        self._stack_of_tasks = stack_of_tasks
-        self.stack_changed()
+    def set_task_hierarchy(self, task_hierarchy: TaskHierarchy):
+        self._task_hierarchy = task_hierarchy
+        self.tasks_changed()
 
-    @abstractmethod
-    def stack_changed(self):
+    def tasks_changed(self):
         ...
 
     @abstractmethod

@@ -9,7 +9,7 @@ from stack_of_tasks.robot_model.actuators import DummyPublisherActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
-from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
+from stack_of_tasks.tasks import TaskHierarchy
 from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
@@ -34,10 +34,6 @@ class Controller(BaseSoTHasTraits):
         # collection of tasks
         self.task_hierarchy = TaskHierarchy()
         self.solver = solver(self.robot_model.N, self.task_hierarchy, **solver_args)
-
-    @ta.observe("task_hierarchy.stack_changed")
-    def _stack_change(self, evt):
-        self.solver.stack_changed()
 
     def control_loop(self, stopping_condition: Callable[[], bool], rate: int):
         rrate = rospy.Rate(rate)

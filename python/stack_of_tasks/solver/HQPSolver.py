@@ -7,8 +7,8 @@ import numpy as np
 import traits.api as ta
 
 from stack_of_tasks.solver.AbstractSolver import Solver
-from stack_of_tasks.tasks.Task import EqTask, IeqTask, TaskSoftnessType, task_kind_check
-from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
+from stack_of_tasks.tasks import EqTask, IeqTask, TaskHierarchy, TaskSoftnessType
+from stack_of_tasks.tasks.base import task_kind_check
 
 
 class HqpSolver(Solver):
@@ -44,9 +44,9 @@ class HqpSolver(Solver):
     rho = ta.Range(0.0, value=0.1, exclude_low=True)
 
     def __init__(
-        self, number_of_joints: int, stack_of_tasks: TaskHierarchy, **options
+        self, number_of_joints: int, task_hierarchy: TaskHierarchy, **options
     ) -> None:
-        super().__init__(number_of_joints, stack_of_tasks, **options)
+        super().__init__(number_of_joints, task_hierarchy, **options)
 
         self.m_slacks = 0
         self.m_eq = 0
@@ -85,11 +85,8 @@ class HqpSolver(Solver):
         self._calculate_sot_sizes()
         self._create_matrix()
 
-    def set_stack_of_tasks(self, stack_of_tasks: TaskHierarchy):
-        self._stack_of_tasks = stack_of_tasks
-
-    def stack_changed(self):
-        super().stack_changed()
+    def tasks_changed(self):
+        super().tasks_changed()
         self._calculate_sot_sizes()
         self._create_matrix()
 
@@ -108,7 +105,7 @@ class HqpSolver(Solver):
         self.m_ns = 0
 
         # find number of slacks
-        for level in self._stack_of_tasks:
+        for level in self._task_hierarchy:
             level_slacks = level_ieq_r = level_sieq_r = level_eq_r = 0
 
             for task in level:
@@ -176,7 +173,7 @@ class HqpSolver(Solver):
         self.sieq_rows = 0
         self.slacks = 0
 
-        for task in self._stack_of_tasks[level_index]:
+        for task in self._task_hierarchy[level_index]:
             if task_kind_check(task, TaskSoftnessType.hard, EqTask):
                 self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
                 self.eq_matrix[
@@ -274,7 +271,7 @@ class HqpSolver(Solver):
         self._set_bounds(lower_dq, upper_dq)
         dq_warmstart = options.pop("warmstart")
 
-        for level_index, _ in enumerate(self._stack_of_tasks):
+        for level_index, _ in enumerate(self._task_hierarchy):
             # prepare matrices
 
             self._prepare_level(level_index)

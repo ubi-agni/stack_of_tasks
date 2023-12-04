@@ -3,21 +3,13 @@ from __future__ import annotations
 
 import typing
 
-import PyQt5.QtWidgets as QtW
 import traits.observation.events as te
-from PyQt5.QtCore import QMimeData, QModelIndex, QPersistentModelIndex, Qt
-from PyQt5.QtGui import QMouseEvent, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QHeaderView, QWidget
+from PyQt5.QtCore import QMimeData, QModelIndex, Qt
+from PyQt5.QtGui import QStandardItem, QStandardItemModel
+from PyQt5.QtWidgets import QHeaderView, QTreeView, QWidget
 
 from stack_of_tasks.logger import sot_logger
-from stack_of_tasks.tasks.Task import Task
-from stack_of_tasks.tasks.TaskHierarchy import (
-    ChangeType,
-    HierarchieChanged,
-    LevelChanged,
-    TaskHierarchy,
-)
-from stack_of_tasks.ui import RawDataRole
+from stack_of_tasks.tasks import Task, TaskHierarchy
 from stack_of_tasks.ui.property_tree.base import PlaceholderItem
 
 from .prop_item import AttrValueItem, LevelItem, TaskItem
@@ -27,94 +19,94 @@ logger = sot_logger.getChild("TaskView")
 
 
 class InternalMoveMimeData(QMimeData):
-    def __init__(self, source_item) -> None:
+    def __init__(self, items: typing.Iterable[QStandardItem]) -> None:
         super().__init__()
-        self.source_item = source_item
+        self.items = items
 
 
 class SOT_Model(QStandardItemModel):
-    def __init__(self, stack_of_tasks: TaskHierarchy = None):
+    def __init__(self, task_hierarchy: TaskHierarchy = None):
         super().__init__()
+        self.set_task_hierarchy(task_hierarchy)
 
-        self.stack_of_tasks = None
+    def set_task_hierarchy(self, task_hierarchy: TaskHierarchy):
+        self.task_hierarchy = task_hierarchy
+        self.reset_model()
+        self.task_hierarchy.observe(self.reset_model, "levels")
+        self.task_hierarchy.observe(self._levels_changed, "levels:items")
+        self.task_hierarchy.observe(self._tasks_changed, "levels:items:items")
 
-        if stack_of_tasks is not None:
-            self.set_stack(stack_of_tasks)
-
-    def set_stack(self, stack_of_tasks: TaskHierarchy):
-        self.beginResetModel()
-
+    def reset_model(self, *args):
         self.clear()
-        self.stack_of_tasks = stack_of_tasks
-        self.stack_of_tasks.observe(self._levels_changed, "layout_changed", dispatch="ui")
+        self.insert_level_rows(levels=self.task_hierarchy.levels)
 
-        for level in stack_of_tasks.levels:
-            l = self._create_level(level)
-            self.appendRow([l, PlaceholderItem()])
+    def insert_level_rows(self, levels: list[list[Task]], *, row: int = -1):
+        """Create model rows for the given levels"""
+        if row < 0:
+            row = self.rowCount()
 
-        self.endResetModel()
+        for i, tasks in enumerate(levels):
+            level = LevelItem()
+            self.insert_task_rows(level, tasks)
+            self.insertRow(row + i, [level, PlaceholderItem()])
 
-    def _create_level(self, task_list: list[Task]):
-        l = LevelItem()
-        for task in task_list:
-            l.appendRow([TaskItem(task), AttrValueItem(task, "residual")])
+    def insert_task_rows(self, level: LevelItem, tasks: list[Task], *, row: int = -1):
+        """Create model rows for the given tasks below the given level item"""
+        if row < 0:
+            row = level.rowCount()
 
-        return l
+        for i, task in enumerate(tasks):
+            level.insertRow(row + i, [TaskItem(task), AttrValueItem(task, "residual")])
 
-    def _levels_changed(self, evt: te.TraitChangeEvent):
-        evt = evt.new
-        if isinstance(evt, HierarchieChanged):
-            if evt.type is ChangeType.removed:
-                self.removeRow(evt.index)
+    def level_index(self, level: list[Task]) -> QModelIndex:
+        """Get the model index of the given level within the hierarchy"""
+        row = self.task_hierarchy.levels.index(level)
+        return self.index(row, 0)
 
-            if evt.type is ChangeType.added:
-                level = self.stack_of_tasks.levels[evt.index]
-                self.appendRow([self._create_level(level), PlaceholderItem()])
+    def _levels_changed(self, event: te.ListChangeEvent):
+        """Handle changes in the task hierarchy's levels list"""
+        self.removeRows(event.index, len(event.removed))
+        self.insert_level_rows(event.added, row=event.index)
 
-        elif isinstance(evt, LevelChanged):
-            level_index = self.index(evt.level, 0)
-            levelItem = self.itemFromIndex(level_index)
+    def _tasks_changed(self, event: te.ListChangeEvent):
+        """Handle changes in a level's tasks list"""
+        level = self.itemFromIndex(self.level_index(event.object))
+        level.removeRows(event.index, len(event.removed))
+        self.insert_task_rows(level, event.added, row=event.index)
+        if len(event.object) == 0:
+            self.task_hierarchy.levels.remove(event.object)
 
-            if evt.type is ChangeType.added:
-                for task in evt.tasks:
-                    task_item = TaskItem(task)
-                    levelItem.appendRow([task_item, PlaceholderItem()])
+    def remove(self, indexes: list[QModelIndex]):
+        """Remove the items at the given indexes from the model"""
+        for item in list(map(self.itemFromIndex, indexes)):
+            if isinstance(item, LevelItem):
+                del self.task_hierarchy.levels[item.row()]
 
-            if evt.type is ChangeType.removed:
-                for task in evt.tasks:
-                    for cid in range(levelItem.rowCount()):
-                        if self.data(self.index(cid, 0, level_index), RawDataRole) is task:
-                            levelItem.removeRow(cid)
-                            break
+            elif isinstance(item, TaskItem):
+                del self.task_hierarchy.levels[item.parent().row()][item.row()]
 
-    def remove_item_at_index(self, index_to_remove: QModelIndex):
-        item = self.itemFromIndex(index_to_remove)
+    @staticmethod
+    def insert_into_level(level: list[Task], tasks: list[Task], row: int = -1):
+        if row < 0 or row >= len(level):  # just append all tasks
+            level.extend(tasks)
+            return
+        for i, t in enumerate(tasks):  # insert tasks at given row
+            level.insert(row + i, t)
 
-        if isinstance(item, LevelItem):
-            level = item.row()
-            self.stack_of_tasks.remove_level(level)
-
-        elif isinstance(item, TaskItem):
-            task = item.data(RawDataRole)
-            self.stack_of_tasks.remove_task(task)
-
-    def add_task(self, task: Task, parent: QModelIndex = None):
-        if parent is None:
-            with self.stack_of_tasks.new_level() as l:
-                l.append(task)
+    def add_tasks(self, tasks: list[Task], parent: QModelIndex = None):
+        if not parent.isValid():  # append at root
+            self.task_hierarchy.levels.append(tasks)
         else:
-            parent_item = self.itemFromIndex(parent)
-
-            if parent_item is not None:
-                if isinstance(parent_item, LevelItem):
-                    self.stack_of_tasks.levels[parent_item.row()].append(task)
-                elif isinstance(parent_item, TaskItem):
-                    self.stack_of_tasks.levels[parent_item.parent().row()].append(task)
+            parent = self.itemFromIndex(parent)
+            if isinstance(parent, LevelItem):  # append at level
+                self.task_hierarchy.levels[parent.row()].extend(tasks)
+            elif isinstance(parent, TaskItem):  # insert after task
+                self.insert_into_level(
+                    self.task_hierarchy.levels[parent.parent().row()], tasks, parent.row() + 1
+                )
 
     def mimeData(self, indexes: typing.Iterable[QModelIndex]) -> QMimeData:
-        item = self.itemFromIndex(indexes[0])
-
-        return InternalMoveMimeData(item)
+        return InternalMoveMimeData([self.itemFromIndex(idx) for idx in indexes])
 
     def canDropMimeData(
         self,
@@ -125,9 +117,12 @@ class SOT_Model(QStandardItemModel):
         parent: QModelIndex,
     ) -> bool:
         if isinstance(data, InternalMoveMimeData):
-            parent_item = self.itemFromIndex(parent)
-            return column <= 0 and (isinstance(parent_item, LevelItem) or parent_item is None)
-
+            parent = self.itemFromIndex(parent)
+            movable = any(isinstance(item, (LevelItem, TaskItem)) for item in data.items)
+            print(movable, "->", parent, row, column)
+            return (
+                column <= 0 and (isinstance(parent, LevelItem) or parent is None) and movable
+            )
         return super().canDropMimeData(data, action, row, column, parent)
 
     def dropMimeData(
@@ -138,60 +133,90 @@ class SOT_Model(QStandardItemModel):
         column: int,
         parent: QModelIndex,
     ) -> bool:
+        have_inserted = False
         if isinstance(data, InternalMoveMimeData):
-            source_item: QStandardItem = data.source_item
-            dest_item = self.itemFromIndex(parent)
+            levels = self.task_hierarchy.levels
+            dest = self.itemFromIndex(parent)
 
-            if isinstance(source_item, LevelItem) and dest_item is None:
-                self.stack_of_tasks.move_level(source_item.row(), row)
+            def insert(tasks: list[Task], append_on_level=False):
+                if dest is None:  # drop on root
+                    # BUG: list insertion disables trait notifications
+                    # idx = len(levels) if row < 0 else row
+                    # levels.insert(idx, tasks)
+                    idx = len(levels)
+                    levels.append(tasks)
+                    return self.itemFromIndex(self.index(idx, 0))
+                elif isinstance(dest, LevelItem):
+                    if row < 0:  # drop on level
+                        if append_on_level:
+                            self.insert_into_level(levels[dest.row()], tasks)
+                        else:  # insert after
+                            return None  # BUG: list insertion disables trait notifications
+                            idx = dest.row() + 1
+                            levels.insert(idx, tasks)
+                            return self.itemFromIndex(self.index(idx, 0))
+                    else:  # drop between tasks: insert at given row
+                        self.insert_into_level(levels[dest.row()], tasks, row)
+                elif isinstance(dest, TaskItem) and row < 0:  # drop on task: insert after
+                    self.insert_into_level(levels[dest.parent().row()], tasks, dest.row() + 1)
+                else:
+                    return None  # indicate failure
+                return dest  # return level item we inserted too
 
-            elif isinstance(source_item, TaskItem):
-                task = source_item.data(RawDataRole)
+            for item in filter(lambda x: isinstance(x, LevelItem), data.items):
+                old_text = item.data(Qt.EditRole)
+                tasks = levels.pop(item.row())
+                item = insert(tasks)
+                have_inserted |= item is not None
+                if isinstance(item, LevelItem):
+                    item.setData(old_text, Qt.EditRole)
 
-                if isinstance(dest_item, LevelItem):
-                    level = dest_item.row()
-                    self.stack_of_tasks.move_task_to_level(level, task)
+            for item in filter(lambda x: isinstance(x, TaskItem), data.items):
+                prev_level = levels[item.parent().row()]
+                task = prev_level.pop(item.row())
+                new_dest = insert([task], append_on_level=True)
+                have_inserted |= new_dest is not None
 
-                elif dest_item is None:
-                    self.stack_of_tasks.remove_task(task)
-                    self.stack_of_tasks.insert_level(row, [task])
+                if new_dest is not None and new_dest is not dest:
+                    dest = new_dest
+                    row = -1  # append
 
-            return True
-        else:
-            return super().dropMimeData(data, action, row, column, parent)
+        return super().dropMimeData(data, action, row, column, parent) or have_inserted
 
 
-class SOT_View(QtW.QTreeView):
+class SOT_View(QTreeView):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.setModel(SOT_Model())
         self.setItemDelegate(PropItemDelegate())
 
         self.header().setStretchLastSection(False)
         self.header().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.header().setVisible(False)
 
-        self.setSelectionBehavior(self.SelectItems)
-        self.setSelectionMode(self.SingleSelection)
+        self.setSelectionBehavior(self.SelectRows)
+        self.setSelectionMode(self.ExtendedSelection)
 
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDragDropMode(self.InternalMove)
 
-    def model(self) -> SOT_Model:
-        return super().model()
+    def setModel(self, model) -> None:
+        super().setModel(model)
+        if model is not None:
+            model.rowsInserted.connect(self.expand_levels)
+            self.expand_levels(QModelIndex(), 0, model.rowCount() - 1)
 
-    def mousePressEvent(self, e: QMouseEvent) -> None:
-        self.clearSelection()
-        return super().mousePressEvent(e)
+    def expand_levels(self, parent: QModelIndex, first: int, last: int):
+        if parent.isValid():
+            return  # only expand top-level items
+        for row in range(first, last + 1):
+            self.expand(self.model().index(row, 0))
 
-    def add_task(self, task: Task):
+    def add_tasks(self, tasks: list[Task]):
         selected_indices = self.selectedIndexes()
-        self.model().add_task(
-            task, None if len(selected_indices) == 0 else selected_indices[0]
-        )
+        parent = QModelIndex() if len(selected_indices) == 0 else selected_indices[0]
+        self.model().add_tasks(tasks, parent)
 
     def remove_selected(self):
-        selected_indices = self.selectedIndexes()
-        self.model().remove_item_at_index(selected_indices[0])
+        self.model().remove(self.selectedIndexes())

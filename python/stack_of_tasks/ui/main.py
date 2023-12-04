@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import logging
-import os
-from pprint import pprint
 from sys import argv
-from threading import Event, Thread, current_thread
+from threading import Event, Thread
 
 from typing import Any, Generic, List, Type, TypeVar
 
@@ -24,15 +22,13 @@ from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.ref_frame import MarkerFrame, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
-from stack_of_tasks.robot_model.actuators import DummyPublisherActuator
+from stack_of_tasks.robot_model.actuators import Actuator, DummyPublisherActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
-from stack_of_tasks.tasks import TaskRegister
+from stack_of_tasks.tasks import Task, TaskHierarchy, TaskRegister, TaskSoftnessType
 from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, PositionTask
-from stack_of_tasks.tasks.Task import Task, TaskSoftnessType
-from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
 from stack_of_tasks.ui.mainwindow import Ui
 from stack_of_tasks.ui.model.object_model import ObjectModel
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
@@ -97,12 +93,12 @@ class Controller(BaseSoTHasTraits):
     solvercls: Type[Solver] = ta.Type(klass=Solver, value=None)
     solver: Solver = ta.Instance(klass=Solver)
 
-    def __init__(self):
+    def __init__(self, *, robot_model: RobotModel = None, actuator: Actuator = None):
         super().__init__()
 
-        self.robot_model = RobotModel()
+        self.robot_model = robot_model or RobotModel()
         self.robot_state = RobotState(self.robot_model)
-        self.actuator = DummyPublisherActuator(self.robot_state)
+        self.actuator = actuator or DummyPublisherActuator(self.robot_state)
 
         self.task_hierarchy = TaskHierarchy()
 
@@ -112,11 +108,11 @@ class Controller(BaseSoTHasTraits):
     @ta.observe("solvercls", post_init=True)
     def _solver_changed(self, evt):
         self.solver: Solver = self.solvercls(self.robot_model.N, self.task_hierarchy)
-        self.solver.stack_changed()
+        self.solver.tasks_changed()
 
     def toggle_solver_state(self):
         if self.thread is None:
-            self.solver.stack_changed()
+            self.solver.tasks_changed()
             self.thread = SolverThread(self.worker)
             self.thread.start()
             return True
@@ -180,23 +176,18 @@ class Main(BaseSoTHasTraits):
 
         self.task_hierachy_model = SOT_Model(self.controller.task_hierarchy)
         ModelMapping.add_mapping(Task, self.task_hierachy_model)
+        self.controller.observe(
+            lambda evt: self.task_hierachy_model.set_task_hierarchy(evt.new), "task_hierarchy"
+        )
 
-        def _reset_th(evt):
-            self.task_hierachy_model.beginResetModel()
-            self.task_hierachy_model.endResetModel()
-
-        self.controller.task_hierarchy.observe(_reset_th, "stack_changed, layout_changed")
         self.residual_update_timer = QtCore.QTimer()
+        self.residual_update_timer.timeout.connect(self.update_residuals)
 
-        def update_residuals():
-            for task in self.controller.task_hierarchy.tasks():
-                task._residual_update = True
-
-        self.residual_update_timer.timeout.connect(update_residuals)
+    def update_residuals(self):
+        for task in self.controller.task_hierarchy.all_tasks():
+            task._residual_update = True
 
     def setup(self):
-        self.task_hierachy_model.set_stack(self.controller.task_hierarchy)
-
         rospy.sleep(0.1)  # wait for joint_states message
         self.controller.robot_state.update()
 
@@ -275,8 +266,11 @@ def main():
             ui_window.run_Button.setText("Start")
             main_app.residual_update_timer.stop()
 
-    def debug_button():
-        print(main_app.controller.task_hierarchy.levels)
+    def debug():
+        for i, l in enumerate(main_app.controller.task_hierarchy):
+            print(f"level {i+1}:")
+            for t in l:
+                print(f"  {type(t).__name__}: {t.name}")
 
     ui_window.run_Button.clicked.connect(toggle_start_stop)
 

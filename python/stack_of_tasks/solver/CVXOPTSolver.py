@@ -7,12 +7,12 @@ import cvxopt
 import numpy as np
 
 from stack_of_tasks.solver.HQPSolver import HqpSolver
-from stack_of_tasks.tasks.Task import EqTask
+from stack_of_tasks.tasks import EqTask
 
 
 class CVXOPTSolver(HqpSolver):
-    def __init__(self, number_of_joints, stack_of_tasks, **options) -> None:
-        super().__init__(number_of_joints, stack_of_tasks, **options)
+    def __init__(self, number_of_joints, task_hierarchy, **options) -> None:
+        super().__init__(number_of_joints, task_hierarchy, **options)
         self.slack_joint_matrix = None
 
     def _create_matrix(self):
@@ -22,7 +22,7 @@ class CVXOPTSolver(HqpSolver):
     def _interpret_solution(self, level_index, solution: object) -> Any:
         dq = np.asarray(solution["x"]).reshape(-1)[: self.N]
 
-        for task in self._stack_of_tasks.levels[level_index]:
+        for task in self._task_hierarchy.levels[level_index]:
             b = task.A.dot(dq)
             self._add_nullspace(task.A, b)
 

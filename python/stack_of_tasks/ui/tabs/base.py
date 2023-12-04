@@ -17,6 +17,7 @@ class Base(QWidget):
 
         self.add_action = self.tool_bar.addAction(QIcon.fromTheme("add"), "add")
         self.remove_action = self.tool_bar.addAction(QIcon.fromTheme("remove"), "remove")
+        self.remove_action.setShortcut("Del")
         self.remove_action.setDisabled(True)
 
         self.add_action.triggered.connect(self.add_action_callback)

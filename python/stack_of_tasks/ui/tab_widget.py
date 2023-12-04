@@ -21,4 +21,4 @@ class TabWidget(QTabWidget):
         self.parameter = Parameter()
         self.addTab(self.parameter, "Parameter")
 
-        # TabWidget.setCurrentIndex(1)
+        self.setCurrentIndex(1)

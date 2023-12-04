@@ -11,8 +11,7 @@ from stack_of_tasks.plot.plot_publisher import PlotPublisher
 from stack_of_tasks.ref_frame.frames import JointFrame, World
 from stack_of_tasks.ref_frame.offset import Offset
 from stack_of_tasks.solver import InverseJacobianSolver, OSQPSolver
-from stack_of_tasks.tasks import OrientationTask, PositionTask
-from stack_of_tasks.tasks.Task import TaskSoftnessType
+from stack_of_tasks.tasks import OrientationTask, PositionTask, TaskSoftnessType
 
 
 class Main:

@@ -8,6 +8,7 @@ from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.ref_frame import MarkerFrame
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
 from stack_of_tasks.solver import OSQPSolver
+from stack_of_tasks.tasks import TaskSoftnessType
 from stack_of_tasks.tasks.Eq_Tasks import (
     DistanceTask,
     OrientationTask,
@@ -15,7 +16,6 @@ from stack_of_tasks.tasks.Eq_Tasks import (
     PlaneTask,
     PositionTask,
 )
-from stack_of_tasks.tasks.Task import TaskSoftnessType
 
 np.set_printoptions(precision=3, suppress=True, linewidth=100, floatmode="fixed")
 

@@ -1,19 +1,16 @@
-from typing import List
-
 import numpy as np
 
-from stack_of_tasks.tasks.Task import EqTask
-from stack_of_tasks.tasks.TaskHierarchy import TaskHierarchy
+from stack_of_tasks.tasks import TaskHierarchy
 
 from .AbstractSolver import Solver
 
 
 class InverseJacobianSolver(Solver):
-    def __init__(self, number_of_joints, stack_of_tasks: TaskHierarchy, **options) -> None:
-        super().__init__(number_of_joints, stack_of_tasks, **options)
+    def __init__(self, number_of_joints, task_hierarchy: TaskHierarchy, **options) -> None:
+        super().__init__(number_of_joints, task_hierarchy, **options)
         self.threshold = options.get("threshold", 0.01)
 
-    def stack_changed(self):
+    def tasks_changed(self):
         # TODO check if stack consists of only EQ-Tasks, Warn if task is not Hard (type will be ignored in this solver)
         # count task-sizes, error larger than self.N (can not be solved by this solver)
         pass
@@ -27,7 +24,7 @@ class InverseJacobianSolver(Solver):
 
         qdot = np.zeros(self.N)
 
-        for task_level in self._stack_of_tasks:
+        for task_level in self._task_hierarchy:
             # combine tasks of this level into one
             J = np.concatenate([task.A for task in task_level], axis=0)
             e = np.concatenate([np.atleast_1d(task.bound) for task in task_level], axis=0)

@@ -112,24 +112,43 @@ class VelocityCommandActuator(Actuator, JointStateSubscriber):
     """Publish joint state deltas to velocity controller"""
 
     def __init__(
-        self, robot_state: RobotState, rate: float, ns: str = "/joint_velocity_controller"
+        self, controller, rate: float, ns: str = "/joint_velocity_controller"
     ) -> None:
-        super().__init__(robot_state)
+        super().__init__(controller.robot_state)
         self._pub = rospy.Publisher(
             ns + "/command", Float64MultiArray, queue_size=1, latch=True
         )
+        self.controller = controller
+
         # retrieve (sub)set of controlled joints
         controlled = rospy.get_param(ns + "/joints")
-        active = robot_state.robot_model.active_joints
+        active = controller.robot_state.robot_model.active_joints
         self.joint_mask = [j.name in controlled for j in active]
 
         self.msg = Float64MultiArray()
         dim = MultiArrayDimension(label="dq", size=len(controlled), stride=len(controlled))
         self.msg.layout.dim.append(dim)
         self.rate = rate
+        self.last_residuals = numpy.zeros(())
+        self.scale = 1.0
+        self.vmaxs = controller.robot_state.robot_model.vmaxs[self.joint_mask]
 
     def actuate(self, dq):
-        self.msg.data = dq[self.joint_mask] * self.rate
+        v = dq[self.joint_mask] * self.rate
+        residuals = self.controller.task_hierarchy.residuals()
+        if self.last_residuals.shape != residuals.shape:
+            self.last_residuals = residuals
+
+        # scale velocity down if getting close to target
+        scale = numpy.minimum(1.0, numpy.power(numpy.max(numpy.abs(residuals) / 0.01), 2))
+        # scale down strongly if any error changes sign (overshooting target)
+        if numpy.any(residuals * self.last_residuals < -1e-6):
+            self.scale = numpy.maximum(1e-3, 0.5 * self.scale)
+        else:
+            self.scale = numpy.minimum(1.0, self.scale * 1.1)
+
+        self.msg.data = self.scale * scale * v
+        self.last_residuals = residuals
         self._pub.publish(self.msg)
 
     @staticmethod

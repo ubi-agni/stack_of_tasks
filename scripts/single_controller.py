@@ -71,7 +71,7 @@ if __name__ == "__main__":
     app = Application(setup, OSQPSolver, False, rho=0.1)
     app.controller.robot_model.vmaxs *= 0.01
     rate = 100
-    actuator = VelocityCommandActuator(app.controller.robot_state, 0.5 * rate)
+    actuator = VelocityCommandActuator(app.controller, rate)
     app.controller.actuator = actuator
     actuator.switch_controllers(
         start=["joint_velocity_controller"], stop=["position_joint_trajectory_controller"]

@@ -249,9 +249,7 @@ def main():
         start=["joint_velocity_controller"], stop=["position_joint_trajectory_controller"]
     )
 
-    main_app.controller.actuator = VelocityCommandActuator(
-        main_app.controller.robot_state, rate
-    )
+    main_app.controller.actuator = VelocityCommandActuator(main_app.controller, rate)
     main_app.controller.robot_model.vmaxs *= 0.01
 
     logger.info("create application ")

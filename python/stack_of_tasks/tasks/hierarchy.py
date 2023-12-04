@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from typing import Iterator, List
 
+import numpy
 import traits.api as ta
 
 from stack_of_tasks.tasks import Task
@@ -50,3 +51,6 @@ class TaskHierarchy(BaseSoTHasTraits):
 
             except ValueError:
                 continue
+
+    def residuals(self):
+        return numpy.hstack([task.residual for task in self.all_tasks()])

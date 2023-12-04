@@ -7,8 +7,9 @@ import rospy
 from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.ref_frame import MarkerFrame
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
-from stack_of_tasks.solver import OSQPSolver
 from stack_of_tasks.tasks import TaskSoftnessType
+from stack_of_tasks.robot_model.actuators import VelocityCommandActuator
+from stack_of_tasks.solver import CVXOPTSolver, InverseJacobianSolver, OSQPSolver
 from stack_of_tasks.tasks.Eq_Tasks import (
     DistanceTask,
     OrientationTask,
@@ -50,7 +51,31 @@ def setup(app: Application):
         level.append(axisTask)
 
 
+_stopping = False
+
+
+def stopping():
+    return _stopping
+
+
+def stopController(actuator):
+    global _stopping
+    _stopping = True
+    print("Stopping controller")
+    actuator.stop(["joint_velocity_controller"])
+
+
 if __name__ == "__main__":
     rospy.init_node("sot")
-    app = Application(setup, OSQPSolver, rho=0.1)
-    app.controller.control_loop(rospy.is_shutdown, 50)
+
+    app = Application(setup, OSQPSolver, False, rho=0.1)
+    app.controller.robot_model.vmaxs *= 0.01
+    rate = 100
+    actuator = VelocityCommandActuator(app.controller.robot_state, 0.5 * rate)
+    app.controller.actuator = actuator
+    actuator.switch_controllers(
+        start=["joint_velocity_controller"], stop=["position_joint_trajectory_controller"]
+    )
+    rospy.on_shutdown(lambda: stopController(actuator))
+    rospy.sleep(0.1)  # wait for joint states
+    app.controller.control_loop(stopping, rate)

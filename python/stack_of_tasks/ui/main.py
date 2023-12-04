@@ -22,7 +22,11 @@ from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.ref_frame import MarkerFrame, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
-from stack_of_tasks.robot_model.actuators import Actuator, DummyPublisherActuator
+from stack_of_tasks.robot_model.actuators import (
+    Actuator,
+    DummyPublisherActuator,
+    VelocityCommandActuator,
+)
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
@@ -237,6 +241,18 @@ def main():
 
     main_app = Main()
     main_app.setup()
+
+    rate = 50  # hard-coded for Controller.worker
+    actuator = VelocityCommandActuator(main_app.controller, rate)
+    main_app.controller.actuator = actuator
+    actuator.switch_controllers(
+        start=["joint_velocity_controller"], stop=["position_joint_trajectory_controller"]
+    )
+
+    main_app.controller.actuator = VelocityCommandActuator(
+        main_app.controller.robot_state, rate
+    )
+    main_app.controller.robot_model.vmaxs *= 0.01
 
     logger.info("create application ")
     app = QApplication(argv)

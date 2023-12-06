@@ -36,7 +36,7 @@ class ClassRegister(Generic[ClassType]):
 
         def hook(sub_cls):
             if (
-                self._abstract or not inspect.isabstract(sub_cls)
+                self._include_abstract or not inspect.isabstract(sub_cls)
             ) and sub_cls not in self._register:
                 self._register.append(sub_cls)
 

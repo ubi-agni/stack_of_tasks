@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 import traits.api as ta
 
-from stack_of_tasks.ui.utils.class_register import Register
+from stack_of_tasks.utils import ClassRegister
 
 
 @contextmanager
@@ -13,10 +13,10 @@ def matrix_edit(obj: ta.HasTraits, trait: str, capture_old=True):
     obj.trait_property_changed(trait, old, obj.trait_get(trait))
 
 
-register_all = Register("all", register_base=False)
+register_all = ClassRegister("all")
 
 
-@register_all.register_base
+@register_all.base
 class BaseSoTHasTraits(ta.HasTraits):
     __init_subclass_hooks__ = []
 

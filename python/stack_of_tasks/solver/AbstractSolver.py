@@ -4,12 +4,13 @@ import traits.api as ta
 
 from stack_of_tasks.tasks import TaskHierarchy
 from stack_of_tasks.utils import ClassRegister
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
 SolverRegister = ClassRegister("SolverRegister")
 
 
 @SolverRegister.base
-class Solver(ta.ABCHasTraits):
+class Solver(ABCSoTHasTraits):
     def __init__(
         self, number_of_joints: int, task_hierarchy: TaskHierarchy, **options
     ) -> None:

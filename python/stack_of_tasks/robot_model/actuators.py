@@ -5,6 +5,8 @@ from controller_manager_msgs.srv import ListControllers, LoadController, SwitchC
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
+
 from .robot_state import RobotState
 
 
@@ -22,7 +24,7 @@ def initial_joint_values(state: RobotState, ns="", param="initial_joints"):
         raise TypeError(f"Invalid type for {param}: {type(values)}")
 
 
-class Actuator:
+class Actuator(ABCSoTHasTraits):
     """Base class for actuators"""
 
     def actuate(self, dq):

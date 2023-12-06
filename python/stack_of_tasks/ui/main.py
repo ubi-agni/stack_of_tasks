@@ -16,6 +16,7 @@ from traits.trait_notifiers import set_ui_handler
 
 import rospy
 
+from stack_of_tasks.config.load_safe import LoadSafe
 from stack_of_tasks.logger import fix_rospy_logging, sot_logger
 from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
@@ -272,7 +273,12 @@ def main():
             for t in l:
                 print(f"  {type(t).__name__}: {t.name}")
 
-    ui_window.run_Button.clicked.connect(toggle_start_stop)
+    # ui_window.run_Button.clicked.connect(toggle_start_stop)
+
+    def dummy_safe():
+        print(LoadSafe.save_config(main_app.controller.task_hierarchy))
+
+    ui_window.run_Button.clicked.connect(dummy_safe)
 
     app.exec()
 

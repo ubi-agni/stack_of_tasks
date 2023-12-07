@@ -83,8 +83,7 @@ class Offset(RefFrame):
         return self.frame.T @ self.offset
 
     def transform(self, T_matrix: Transform) -> Offset:
-        with matrix_edit(self, "offset"):
-            self.offset[:] = self.offset @ T_matrix
+        self.offset = self.offset @ T_matrix
         return self
 
 

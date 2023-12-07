@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Generic, List, Type, TypeVar
 
-import PyQt5.QtWidgets as QTW
+import PyQt5.QtWidgets as QtWidgets
 import traits.api as ta
 import traits.trait_types as tt
-from PyQt5.QtWidgets import QWidget
 from traits.trait_numeric import Array
 
 from stack_of_tasks.ui.model.object_model import ObjectModel
@@ -40,9 +39,8 @@ MappingType = TypeVar("MappingType")
 
 class MappingEntry(Generic[MappingType]):
     traits: List[ta.CTrait]
-
     painter: Type[Delegate_Painter | None] = None
-    widget: Type[QWidget] = None
+    widget: Type[QtWidgets.QWidget] = None
 
     def __init_subclass__(cls, *args, **kwargs) -> None:
         super().__init_subclass__(*args, **kwargs)
@@ -53,16 +51,16 @@ class MappingEntry(Generic[MappingType]):
         return any(isinstance(trait.trait_type, x) for x in cls.traits)
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW):
+    def setup_function(cls, trait: ta.CTrait, widget: QtWidgets.QWidget):
         pass
 
 
 class String(MappingEntry):
     traits = [tt.String, tt.BaseStr, tt.BaseCStr]
-    widget = QTW.QLineEdit
+    widget = QtWidgets.QLineEdit
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW.QLineEdit, value=None):
+    def setup_function(cls, trait: ta.CTrait, widget: QtWidgets.QLineEdit, value=None):
         if value is None:
             value = trait.default
 
@@ -71,11 +69,10 @@ class String(MappingEntry):
 
 class Float(MappingEntry):
     traits = [tt.BaseFloat, tt.BaseCFloat]
-
-    widget = QTW.QDoubleSpinBox
+    widget = QtWidgets.QDoubleSpinBox
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW.QDoubleSpinBox, value=None):
+    def setup_function(cls, trait: ta.CTrait, widget: QtWidgets.QDoubleSpinBox, value=None):
         if value is None:
             value = trait.default
 

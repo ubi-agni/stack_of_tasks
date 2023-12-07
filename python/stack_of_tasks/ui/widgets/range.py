@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from enum import IntFlag
 
-import PyQt5.QtWidgets as QTW
-from PyQt5.QtWidgets import QAbstractSpinBox
+from PyQt5.QtWidgets import QDoubleSpinBox
 
 
 class HasBound(IntFlag):
@@ -18,7 +17,7 @@ class ExcludeBound(IntFlag):
     EXCLUDE_MAX = 0x2
 
 
-class Range(QTW.QDoubleSpinBox):
+class Range(QDoubleSpinBox):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
@@ -49,8 +48,8 @@ class Range(QTW.QDoubleSpinBox):
         else:
             self.exclude_bound ^= ExcludeBound.EXCLUDE_MAX
 
-    def stepEnabled(self) -> QAbstractSpinBox.StepEnabled:
-        f = QAbstractSpinBox.StepNone
+    def stepEnabled(self) -> QDoubleSpinBox.StepEnabled:
+        f = QDoubleSpinBox.StepNone
 
         if (
             (hb := HasBound.HAS_MIN in self.has_bound)
@@ -60,7 +59,7 @@ class Range(QTW.QDoubleSpinBox):
             )
             or (not ex and self.value() - self.singleStep() >= self.minimum())
         ) or not hb:
-            f |= QAbstractSpinBox.StepDownEnabled
+            f |= QDoubleSpinBox.StepDownEnabled
 
         if (
             (hb := HasBound.HAS_MAX in self.has_bound)
@@ -70,5 +69,5 @@ class Range(QTW.QDoubleSpinBox):
             )
             or (not ex and self.value() + self.singleStep() <= self.maximum())
         ) or not hb:
-            f |= QAbstractSpinBox.StepUpEnabled
+            f |= QDoubleSpinBox.StepUpEnabled
         return f

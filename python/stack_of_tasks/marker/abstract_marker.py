@@ -25,7 +25,7 @@ MarkerRegister = ClassRegister("MarkerRegister")
 
 @MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
-    name = ta.Str(value="")
+    name = ta.Str()
 
     _default_frame_id = ""
     frame_id = ta.Str()

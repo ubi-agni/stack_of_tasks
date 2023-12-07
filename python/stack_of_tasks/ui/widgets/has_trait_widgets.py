@@ -41,8 +41,15 @@ class NewInstanceWidget(QWidget):
         while self.fl.rowCount() > 0:
             self.fl.removeRow(0)
 
-        cls_trs = self.cls.class_traits()
+        def get_default(cls, trait, name):
+            if trait.value is not None:
+                return trait.value
+            if callable(f := getattr(cls, f"_{name}_default", None)):
+                # HACK: this assumes that the default method acts like a class method
+                return f(cls)
+            return trait.trait_type.default_value
 
+        cls_trs = self.cls.class_traits()
         for name in get_init_arg_trait_names(self.cls):
             trait: ta.CTrait = cls_trs[name]
 
@@ -55,7 +62,7 @@ class NewInstanceWidget(QWidget):
             if me is not None:
                 widget = me.widget()
                 me.setup_function(trait, widget)
-                value = old_args.get(name, trait.trait_type.default_value)
+                value = old_args.get(name, get_default(self.cls, trait, name))
                 set_user_property(widget, value)
                 self.fl.addRow(name, widget)
                 self.args[name] = widget

@@ -61,36 +61,20 @@ class String(MappingEntry):
     traits = [tt.String, tt.BaseStr, tt.BaseCStr]
     widget = QTW.QLineEdit
 
-    @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW.QLineEdit, value=None):
-        if value is None:
-            value = trait.default
-
-        widget.setText(value)
-
 
 class Float(MappingEntry):
     traits = [tt.BaseFloat, tt.BaseCFloat]
 
     widget = QTW.QDoubleSpinBox
 
-    @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW.QDoubleSpinBox, value=None):
-        if value is None:
-            value = trait.default
-
 
 class RangeEntry(MappingEntry):
     traits = [tt.BaseRange]
-
     widget = Range
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: Range, value=None):
+    def setup_function(cls, trait: ta.CTrait, widget: Range):
         rng: ta.Range = trait.trait_type
-
-        if value is None:
-            value = trait.default
 
         widget.setMinimum(rng._low)
         widget.setMaximum(rng._high)
@@ -101,7 +85,6 @@ class RangeEntry(MappingEntry):
 
 class Selection(MappingEntry):
     traits = [tt.Instance]
-
     widget = AddableObjectDropdown
 
     @classmethod
@@ -119,7 +102,6 @@ class Selection(MappingEntry):
 
 class Enum(MappingEntry):
     traits = [tt.BaseEnum]
-
     widget = ObjectDropdown
 
     @classmethod

@@ -5,7 +5,7 @@ from typing import Generic, List, Type, TypeVar
 import PyQt5.QtWidgets as QTW
 import traits.api as ta
 import traits.trait_types as tt
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtGui import QDoubleValidator
 from traits.trait_numeric import Array
 
 from stack_of_tasks.ui.model.object_model import ObjectModel
@@ -64,8 +64,11 @@ class String(MappingEntry):
 
 class Float(MappingEntry):
     traits = [tt.BaseFloat, tt.BaseCFloat]
+    widget = QtWidgets.QLineEdit
 
-    widget = QTW.QDoubleSpinBox
+    @classmethod
+    def setup_function(cls, trait: ta.CTrait, widget: QtWidgets.QWidget):
+        widget.setValidator(QDoubleValidator(widget))
 
 
 class RangeEntry(MappingEntry):

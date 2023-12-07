@@ -57,11 +57,13 @@ class MatrixItem(QStandardItem):
     def data(self, role: int = ...) -> Any:
         if role == Qt.DisplayRole:
             return f"{self.element():.2f}"
+        if role == Qt.EditRole:
+            return self.element()
 
         return super().data(role)
 
     def setData(self, value: Any, role: int = ...) -> bool:
-        if role == RawDataRole:
+        if role == Qt.EditRole:
             self.model().matrix()[self._i, self._j] = value
         else:
             return super().setData(value, role)
@@ -140,10 +142,10 @@ class MatrixItemDelegate(QStyledItemDelegate):
     def setModelData(
         self, editor: QDoubleSpinBox, model: QStandardItemModel, index: QModelIndex
     ) -> None:
-        model.setData(index, editor.value(), RawDataRole)
+        model.setData(index, editor.value(), Qt.EditRole)
 
     def setEditorData(self, editor: QDoubleSpinBox, index: QModelIndex) -> None:
-        f = index.data(RawDataRole)
+        f = index.data(Qt.EditRole)
         editor.setValue(f)
 
     def updateEditorGeometry(

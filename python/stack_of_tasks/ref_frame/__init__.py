@@ -8,7 +8,7 @@ import traits.api as ta
 import tf.transformations as tfs
 
 from stack_of_tasks.utils import ClassRegister
-from stack_of_tasks.utils.traits import ABCSoTHasTraits, matrix_edit
+from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
 Transform = np.ndarray
 Jacobian = np.ndarray

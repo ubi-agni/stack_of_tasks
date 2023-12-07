@@ -25,10 +25,10 @@ MarkerRegister = ClassRegister("MarkerRegister")
 
 @MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
-    name = ta.Str(value="")
+    name = ta.Str()
 
     _default_frame_id = ""
-    frame_id = ta.Str("")
+    frame_id = ta.Str()
 
     transform = ta.Array(
         shape=(4, 4), value=np.identity(4), comparison_mode=ta.ComparisonMode.none

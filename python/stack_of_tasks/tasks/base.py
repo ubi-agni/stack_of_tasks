@@ -61,7 +61,7 @@ class Task(ABCSoTHasTraits):
     task_size = -1
 
     # universal task properties
-    softness_type = ta.Enum(TaskSoftnessType, default=TaskSoftnessType.linear)
+    softness_type = ta.Enum(TaskSoftnessType.linear, TaskSoftnessType)
 
     weight = ta.Range(
         low=0.0,
@@ -102,7 +102,7 @@ class Task(ABCSoTHasTraits):
 
 
 class RelativeTask(Task, ABC):
-    relType: RelativeType = ta.Enum(RelativeType, default=RelativeType.A_FIXED)
+    relType: RelativeType = ta.Enum(RelativeType.A_FIXED, RelativeType)
 
     refA: RefFrame = ta.Instance(RefFrame, label="frame A")
     refB: RefFrame = ta.Instance(RefFrame, label="frame B")

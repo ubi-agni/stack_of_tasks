@@ -1,0 +1,44 @@
+settings:
+  actuator: !SOT_object:JointStatePublisherActuator {}
+  solver: !SOT_object:OSQPSolver
+    rho: 0.1
+frames:
+- &id002 !SOT_object:RobotRefFrame
+  link_name: panda_hand_tcp
+  name: eef
+- &id003 !SOT_object:MarkerFrame
+  marker: &id001 !SOT_object:PlaneMarker
+    frame_id: panda_link0
+    name: plane
+    scale: 0.25
+    transform: !SOT_transform {rpy: [0.0, 0.0, 0.0], xyz: [0.4357488751411438, -0.10356132686138153,
+        0.48081427812576294]}
+  name: target
+marker:
+- *id001
+stack_of_tasks:
+  0:
+  - !SOT_object:PlaneTask
+    name: ''
+    robot: *id002
+    softness_type: &id004 !SOT_enum TaskSoftnessType.linear
+    target: *id003
+    weight: 1.0
+  1:
+  - !SOT_object:DistanceTask
+    distance: 0.2
+    name: ''
+    refA: *id003
+    refB: *id002
+    relType: !SOT_enum RelativeType.A_FIXED
+    softness_type: *id004
+    weight: 1.0
+  2:
+  - !SOT_object:RotationTask
+    axis: !SOT_arr [0.0, 0.0, 1.0]
+    center: *id003
+    name: ''
+    omega: 0.1
+    robot: *id002
+    softness_type: *id004
+    weight: 1.0

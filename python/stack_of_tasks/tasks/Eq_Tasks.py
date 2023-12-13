@@ -3,7 +3,17 @@ import traits.api as ta
 
 from tf.transformations import rotation_from_matrix
 
-from stack_of_tasks.tasks.base import A, Bound, EqTask, RelativeTask, TargetTask, Tuple
+from stack_of_tasks.ref_frame import Jacobian
+from stack_of_tasks.ref_frame.frames import RefFrame
+from stack_of_tasks.tasks.base import (
+    A,
+    Bound,
+    EqTask,
+    RelativeTask,
+    TargetTask,
+    TaskSoftnessType,
+    Tuple,
+)
 from stack_of_tasks.utils.transform_math import skew
 
 
@@ -25,6 +35,34 @@ class OrientationTask(RelativeTask, EqTask):
         delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.refB.T[0:3, 0:3])
         angle, axis, _ = rotation_from_matrix(delta)
         return self._J[3:], tA[0:3, 0:3].dot(angle * axis)
+
+
+class RotationTask(EqTask):
+    name = "Rotation"
+    task_size: int = 3
+
+    robot: RefFrame = ta.Instance(RefFrame)
+    center: RefFrame = ta.Instance(RefFrame)
+    axis = ta.Array(shape=(3,), dtype="float", value=np.array([0, 0, 1]))
+    omega = ta.Float(0.01)
+
+    _J: Jacobian = ta.DelegatesTo("robot", "J")
+
+    def __init__(
+        self,
+        center: RefFrame,
+        robot: RefFrame,
+        softness_type: TaskSoftnessType,
+        weight: float = 1,
+        **traits,
+    ) -> None:
+        super().__init__(softness_type, weight, robot=robot, center=center, **traits)
+        self.observe(self._trigger_recompute, "robot:T, _J, axis, omega")
+
+    def compute(self) -> Tuple[A, Bound]:
+        r = self.robot.T[0:3, 3] - self.center.T[0:3, 3]
+        w = self.omega * self.center.T[:3, :3].dot(self.axis)
+        return self._J[:3], np.cross(w, r)
 
 
 class DistanceTask(RelativeTask, EqTask):

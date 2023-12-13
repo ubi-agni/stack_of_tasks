@@ -148,18 +148,19 @@ class RelativeTask(Task, ABC):
 
 class TargetTask(Task, ABC):
     target: RefFrame = ta.Instance(RefFrame)
-    robot: RobotRefFrame = ta.Instance(RobotRefFrame)
+    robot: RefFrame = ta.Instance(RefFrame)
 
     _J: Jacobian = ta.DelegatesTo("robot", "J")
 
     def __init__(
         self,
         target: RefFrame,
-        robotFrame: RobotRefFrame,
+        robot: RefFrame,
         softness_type: TaskSoftnessType,
         weight: float = 1,
+        **traits,
     ) -> None:
-        super().__init__(softness_type, weight, target=target, robot=robotFrame)
+        super().__init__(softness_type, weight, target=target, robot=robot, **traits)
         self.observe(self._trigger_recompute, "target:T, robot:T, _J")
 
 

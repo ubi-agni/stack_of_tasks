@@ -73,7 +73,7 @@ class Task(ABCSoTHasTraits):
     A: A = ta.Property(depends_on="_recompute", trait=ta.Array, visible=False)
 
     def _get_A(self):
-        return self._compute_val[0]
+        return np.atleast_2d(self._compute_val[0])
 
     def __init__(
         self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits
@@ -169,7 +169,7 @@ class EqTask(Task, ABC):
     residual = ta.Property(trait=ta.Array, visible=False, depends_on="_residual_update")
 
     def _get_bound(self):
-        return self._compute_val[1]
+        return np.atleast_1d(self._compute_val[1])
 
     def _get_residual(self):
         return self.bound

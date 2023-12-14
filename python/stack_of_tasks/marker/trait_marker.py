@@ -22,12 +22,6 @@ class PositionMarker(IAMarker):
 
         self._add_movement_control(self.marker, "_move", InteractiveMarkerControl.MOVE_AXIS)
 
-    def feedback(self, fb: InteractiveMarkerFeedback):
-        with self.lg("transform"):
-            self.trait_set(transform=pose_to_matrix(fb.pose))
-            self.marker.pose = fb.pose
-            self.sync = self.name
-
 
 class OrientationMarker(IAMarker):
     def __init__(self, name, **kwargs) -> None:
@@ -35,12 +29,6 @@ class OrientationMarker(IAMarker):
 
         self._add_display_marker(self.marker, "_disp", self.sphere())
         self._add_movement_control(self.marker, "_rot", InteractiveMarkerControl.ROTATE_AXIS)
-
-    def feedback(self, fb: InteractiveMarkerFeedback):
-        with self.lg("transform"):
-            self.trait_set(transform=pose_to_matrix(fb.pose))
-            self.marker.pose = fb.pose
-            self.sync = self.name
 
 
 class FullMovementMarker(IAMarker):
@@ -51,11 +39,15 @@ class FullMovementMarker(IAMarker):
         self._add_movement_control(self.marker, "_rot", InteractiveMarkerControl.ROTATE_AXIS)
         self._add_movement_control(self.marker, "_move", InteractiveMarkerControl.MOVE_AXIS)
 
-    def feedback(self, fb: InteractiveMarkerFeedback):
-        with self.lg("transform"):
-            self.trait_set(transform=pose_to_matrix(fb.pose))
-            self.marker.pose = fb.pose
-            self.sync = self.name
+
+class PlaneMarker(IAMarker):
+    def __init__(self, name, **kwargs) -> None:
+        super().__init__(name, **kwargs)
+
+        self._add_display_marker(self.marker, "", self.sphere())
+        self._add_movement_marker(
+            self.marker, "plane", InteractiveMarkerControl.MOVE_ROTATE_3D, self.plane()
+        )
 
 
 class ConeMarker(IAMarker):
@@ -91,12 +83,8 @@ class ConeMarker(IAMarker):
 
     def feedback(self, fb: InteractiveMarkerFeedback):
         if fb.marker_name == self.marker.name:
-            # transform
-            with self.lg("transform"):
-                self.trait_set(transform=pose_to_matrix(fb.pose))
-                self.marker.pose = fb.pose
-                self._set_handle_pose()
-                self.sync = self.marker.name
+            super().feedback(fb)
+            self._set_handle_pose()
         else:
             with self.lg("angle", "scale"):
                 T_marker = pose_to_matrix(fb.pose)

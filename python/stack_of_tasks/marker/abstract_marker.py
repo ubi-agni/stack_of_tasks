@@ -17,7 +17,7 @@ from visualization_msgs.msg import (
 )
 
 from stack_of_tasks.utils import ClassRegister
-from stack_of_tasks.utils.tf_mappings import matrix_to_pose
+from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 from stack_of_tasks.utils.traits import ABCSoTHasTraits, Guard
 
 MarkerRegister = ClassRegister("MarkerRegister")
@@ -73,9 +73,11 @@ class IAMarker(ABCSoTHasTraits):
             self.marker.scale = self.scale
             self.sync = self.name
 
-    @abstractmethod
     def feedback(self, fb: InteractiveMarkerFeedback):
-        pass
+        with self.lg("transform"):
+            self.trait_set(transform=pose_to_matrix(fb.pose))
+            self.marker.pose = fb.pose
+            self.sync = self.name
 
     @staticmethod
     def _create_interactive_marker(name: str, scale: float, frame_id: str, pose):

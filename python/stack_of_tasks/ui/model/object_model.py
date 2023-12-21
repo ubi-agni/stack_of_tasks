@@ -35,6 +35,17 @@ class ObjectModel(Generic[ObjectType], QStandardItemModel):
         for obj in objs:
             self.append(obj)
 
+    def remove(self, objs: list[ObjectType]):
+        if len(objs) == self.rowCount():
+            self.clear()
+        else:
+            self.beginRemoveRows(QModelIndex(), 0, self.rowCount())
+            for o in objs:
+                i = self.find(o)
+                self.removeRow(i)
+
+            self.endRemoveRows()
+
 
 class FilterObjectModel(
     QSortFilterProxyModel

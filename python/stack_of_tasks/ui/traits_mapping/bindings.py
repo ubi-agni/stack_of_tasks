@@ -187,5 +187,6 @@ class TraitObjectModelBinder:
             if len(evt.added) > 0:
                 with self._guard("trait"):
                     self._model().extend(evt.added)
+
             if len(evt.removed) > 0:
-                pass
+                self._model().remove(evt.removed)

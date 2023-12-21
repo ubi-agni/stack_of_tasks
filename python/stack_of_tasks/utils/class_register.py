@@ -40,8 +40,11 @@ class ClassRegister(Generic[ClassType]):
             ) and sub_cls not in self._register:
                 self._register.append(sub_cls)
 
-        cls.__init_subclass_hooks__.append(hook)
+        parent_hooks = getattr(self._base_cls, "__init_subclass_hooks__", [])
+        cls.__init_subclass_hooks__ = [*parent_hooks]
 
+        cls.__init_subclass_hooks__.append(hook)
+        cls.register = self
         return cls
 
     def skip(self, cls):

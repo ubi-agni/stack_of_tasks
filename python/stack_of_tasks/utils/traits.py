@@ -18,15 +18,13 @@ register_all = ClassRegister("all")
 
 @register_all.base
 class BaseSoTHasTraits(ta.HasTraits):
-    __init_subclass_hooks__ = []
-
     # Make 'private' traits (leading '_') have no type checking:
     __ = ta.Any(private=True, transient=True)
 
     trait_removed = ta.Event()
 
     def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
+        super.__init_subclass__(**kwargs)
         for f in cls.__init_subclass_hooks__:
             f(cls)
 

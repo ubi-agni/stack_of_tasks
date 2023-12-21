@@ -48,6 +48,17 @@ class BaseSoTHasTraits(ta.HasTraits):
                 if name.startswith(prefix):
                     trait.__dict__.update(self.__prefix_traits__[prefix].__dict__)
 
+    def __get_yml_state__(self):
+        def is_none(val):
+            return val is None
+
+        def not_py(val):
+            return val != "python"
+
+        result = self.trait_get(transient=is_none, type=not_py)
+
+        return result
+
 
 class ABCSoTHasTraits(ta.ABCHasTraits, BaseSoTHasTraits):
     pass

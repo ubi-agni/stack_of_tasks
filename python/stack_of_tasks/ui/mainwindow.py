@@ -11,6 +11,12 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         super(Ui, self).__init__()
         self.setupUi(self)
 
+        fileMenu = self.menu_bar.addMenu("File")
+
+        self.new_action = fileMenu.addAction("New")
+        self.save_action = fileMenu.addAction("Save")
+        self.load_action = fileMenu.addAction("Load")
+
         infoMenu = self.menu_bar.addMenu("Info")
 
         info1 = QtWidgets.QWidgetAction(infoMenu)
@@ -33,10 +39,6 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         infoMenu.addAction(info3)
 
         self.setCentralWidget(self.tab_widget)
-        # self.tab_widget.hierarchy.set_ref_model(ref_model)
-        # self.tab_widget.hierarchy.model.set_hierarchy(task_hierarchy)
-        # self.tab_widget.refs.set_model(ref_model)
-
         self.run_Button = QPushButton("Start")
         self.status_bar.addPermanentWidget(self.run_Button)
         self.show()

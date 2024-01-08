@@ -11,7 +11,7 @@ from typing import Any, Generic, List, Type, TypeVar
 import numpy as np
 import traits.api as ta
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QFileDialog
 from traits.trait_notifiers import set_ui_handler
 
 import rospy
@@ -230,6 +230,38 @@ class Main(BaseSoTHasTraits):
         if self.controller.is_thread_running():
             self.controller.toggle_solver_state()
 
+    def save_state(self):
+        url, _ = QFileDialog.getSaveFileUrl(filter="YAML - Files (*.yml)")
+        yml_str = LoadSafe.save_config(self.controller.task_hierarchy)
+
+        with open(url.path(), "w") as f:
+            f.write(yml_str)
+
+    def load_state(self):
+        url, _ = QFileDialog.getOpenFileUrl()
+        with open(url.path(), "r") as f:
+            yml_str = f.read()
+
+        data = LoadSafe.load_config(yml_str)
+        frames = data["frames"]
+        marker = data["marker"]
+        sot: dict = data["stack_of_tasks"]
+
+        self.marker.extend(marker)
+        self.refs.extend(frames)
+
+        for k, level in sorted(sot.items()):
+            with self.controller.task_hierarchy.new_level() as l:
+                l.extend(level)
+
+    def clear_data(self):
+        for l in self.controller.task_hierarchy.levels:
+            l.clear()
+        self.controller.task_hierarchy.levels.clear()
+
+        self.refs.clear()
+        self.marker.clear()
+
 
 def _ui_handler(handler, *args, **kwargs):
     logger.debug(f"handler {handler}, args {args}, kwargs {kwargs}")
@@ -240,7 +272,7 @@ def main():
     set_ui_handler(_ui_handler)
 
     main_app = Main()
-    main_app.setup()
+    # main_app.setup()
 
     logger.info("create application ")
     app = QApplication(argv)
@@ -270,18 +302,11 @@ def main():
             ui_window.run_Button.setText("Start")
             main_app.residual_update_timer.stop()
 
-    def debug():
-        for i, l in enumerate(main_app.controller.task_hierarchy):
-            print(f"level {i+1}:")
-            for t in l:
-                print(f"  {type(t).__name__}: {t.name}")
+    ui_window.run_Button.clicked.connect(toggle_start_stop)
 
-    # ui_window.run_Button.clicked.connect(toggle_start_stop)
-
-    def dummy_safe():
-        print(LoadSafe.save_config(main_app.controller.task_hierarchy))
-
-    ui_window.run_Button.clicked.connect(dummy_safe)
+    ui_window.save_action.triggered.connect(main_app.save_state)
+    ui_window.load_action.triggered.connect(main_app.load_state)
+    ui_window.new_action.triggered.connect(main_app.clear_data)
 
     app.exec()
 

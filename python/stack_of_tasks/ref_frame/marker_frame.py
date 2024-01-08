@@ -10,5 +10,5 @@ class MarkerFrame(RefFrame):
 
     T = ta.Delegate("marker", "transform")
 
-    def __init__(self, marker, **traits):
+    def __init__(self, marker: IAMarker, **traits):
         super().__init__(**traits, marker=marker)

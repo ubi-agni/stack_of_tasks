@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 import numpy
 
 import rospy
@@ -5,6 +7,7 @@ from controller_manager_msgs.srv import ListControllers, LoadController, SwitchC
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 
+from stack_of_tasks import syringe
 from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
 from .robot_state import RobotState
@@ -27,6 +30,7 @@ def initial_joint_values(state: RobotState, ns="", param="initial_joints"):
 class Actuator(ABCSoTHasTraits):
     """Base class for actuators"""
 
+    @abstractmethod
     def actuate(self, dq):
         raise NotImplementedError()
 
@@ -34,6 +38,7 @@ class Actuator(ABCSoTHasTraits):
 class DummyActuator(Actuator):
     """Directly update current joint values with deltas"""
 
+    @syringe.inject
     def __init__(self, robot_state: RobotState, ns_prefix="") -> None:
         self._robot_state = robot_state
         self.initial_values = initial_joint_values(robot_state, ns_prefix)
@@ -55,6 +60,7 @@ class DummyActuator(Actuator):
 class JointStateSubscriber:
     """Update RobotState's incoming_joint_values from /joint_states topic"""
 
+    @syringe.inject
     def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
         self._robot_state = robot_state
         self.ns_prefix = ns_prefix
@@ -72,6 +78,7 @@ class JointStateSubscriber:
 class JointStatePublisher:
     """Publish updated joint values to target_joint_states topic"""
 
+    @syringe.inject
     def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
         self._pub = rospy.Publisher(
             ns_prefix + "target_joint_states", JointState, queue_size=1, latch=True
@@ -89,6 +96,7 @@ class JointStatePublisher:
 class DummyPublisherActuator(DummyActuator, JointStatePublisher):
     """Directly update joint values and publish them, but don't subscribe to /joint_states"""
 
+    @syringe.inject
     def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
         DummyActuator.__init__(self, robot_state, ns_prefix)
         JointStatePublisher.__init__(self, robot_state, ns_prefix)
@@ -101,6 +109,7 @@ class DummyPublisherActuator(DummyActuator, JointStatePublisher):
 class JointStatePublisherActuator(DummyActuator, JointStateSubscriber, JointStatePublisher):
     """Publish updated joint values to target_joint_states topic"""
 
+    @syringe.inject
     def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
         DummyActuator.__init__(self, robot_state, ns_prefix)
         JointStateSubscriber.__init__(self, robot_state, ns_prefix)
@@ -113,6 +122,7 @@ class JointStatePublisherActuator(DummyActuator, JointStateSubscriber, JointStat
 class VelocityCommandActuator(Actuator, JointStateSubscriber):
     """Publish joint state deltas to velocity controller"""
 
+    @syringe.inject
     def __init__(
         self, robot_state: RobotState, rate: float, ns: str = "/joint_velocity_controller"
     ) -> None:

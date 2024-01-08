@@ -21,7 +21,7 @@ class Mapping:
     mappings: List[MappingEntry] = []
 
     @classmethod
-    def find_entry(cls, trait: ta.CTrait) -> bool:
+    def find_entry(cls, trait: ta.CTrait):
         if getattr(trait, "enum_selection") is not None:  # temp. workaround
             return Enum
 
@@ -53,7 +53,7 @@ class MappingEntry(Generic[MappingType]):
         return any(isinstance(trait.trait_type, x) for x in cls.traits)
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW):
+    def setup_function(cls, trait: ta.CTrait, widget: QTW, init_value=None):
         pass
 
 
@@ -62,11 +62,11 @@ class String(MappingEntry):
     widget = QTW.QLineEdit
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW.QLineEdit, value=None):
-        if value is None:
-            value = trait.default
+    def setup_function(cls, trait: ta.CTrait, widget: QTW.QLineEdit, init_value=None):
+        if init_value is None:
+            init_value = trait.default
 
-        widget.setText(value)
+        widget.setText(init_value)
 
 
 class Float(MappingEntry):
@@ -75,9 +75,9 @@ class Float(MappingEntry):
     widget = QTW.QDoubleSpinBox
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QTW.QDoubleSpinBox, value=None):
-        if value is None:
-            value = trait.default
+    def setup_function(cls, trait: ta.CTrait, widget: QTW.QDoubleSpinBox, init_value=None):
+        if init_value is None:
+            init_value = trait.default
 
 
 class RangeEntry(MappingEntry):
@@ -86,11 +86,11 @@ class RangeEntry(MappingEntry):
     widget = Range
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: Range, value=None):
+    def setup_function(cls, trait: ta.CTrait, widget: Range, init_value=None):
         rng: ta.Range = trait.trait_type
 
-        if value is None:
-            value = trait.default
+        if init_value is None:
+            init_value = trait.default
 
         widget.setMinimum(rng._low)
         widget.setMaximum(rng._high)
@@ -105,7 +105,7 @@ class Selection(MappingEntry):
     widget = AddableObjectDropdown
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: AddableObjectDropdown):
+    def setup_function(cls, trait: ta.CTrait, widget: AddableObjectDropdown, init_value=None):
         t: tt.Instance = trait.trait_type
         key = t.model_key if t.model_key is not None else t.klass
 
@@ -123,7 +123,7 @@ class Enum(MappingEntry):
     widget = ObjectDropdown
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: ObjectDropdown):
+    def setup_function(cls, trait: ta.CTrait, widget: ObjectDropdown, init_value=None):
         if getattr(trait, "enum_selection") is not None:
             widget.setModel(getattr(trait, "enum_selection"))
 
@@ -141,3 +141,8 @@ class Matrix(MappingEntry):
     @classmethod
     def matches(cls, trait: ta.CTrait) -> bool:
         return isinstance(trait.trait_type, Array)
+
+    @classmethod
+    def setup_function(cls, trait: ta.CTrait, widget: MatrixWidget, init_value=None):
+        if init_value is not None:
+            widget.set_matrix(init_value)

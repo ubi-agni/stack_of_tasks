@@ -16,5 +16,12 @@ def __init_subclass__(cls, **kwargs):
 enum.Enum.__init_subclass__ = __init_subclass__
 enum.Enum = cl.base(enum.Enum)
 
+from stack_of_tasks.utils.syringe import Syringe
 
-from .controller import Controller
+syringe = Syringe()
+
+import stack_of_tasks.marker.abstract_marker
+import stack_of_tasks.ref_frame.frames
+import stack_of_tasks.tasks.Eq_Tasks
+
+print(stack_of_tasks.tasks.base.TaskRegister.classes)

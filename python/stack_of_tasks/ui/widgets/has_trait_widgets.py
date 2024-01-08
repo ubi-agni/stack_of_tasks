@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Type
 
 import traits.api as ta
 from PyQt5.QtCore import pyqtProperty
@@ -22,20 +22,20 @@ from stack_of_tasks.ui.traits_mapping.bindings import (
     set_user_property,
     trait_widget_binding,
 )
+from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
 class NewInstanceWidget(QWidget):
     def __init__(self, parent=None, cls=None) -> None:
         super().__init__(parent)
 
-        self.cls = cls
+        self.cls: Type[BaseSoTHasTraits] = cls
         self.args = {}
 
         self.fl = QFormLayout()
         self.setLayout(self.fl)
 
     def _setup_widgets(self):
-        old_args = {k: get_user_property(v) for k, v in self.args.items()}
         self.args.clear()
 
         while self.fl.rowCount() > 0:
@@ -45,18 +45,13 @@ class NewInstanceWidget(QWidget):
 
         for name in get_init_arg_trait_names(self.cls):
             trait: ta.CTrait = cls_trs[name]
-
-            if trait.injected is not None:
-                self.args[trait.injected] = InjectionArg()
-                continue
-
             me = ui_mapping.Mapping.find_entry(trait)
 
             if me is not None:
                 widget = me.widget()
+
                 me.setup_function(trait, widget)
-                value = old_args.get(name, trait.trait_type.default_value)
-                set_user_property(widget, value)
+
                 self.fl.addRow(name, widget)
                 self.args[name] = widget
 
@@ -78,20 +73,18 @@ class HasTraitsFormLayout(QFormLayout):
         self.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
 
     def fill(self, inst: ta.HasTraits):
+
         for name in inst.visible_traits():
             trait = inst.trait(name)
-            if trait.injected:
-                continue
 
             me = ui_mapping.Mapping.find_entry(trait)
 
             if me is not None:
                 widget = me.widget()
-                me.setup_function(trait, widget)
 
-                set_user_property(widget, getattr(inst, name))
-
+                me.setup_function(trait, widget, init_value=getattr(inst, name))
                 trait_widget_binding(inst, name, widget)
+
                 widget.setToolTip(trait.desc)
                 self.addRow(trait.label or name, widget)
 

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+from collections import namedtuple
+from pathlib import Path
 from sys import argv
 from threading import Event, Thread
 
-from typing import Any, Generic, List, Type, TypeVar
+from typing import Any, Generic, List, Type, TypedDict, TypeVar
 
 import numpy as np
 import traits.api as ta
@@ -16,23 +18,23 @@ from traits.trait_notifiers import set_ui_handler
 
 import rospy
 
-from stack_of_tasks.config.load_safe import LoadSafe
+from stack_of_tasks import syringe
+from stack_of_tasks.config import Configuration
+from stack_of_tasks.config.load_safe import load
+from stack_of_tasks.controller import Controller
 from stack_of_tasks.logger import fix_rospy_logging, sot_logger
 from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.ref_frame import MarkerFrame, RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import Origin, RobotRefFrame
-from stack_of_tasks.robot_model.actuators import Actuator, DummyPublisherActuator
-from stack_of_tasks.robot_model.robot_model import RobotModel
-from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver import SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import Task, TaskHierarchy, TaskRegister, TaskSoftnessType
-from stack_of_tasks.tasks.Eq_Tasks import OrientationTask, PositionTask
 from stack_of_tasks.ui.mainwindow import Ui
 from stack_of_tasks.ui.model.object_model import ObjectModel
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
+from stack_of_tasks.ui.proj_window import Ui_Project_Window
 from stack_of_tasks.ui.property_tree.prop_tree import SOT_Model
 from stack_of_tasks.ui.traits_mapping.bindings import (
     TraitObjectModelBinder,
@@ -43,6 +45,10 @@ from stack_of_tasks.ui.utils.dependency_injection import DependencyInjection
 from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 logger = sot_logger.getChild("main")
+
+import json
+
+import platformdirs
 
 
 class Worker:
@@ -90,25 +96,18 @@ class SolverThread(Thread):
             self.worker.wait()
 
 
-class Controller(BaseSoTHasTraits):
-    solvercls: Type[Solver] = ta.Type(klass=Solver, value=None)
-    solver: Solver = ta.Instance(klass=Solver)
-
-    def __init__(self, *, robot_model: RobotModel = None, actuator: Actuator = None):
-        super().__init__()
-
-        self.robot_model = robot_model or RobotModel()
-        self.robot_state = RobotState(self.robot_model)
-        self.actuator = actuator or DummyPublisherActuator(self.robot_state)
-
-        self.task_hierarchy = TaskHierarchy()
+class UI_Controller(Controller):
+    def __init__(self, config: Configuration):
+        super().__init__(config)
 
         self.worker = Worker(self, 50)
         self.thread: SolverThread = None
 
     @ta.observe("solvercls", post_init=True)
     def _solver_changed(self, evt):
-        self.solver: Solver = self.solvercls(self.robot_model.N, self.task_hierarchy)
+        self.solver: Solver = self.config.parameter.solvercls(
+            self.robot_model.N, self.task_hierarchy
+        )
         self.solver.tasks_changed()
 
     def toggle_solver_state(self):
@@ -127,56 +126,106 @@ class Controller(BaseSoTHasTraits):
         return self.thread is not None and self.thread.is_alive()
 
 
-class Main(BaseSoTHasTraits):
-    def __init__(self):
+class App_Main:
+    def __init__(self) -> None:
+
+        self.ui = Ui_Project_Window()
+        self._load_latest()
+
+        self.current_project = None
+
+        self.ui.open_project.connect(self.open_project)
+
+    def _load_latest(self):
+        latest = platformdirs.user_cache_path("stack_of_tasks") / "latest.txt"
+
+        if latest.exists():
+            with open(latest, "r") as f:
+                self.latest = json.load(f)
+
+        self.ui.set_last_items(self.latest)
+
+    def _save_latest(self):
+        latest = platformdirs.user_cache_path("stack_of_tasks")
+        if not latest.exists():
+            latest.mkdir()
+
+        with open(latest / "latest.txt", "w") as f:
+            json.dump(self.latest, f)
+
+    def new_project(self):
+        pass
+
+    def open_project(self, index: int):
+        config_location: Path = Path(self.latest[index]["url"])
+
+        self.ui.close()
+        config = load(config_location.read_text())
+        from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
+        from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+
+        config.parameter.solver_cls = OSQPSolver
+        config.parameter.actuator_cls = JointStatePublisherActuator
+
+        self.current_project = UI_App_Project(config)
+
+
+class UI_App_Project(BaseSoTHasTraits):
+
+    ref_objects: List[RefFrame] = ta.List(RefFrame)
+    marker_objects: List[IAMarker] = ta.List(IAMarker)
+
+    def __init__(self, config: Configuration):
         super().__init__()
 
-        self.controller = Controller()
-        self.marker_server = MarkerServer()
+        self.controller = Controller(config)
 
-        model = self.controller.robot_model
-        IAMarker._default_frame_id = model.root_link
-        RobotRefFrame.class_traits()["_robot_state"].injected = "robot_state"
-        DependencyInjection.mapping["robot_state"] = self.controller.robot_state
+        self.marker_server = MarkerServer()
+        IAMarker._default_frame_id = self.controller.robot_model.root_link
 
         # QT-Models
 
-        self.link_model = ObjectModel(data=[*model.links.keys()])  # all robot links
+        # class models -> should be global state
+        self.solver_cls_model = ObjectModel.from_class_register(SolverRegister)
+        self.task_class_model = ObjectModel.from_class_register(TaskRegister)
+        self.refs_cls_model = ObjectModel.from_class_register(RefFrameRegister)
+        self.marker_cls_model = ObjectModel.from_class_register(MarkerRegister)
+
+        # runtime models
+
+        self.refs_model = ObjectModel(
+            self.controller.config.instancing_data.objects["frames"]
+        )
+
+        self.marker_model = ObjectModel(
+            self.controller.config.instancing_data.objects["marker"]
+        )
+
+        self.task_hierachy_model = SOT_Model(self.controller.task_hierarchy)
+
+        self.link_model = ObjectModel(
+            data=[*self.controller.robot_model.links.keys()]
+        )  # all robot links
 
         RobotRefFrame.class_traits()[
             "link_name"
         ].enum_selection = self.link_model  # temp. workaround
 
-        self.solver_cls_model = ObjectModel.from_class_register(SolverRegister)
         ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
-
-        self.task_class_model = ObjectModel.from_class_register(TaskRegister)
         ModelMapping.add_mapping(ClassKey(Task), self.task_class_model)
-
-        self.refs_cls_model = ObjectModel.from_class_register(RefFrameRegister)
         ModelMapping.add_mapping(ClassKey(RefFrame), self.refs_cls_model)
-
-        self.refs: List[RefFrame]
-        self.add_trait("refs", ta.List(RefFrame))
-        self.refs_model = ObjectModel()
-
-        ModelMapping.add_mapping(RefFrame, self.refs_model)
-        TraitObjectModelBinder(self, "refs", self.refs_model)
-
-        self.marker: List[IAMarker]
-        self.add_trait("marker", ta.List(IAMarker))
-
-        self.observe(self._marker_list_changed, "marker:items")
-
-        self.marker_model = ObjectModel()
-        ModelMapping.add_mapping(IAMarker, self.marker_model)
-        TraitObjectModelBinder(self, "marker", self.marker_model)
-
-        self.marker_cls_model = ObjectModel.from_class_register(MarkerRegister)
         ModelMapping.add_mapping(ClassKey(IAMarker), self.marker_cls_model)
 
-        self.task_hierachy_model = SOT_Model(self.controller.task_hierarchy)
+        ModelMapping.add_mapping(RefFrame, self.refs_model)
+        ModelMapping.add_mapping(IAMarker, self.marker_model)
         ModelMapping.add_mapping(Task, self.task_hierachy_model)
+
+        TraitObjectModelBinder(self, "ref_objects", self.refs_model)
+
+        self.observe(self._marker_list_changed, "marker_objects:items")
+
+        TraitObjectModelBinder(self, "marker_objects", self.marker_model)
+
         self.controller.observe(
             lambda evt: self.task_hierachy_model.set_task_hierarchy(evt.new), "task_hierarchy"
         )
@@ -184,26 +233,50 @@ class Main(BaseSoTHasTraits):
         self.residual_update_timer = QtCore.QTimer()
         self.residual_update_timer.timeout.connect(self.update_residuals)
 
+        ### UI STuff
+
+        self.ui_window = Ui()
+
+        # app.aboutToQuit.connect(main_app.teardown)
+
+        TraitWidgetBinding(
+            self.controller,
+            "solver",
+            self.ui_window.tab_widget.solver.edit_solver,
+            "trait_object",
+        )
+
+        # trait_widget_binding(
+        #    self.controller,
+        #    "solvercls",
+        #    self.ui_window.tab_widget.solver.solverClassComboBox,
+        #    set_trait_post=True,
+        # )
+
+        self.ui_window.tab_widget.refs.new_ref_signal.connect(self.new_ref)
+        self.ui_window.tab_widget.marker.new_marker_signal.connect(self.new_marker)
+
+        def toggle_start_stop():
+            if self.controller.toggle_solver_state():
+                self.ui_window.run_Button.setText("Stop")
+                self.residual_update_timer.start(100)
+            else:
+                self.ui_window.run_Button.setText("Start")
+                self.residual_update_timer.stop()
+
+        self.ui_window.run_Button.clicked.connect(toggle_start_stop)
+
+        self.ui_window.save_action.triggered.connect(self.save_state)
+        self.ui_window.load_action.triggered.connect(self.load_state)
+        self.ui_window.new_action.triggered.connect(self.clear_data)
+
     def update_residuals(self):
         for task in self.controller.task_hierarchy.all_tasks():
             task._residual_update = True
 
-    def setup(self):
-        rospy.sleep(0.1)  # wait for joint_states message
-        self.controller.robot_state.update()
-
-        eef = RobotRefFrame(self.controller.robot_state, "panda_hand_tcp")
-        self.new_marker(FullMovementMarker, dict(name="pose", transform=eef.T))
-
-        self.refs.extend([Origin(), goal := MarkerFrame(self.marker[-1]), eef])
-
-        with self.controller.task_hierarchy.new_level() as level:
-            level.append(PositionTask(goal, eef, TaskSoftnessType.linear))
-            level.append(OrientationTask(goal, eef, TaskSoftnessType.linear))
-
     def new_ref(self, cls, args):
-        new_ref = DependencyInjection.create_instance(cls, args)
-        self.refs.append(new_ref)
+        new_ref = cls(**args)
+        self.ref_objects.append(new_ref)
 
     def new_task(self, cls, args):
         new_task = DependencyInjection.create_instance(cls, args)
@@ -213,7 +286,7 @@ class Main(BaseSoTHasTraits):
 
     def new_marker(self, cls, args):
         new_marker = DependencyInjection.create_instance(cls, args)
-        self.marker.append(new_marker)
+        self.marker_objects.append(new_marker)
         self._add_marker_to_server(new_marker)
 
     def _marker_list_changed(self, evt):
@@ -247,8 +320,10 @@ class Main(BaseSoTHasTraits):
         marker = data["marker"]
         sot: dict = data["stack_of_tasks"]
 
-        self.marker.extend(marker)
-        self.refs.extend(frames)
+        self.marker_objects.extend(marker)
+        self.ref_objects.extend(frames)
+
+        print(self.refs_model.da)
 
         for k, level in sorted(sot.items()):
             with self.controller.task_hierarchy.new_level() as l:
@@ -259,22 +334,17 @@ class Main(BaseSoTHasTraits):
             l.clear()
         self.controller.task_hierarchy.levels.clear()
 
-        self.refs.clear()
-        self.marker.clear()
-
-
-def _ui_handler(handler, *args, **kwargs):
-    logger.debug(f"handler {handler}, args {args}, kwargs {kwargs}")
+        self.ref_objects.clear()
+        self.marker_objects.clear()
 
 
 def main():
     logger.info("create main")
-    set_ui_handler(_ui_handler)
-
-    main_app = Main()
-    # main_app.setup()
 
     logger.info("create application ")
+
+    main_app = UI_App_Project()
+
     app = QApplication(argv)
     ui_window = Ui()
 
@@ -311,8 +381,17 @@ def main():
     app.exec()
 
 
+def main_2():
+
+    logger.info("create application ")
+    app = QApplication(argv)
+    _ = App_Main()
+
+    app.exec()
+
+
 if __name__ == "__main__":
     rospy.init_node("ik")
     fix_rospy_logging(sot_logger)
     sot_logger.setLevel(logging.DEBUG)
-    main()
+    main_2()

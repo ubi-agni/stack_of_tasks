@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import traits.api as ta
 
+from stack_of_tasks import syringe
 from stack_of_tasks.ref_frame import RefFrame, Transform
 from stack_of_tasks.robot_model.robot_state import RobotState
 
@@ -34,6 +35,7 @@ class RobotRefFrame(RefFrame):
     _fk = ta.Property()
     _robot_state: RobotState = ta.Instance(RobotState)
 
+    @syringe.inject
     def __init__(self, robot_state: RobotState, link_name: str, **kwargs) -> None:
         if "name" not in kwargs:
             kwargs["name"] = link_name

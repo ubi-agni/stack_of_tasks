@@ -28,7 +28,7 @@ class IAMarker(ABCSoTHasTraits):
     name = ta.Str(value="")
 
     _default_frame_id = ""
-    frame_id = ta.Str()
+    frame_id = ta.Str("")
 
     transform = ta.Array(
         shape=(4, 4), value=np.identity(4), comparison_mode=ta.ComparisonMode.none
@@ -38,7 +38,7 @@ class IAMarker(ABCSoTHasTraits):
 
     sync = ta.Event()
 
-    def __init__(self, name, **kwargs) -> None:
+    def __init__(self, name: str, **kwargs) -> None:
         super().__init__(name=name, **kwargs)
         self.lg = Guard()
         self.markers = []
@@ -53,8 +53,10 @@ class IAMarker(ABCSoTHasTraits):
         self.markers.append(self.marker)
 
     # trait method for dynamic default
-    def _frame_id_default(self):
-        return self._default_frame_id
+    @classmethod
+    def _frame_id_default(cls):
+        print("get default frame")
+        return cls._default_frame_id
 
     @ta.observe("name", post_init=True)
     def _name_changed(self, evt: TraitChangeEvent):

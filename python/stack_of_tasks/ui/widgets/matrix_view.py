@@ -236,4 +236,3 @@ class MatrixWidget(QTableView):
         self.matrix_model.setMatrix(val)
 
     matrix = pyqtProperty(QVariant, get_matrix, set_matrix, notify=matrix_changed, user=True)
-    matrix = pyqtProperty(QVariant, get_matrix, set_matrix, notify=matrix_changed, user=True)

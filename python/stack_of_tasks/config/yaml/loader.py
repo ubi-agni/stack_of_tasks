@@ -1,16 +1,42 @@
 from __future__ import annotations
 
+from collections import namedtuple
 from collections.abc import Mapping
 from enum import Enum
+from weakref import ref
 
-from typing import Any
+from typing import Any, Type
 
 import numpy as np
 import yaml
 from scipy.spatial.transform.rotation import Rotation
 
-from stack_of_tasks.ui.utils.dependency_injection import DependencyInjection
+from stack_of_tasks.config.config import Configuration
 from stack_of_tasks.utils.traits import BaseSoTHasTraits, register_all
+
+
+class SoTInstancingData:
+    def __init__(self, cls: Type[BaseSoTHasTraits], data: dict) -> None:
+        self.cls = cls
+        self.data = data
+
+        self._instance = None
+
+    def _instanciate(self) -> BaseSoTHasTraits:
+        kwargs = {
+            k: v.instance if isinstance(v, SoTInstancingData) else v
+            for k, v in self.data.items()
+        }
+
+        return self.cls(**kwargs)
+
+    @property
+    def instance(self) -> BaseSoTHasTraits:
+        if self._instance is None:
+            i = self._instanciate()
+            self._instance = i
+
+        return self._instance
 
 
 class SotYamlLoader(yaml.Loader):
@@ -25,14 +51,21 @@ class SotYamlLoader(yaml.Loader):
 
     @staticmethod
     def sot_constructor(loader: SotYamlLoader, tag_suffix: str, node: yaml.nodes.MappingNode):
-        cls = loader.find_sot_cls(tag_suffix)
+        cls: Type[BaseSoTHasTraits] = loader.find_sot_cls(tag_suffix)
+
         if cls is None:
-            return "CANNOT FIND CLS"
+            raise Exception("CLS NOT FOUND")
         else:
             data = loader.construct_mapping(node)
 
-            inst: BaseSoTHasTraits = DependencyInjection.create_instance(cls, data)
-            return inst
+            return SoTInstancingData(cls, data)
+
+    def construct_document(self, node) -> Configuration:
+        data = super().construct_document(node)
+
+        settings = data.pop("settings")
+
+        return Configuration.from_data(settings, data)
 
     @staticmethod
     def find_sot_cls(cls_name: str):
@@ -62,5 +95,5 @@ class SotYamlLoader(yaml.Loader):
         return np.fromiter(s, dtype=type(dtype))
 
 
-def load(toml: str):
+def load(toml: str) -> Configuration:
     return yaml.load(toml, SotYamlLoader)

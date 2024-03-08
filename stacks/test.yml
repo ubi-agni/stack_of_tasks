@@ -1,3 +1,4 @@
+
 settings:
   solver:
     cls: OSQPSolver

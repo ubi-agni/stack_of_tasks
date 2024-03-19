@@ -54,13 +54,13 @@ class Syringe:
         self._data: Dict[Type, Any] = {}
 
     def __getitem__(self, key: Type | str):
-        print("searching for inj for ", key, " ", isinstance(key, Type), isinstance(key, str))
+        # print("searching for inj for ", key, " ", isinstance(key, Type), isinstance(key, str))
         if isinstance(key, str):
             return self._data.get(key, None)
-        print("looking in data", self._data.items())
+        # print("looking in data", self._data.items())
 
         for dkey, i in self._data.items():
-            print(f"checking {key} against {dkey}... {issubclass(key, dkey)}")
+            # print(f"checking {key} against {dkey}... {issubclass(key, dkey)}")
             if issubclass(key, dkey):
                 return i
 
@@ -93,14 +93,14 @@ class _InjectionDescriptor(Generic[_MethodType]):
         update_wrapper(self, self._method)
 
     def _get_arg(self, key: str):
-        print(f"resolving annotation for {key}....")
+        # print(f"resolving annotation for {key}....")
         if (type := self._type_annotations.get(key, None)) is not None:
-            print(f".. annotation is {type}....")
+            # print(f".. annotation is {type}....")
             if isinstance(type, ForwardRef):
                 type = _resolve_annotations({"type": type}, self._method.__module__)["type"]
 
             item = self.syringe[type]
-            print(f".. and item is {item}....")
+            # print(f".. and item is {item}....")
             return item
 
     def _map_args(self, args: tuple[Any], kwargs: dict[str, Any]):
@@ -115,9 +115,9 @@ class _InjectionDescriptor(Generic[_MethodType]):
 
         # missing positional or kw arguments:
         for key in self._args.args[max(self._pp_n, n_args) : self._p_n] - kwargs.keys():
-            print(f"searching for {key}....")
+            # print(f"searching for {key}....")
             if (inject_item := self._get_arg(key)) is not None:
-                print(f"... setting {key} to {inject_item}")
+                # print(f"... setting {key} to {inject_item}")
                 kwargs[key] = inject_item
 
         # missing positional or kw arguments:
@@ -125,8 +125,8 @@ class _InjectionDescriptor(Generic[_MethodType]):
             if (inject_item := self._get_arg(key)) is not None:
                 kwargs[key] = inject_item
 
-        print(self._args)
-        print(" ", new_args, kwargs)
+        # print(self._args)
+        # print(" ", new_args, kwargs)
         return new_args, kwargs
 
     def __get__(self, obj=None, objtype=None) -> _MethodType:

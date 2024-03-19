@@ -103,12 +103,12 @@ class UI_Controller(Controller):
         self.worker = Worker(self, 50)
         self.thread: SolverThread = None
 
-    @ta.observe("solvercls", post_init=True)
-    def _solver_changed(self, evt):
-        self.solver: Solver = self.config.parameter.solvercls(
-            self.robot_model.N, self.task_hierarchy
-        )
-        self.solver.tasks_changed()
+    # @ta.observe("solvercls", post_init=True)
+    # def _solver_changed(self, evt):
+    #    self.solver: Solver = self.config.parameter.solvercls(
+    #        self.robot_model.N, self.task_hierarchy
+    #    )
+    #    self.solver.tasks_changed()
 
     def toggle_solver_state(self):
         if self.thread is None:
@@ -134,7 +134,9 @@ class App_Main:
 
         self.current_project = None
 
-        self.ui.open_project.connect(self.open_project)
+        self.ui.open_project_from_file.connect(self.open_project_from_file)
+        self.ui.open_project.connect(self.open_recent_project)
+        self.ui.new_project.connect(self.new_project)
 
     def _load_latest(self):
         latest = platformdirs.user_cache_path("stack_of_tasks") / "latest.txt"
@@ -153,21 +155,29 @@ class App_Main:
         with open(latest / "latest.txt", "w") as f:
             json.dump(self.latest, f)
 
+    def _safe_project(self):
+        url, _ = QFileDialog.getSaveFileUrl(filter="YAML - Files (*.yml)")
+        yml_str = LoadSafe.save_config(self.controller.task_hierarchy)
+
+        with open(url.path(), "w") as f:
+            f.write(yml_str)
+
     def new_project(self):
         pass
 
-    def open_project(self, index: int):
-        config_location: Path = Path(self.latest[index]["url"])
+    def open_recent_project(self, index: int):
+        self._load_project(Path(self.latest[index]["url"]))
+
+    def _load_project(self, config_location: Path):
+        config = load(config_location.read_text())
 
         self.ui.close()
-        config = load(config_location.read_text())
-        from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
-        from stack_of_tasks.solver.OSQPSolver import OSQPSolver
-
-        config.parameter.solver_cls = OSQPSolver
-        config.parameter.actuator_cls = JointStatePublisherActuator
-
         self.current_project = UI_App_Project(config)
+
+    def open_project_from_file(self):
+        _, url = QFileDialog.getOpenFileUrl(filter="YAML - Files (*.yml)")
+        if url != "":
+            self._load_project(Path(url))
 
 
 class UI_App_Project(BaseSoTHasTraits):
@@ -178,7 +188,9 @@ class UI_App_Project(BaseSoTHasTraits):
     def __init__(self, config: Configuration):
         super().__init__()
 
-        self.controller = Controller(config)
+        self.controller = UI_Controller(config)
+
+        QApplication.instance().aboutToQuit.connect(self.teardown)
 
         self.marker_server = MarkerServer()
         IAMarker._default_frame_id = self.controller.robot_model.root_link
@@ -197,9 +209,11 @@ class UI_App_Project(BaseSoTHasTraits):
             self.controller.config.instancing_data.objects["frames"]
         )
 
-        self.marker_model = ObjectModel(
-            self.controller.config.instancing_data.objects["marker"]
-        )
+        _m = self.controller.config.instancing_data.objects["marker"]
+        self.marker_model = ObjectModel(_m)
+
+        for m in _m:
+            self.marker_server.add_marker(m)
 
         self.task_hierachy_model = SOT_Model(self.controller.task_hierarchy)
 
@@ -256,15 +270,7 @@ class UI_App_Project(BaseSoTHasTraits):
         self.ui_window.tab_widget.refs.new_ref_signal.connect(self.new_ref)
         self.ui_window.tab_widget.marker.new_marker_signal.connect(self.new_marker)
 
-        def toggle_start_stop():
-            if self.controller.toggle_solver_state():
-                self.ui_window.run_Button.setText("Stop")
-                self.residual_update_timer.start(100)
-            else:
-                self.ui_window.run_Button.setText("Start")
-                self.residual_update_timer.stop()
-
-        self.ui_window.run_Button.clicked.connect(toggle_start_stop)
+        self.ui_window.run_Button.clicked.connect(self.toggle_start_stop)
 
         self.ui_window.save_action.triggered.connect(self.save_state)
         self.ui_window.load_action.triggered.connect(self.load_state)
@@ -303,32 +309,6 @@ class UI_App_Project(BaseSoTHasTraits):
         if self.controller.is_thread_running():
             self.controller.toggle_solver_state()
 
-    def save_state(self):
-        url, _ = QFileDialog.getSaveFileUrl(filter="YAML - Files (*.yml)")
-        yml_str = LoadSafe.save_config(self.controller.task_hierarchy)
-
-        with open(url.path(), "w") as f:
-            f.write(yml_str)
-
-    def load_state(self):
-        url, _ = QFileDialog.getOpenFileUrl()
-        with open(url.path(), "r") as f:
-            yml_str = f.read()
-
-        data = LoadSafe.load_config(yml_str)
-        frames = data["frames"]
-        marker = data["marker"]
-        sot: dict = data["stack_of_tasks"]
-
-        self.marker_objects.extend(marker)
-        self.ref_objects.extend(frames)
-
-        print(self.refs_model.da)
-
-        for k, level in sorted(sot.items()):
-            with self.controller.task_hierarchy.new_level() as l:
-                l.extend(level)
-
     def clear_data(self):
         for l in self.controller.task_hierarchy.levels:
             l.clear()
@@ -337,46 +317,21 @@ class UI_App_Project(BaseSoTHasTraits):
         self.ref_objects.clear()
         self.marker_objects.clear()
 
+    def toggle_start_stop(self):
+        if self.controller.toggle_solver_state():
+            self.ui_window.run_Button.setText("Stop")
+            self.residual_update_timer.start(100)
+        else:
+            self.ui_window.run_Button.setText("Start")
+            self.residual_update_timer.stop()
+
 
 def main():
     logger.info("create main")
 
     logger.info("create application ")
-
-    main_app = UI_App_Project()
-
     app = QApplication(argv)
-    ui_window = Ui()
-
-    app.aboutToQuit.connect(main_app.teardown)
-
-    TraitWidgetBinding(
-        main_app.controller, "solver", ui_window.tab_widget.solver.edit_solver, "trait_object"
-    )
-
-    trait_widget_binding(
-        main_app.controller,
-        "solvercls",
-        ui_window.tab_widget.solver.solverClassComboBox,
-        set_trait_post=True,
-    )
-
-    ui_window.tab_widget.refs.new_ref_signal.connect(main_app.new_ref)
-    ui_window.tab_widget.marker.new_marker_signal.connect(main_app.new_marker)
-
-    def toggle_start_stop():
-        if main_app.controller.toggle_solver_state():
-            ui_window.run_Button.setText("Stop")
-            main_app.residual_update_timer.start(100)
-        else:
-            ui_window.run_Button.setText("Start")
-            main_app.residual_update_timer.stop()
-
-    ui_window.run_Button.clicked.connect(toggle_start_stop)
-
-    ui_window.save_action.triggered.connect(main_app.save_state)
-    ui_window.load_action.triggered.connect(main_app.load_state)
-    ui_window.new_action.triggered.connect(main_app.clear_data)
+    _ = App_Main()
 
     app.exec()
 
@@ -394,4 +349,4 @@ if __name__ == "__main__":
     rospy.init_node("ik")
     fix_rospy_logging(sot_logger)
     sot_logger.setLevel(logging.DEBUG)
-    main_2()
+    main()

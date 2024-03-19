@@ -1,12 +1,12 @@
 
 settings:
   solver:
-    cls: OSQPSolver
+    cls: !SOT_OSQPSolver
     parameter:
       rho: 0.1
 
   actuator:
-    cls:
+    cls: !SOT_JointStatePublisherActuator
     actuator_parameter:
 
 frames:

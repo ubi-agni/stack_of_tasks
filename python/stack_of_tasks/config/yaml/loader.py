@@ -50,15 +50,25 @@ class SotYamlLoader(yaml.Loader):
         self.add_constructor("transform", SotYamlLoader.transform_constructor)
 
     @staticmethod
-    def sot_constructor(loader: SotYamlLoader, tag_suffix: str, node: yaml.nodes.MappingNode):
+    def sot_constructor(
+        loader: SotYamlLoader,
+        tag_suffix: str,
+        node: yaml.nodes.MappingNode | yaml.nodes.ScalarNode,
+    ):
         cls: Type[BaseSoTHasTraits] = loader.find_sot_cls(tag_suffix)
+        print(tag_suffix, cls)
 
         if cls is None:
             raise Exception("CLS NOT FOUND")
         else:
-            data = loader.construct_mapping(node)
+            if isinstance(node, yaml.nodes.ScalarNode):
 
-            return SoTInstancingData(cls, data)
+                return cls
+
+            else:
+                data = loader.construct_mapping(node)
+
+                return SoTInstancingData(cls, data)
 
     def construct_document(self, node) -> Configuration:
         data = super().construct_document(node)

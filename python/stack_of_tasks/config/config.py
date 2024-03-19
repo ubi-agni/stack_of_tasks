@@ -17,10 +17,9 @@ class InstanceData:
         if self._instanced_stack is None:
             s = TaskHierarchy()
             for v in self._task_data.values():
+                print(v)
                 with s.new_level() as l:
                     l.extend([td.instance for td in v])
-
-                    print(l)
 
             self._instanced_stack = s
 
@@ -39,6 +38,8 @@ class Parameter:
         self.actuator_cls = None
         self.actuator_parameter = {}
 
+        self.params = {}
+
 
 class Configuration:
     def __init__(self) -> None:
@@ -52,14 +53,16 @@ class Configuration:
         p = c.parameter
         i = c.instancing_data
 
-        solver_data = settings["solver"]
-        actuator_data = settings["actuator"]
+        solver_data = settings.pop("solver")
+        actuator_data = settings.pop("actuator")
 
         p.solver_cls = solver_data["cls"]
         p.solver_parameter = solver_data.get("parameter", {})
 
         p.actuator_cls = actuator_data["cls"]
         p.actuator_parameter = actuator_data.get("parameter", {})
+
+        p.params = settings
 
         i._task_data = object_data.pop("stack_of_tasks")
         i._object_data = object_data

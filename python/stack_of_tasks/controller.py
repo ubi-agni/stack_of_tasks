@@ -29,7 +29,10 @@ class Controller(BaseSoTHasTraits):
         self.config = config
 
         # robotmodel
-        self.robot_model = RobotModel()
+        if "robot_model_param" in self.config.parameter.params:
+            self.robot_model = RobotModel(self.config.parameter.params["robot_model_param"])
+        else:
+            self.robot_model = RobotModel()
         # robotstate
         self.robot_state = RobotState(self.robot_model)
 

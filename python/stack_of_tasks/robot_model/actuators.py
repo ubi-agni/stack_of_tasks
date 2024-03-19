@@ -172,3 +172,11 @@ class VelocityCommandActuator(Actuator, JointStateSubscriber):
     def stop(self, stop=None):
         self.actuate(numpy.zeros(self._robot_state.robot_model.N))
         self.switch_controllers([], stop)
+
+
+__all__ = [
+    "DummyActuator",
+    "JointStatePublisherActuator",
+    "DummyPublisherActuator",
+    "VelocityCommandActuator",
+]

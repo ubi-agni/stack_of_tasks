@@ -4,3 +4,5 @@ from .HQPSolver import HqpSolver
 from .InverseJacobianSolver import InverseJacobianSolver
 from .OSQPSolver import OSQPSolver
 from .SCSSolver import SCSSolver
+
+__all__ = ["CVXOPTSolver", "HqpSolver", "InverseJacobianSolver", "OSQPSolver", "SCSSolver"]

@@ -7,6 +7,7 @@ import rospy
 
 from stack_of_tasks import syringe
 from stack_of_tasks.config import Configuration
+from stack_of_tasks.robot_model.actuators import Actuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
@@ -26,11 +27,10 @@ class Controller(BaseSoTHasTraits):
 
     def __init__(self, config: Configuration) -> None:
         super().__init__()
-        self.config = config
 
         # robotmodel
-        if "robot_model_param" in self.config.parameter.params:
-            self.robot_model = RobotModel(self.config.parameter.params["robot_model_param"])
+        if "robot_model_param" in config.parameter.params:
+            self.robot_model = RobotModel(config.parameter.params["robot_model_param"])
         else:
             self.robot_model = RobotModel()
         # robotstate
@@ -40,15 +40,15 @@ class Controller(BaseSoTHasTraits):
         syringe[RobotModel] = self.robot_model
         syringe[RobotState] = self.robot_state
 
-        self.actuator = self.config.parameter.actuator_cls(
-            **self.config.parameter.actuator_parameter
+        self.actuator: Actuator = config.parameter.actuator_cls(
+            **config.parameter.actuator_parameter
         )
 
         # collection of tasks
-        self.task_hierarchy = self.config.instancing_data.stack_of_tasks
-        print(self.task_hierarchy)
-        self.solver = self.config.parameter.solver_cls(
-            self.robot_model.N, self.task_hierarchy, **self.config.parameter.solver_parameter
+        self.task_hierarchy = config.instancing_data.stack_of_tasks
+
+        self.solver: Solver = config.parameter.solver_cls(
+            self.robot_model.N, self.task_hierarchy, **config.parameter.solver_parameter
         )
 
     def control_loop(self, stopping_condition: Callable[[], bool], rate: int):
@@ -73,3 +73,11 @@ class Controller(BaseSoTHasTraits):
             print("dq is none")
 
         return dq
+
+    def create_config(self) -> Configuration:
+        conf = Configuration()
+        conf.parameter.actuator_cls = self.actuator.__class__
+        conf.parameter.solver_cls = self.solver.__class__
+        conf.instancing_data._instanced_stack = self.task_hierarchy
+
+        return conf

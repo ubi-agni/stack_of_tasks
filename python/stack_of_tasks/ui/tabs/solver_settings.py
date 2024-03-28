@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFormLayout, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QAction, QFormLayout, QToolButton, QVBoxLayout, QWidget
 
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
@@ -20,9 +20,14 @@ class SolverSettings(QWidget):
         model = ModelMapping.get_mapping(ClassKey(Solver))
 
         self.verticalLayout.addLayout(self.cls_layout)
+
         self.edit_solver = HasTraitWidget()
         self.verticalLayout.addWidget(self.edit_solver)
         self.verticalLayout.setStretch(1, 1)
+
+        self._set_solver_action = QAction
+        self._set_button = QToolButton()
+
         self.setLayout(self.verticalLayout)
 
         self.solverClassComboBox.setModel(model)

@@ -130,7 +130,6 @@ class _InjectionDescriptor(Generic[_MethodType]):
         return new_args, kwargs
 
     def __get__(self, obj=None, objtype=None) -> _MethodType:
-        print("obj: ", obj, "objt: ", objtype)
         if obj is None:
             return self.__call__
 

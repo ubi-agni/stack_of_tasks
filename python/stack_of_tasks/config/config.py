@@ -1,6 +1,8 @@
 from collections import namedtuple
 from pathlib import Path
 
+from typing import Tuple
+
 from stack_of_tasks.tasks.hierarchy import TaskHierarchy
 
 
@@ -17,7 +19,6 @@ class InstanceData:
         if self._instanced_stack is None:
             s = TaskHierarchy()
             for v in self._task_data.values():
-                print(v)
                 with s.new_level() as l:
                     l.extend([td.instance for td in v])
 
@@ -47,11 +48,17 @@ class Configuration:
         self.instancing_data: InstanceData = InstanceData()
 
     @classmethod
-    def from_data(cls, settings: dict, object_data: dict) -> "Configuration":
+    def from_data(cls, data: dict) -> "Configuration":
         c = Configuration()
 
         p = c.parameter
         i = c.instancing_data
+
+        settings: dict = data.pop("settings")
+
+        i._task_data = data.pop("stack_of_tasks")
+        print(i._task_data)
+        i._object_data = data
 
         solver_data = settings.pop("solver")
         actuator_data = settings.pop("actuator")
@@ -64,10 +71,16 @@ class Configuration:
 
         p.params = settings
 
-        i._task_data = object_data.pop("stack_of_tasks")
-        i._object_data = object_data
-
         return c
+
+    def to_data(self) -> Tuple[dict, dict]:
+
+        data = {
+            "settings": (settings := {}),
+            "stack_of_tasks": (sot := {}),
+        }
+
+        return data
 
 
 from .yaml.loader import SoTInstancingData

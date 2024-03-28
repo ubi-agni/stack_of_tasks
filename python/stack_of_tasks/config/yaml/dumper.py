@@ -3,97 +3,98 @@ from __future__ import annotations
 from collections.abc import Mapping
 from enum import Enum
 
-from typing import Any
+from typing import Any, Type
 
+import traits.api as ta
 import yaml
 from numpy import ndarray
 from scipy.spatial.transform.rotation import Rotation
 
 from stack_of_tasks.marker import IAMarker
 from stack_of_tasks.ref_frame import RefFrame
-from stack_of_tasks.utils.traits import BaseSoTHasTraits
+from stack_of_tasks.utils.traits import ABCSoTHasTraits, BaseSoTHasTraits
+
+SOT_TAG_PREFIX = "!SOT_"
 
 
-class SotDumper(yaml.Dumper):
-    def __init__(
-        self,
-        stream: _WriteStream[Any],
-        default_style: str | None = None,
-        default_flow_style: bool | None = False,
-        canonical: bool | None = None,
-        indent: int | None = None,
-        width: int | _Inf | None = None,
-        allow_unicode: bool | None = None,
-        line_break: str | None = None,
-        encoding: str | None = None,
-        explicit_start: bool | None = None,
-        explicit_end: bool | None = None,
-        version: tuple[int, int] | None = None,
-        tags: Mapping[str, str] | None = None,
-        sort_keys: bool = True,
-    ) -> None:
-        super().__init__(
-            stream,
-            default_style,
-            default_flow_style,
-            canonical,
-            indent,
-            width,
-            allow_unicode,
-            line_break,
-            encoding,
-            explicit_start,
-            explicit_end,
-            version,
-            tags,
-            sort_keys,
+class SotDumper(yaml.CDumper):
+    categories = {IAMarker: "marker", RefFrame: "frames"}
+
+    def _represent_sot_cls(self, data: Type[BaseSoTHasTraits]):
+        return self.represent_scalar(SOT_TAG_PREFIX + "cls", data.__name__)
+
+    def _represent_sot_object(self, data: BaseSoTHasTraits):
+        if isinstance(data, Controller):
+            return self.controller_repr(data)
+
+        _, (cls,), state = data.__reduce_ex__(2)
+
+        if "__traits_version__" in state:  # remove traits version info
+            state.pop("__traits_version__")
+
+        return self.represent_mapping(SOT_TAG_PREFIX + "object:" + cls.__name__, state)
+
+    def controller_repr(self, controller: Controller):
+        data = {}
+        settings = data.setdefault("settings", {})
+
+        settings["solver"] = controller.solver
+        settings["actuator"] = controller.actuator
+
+        data = self.represent_data(data)
+
+        sot_node = self.represent_data(
+            {"stack_of_tasks": {k: l for k, l in enumerate(controller.task_hierarchy.levels)}}
         )
 
-        self.categories = {IAMarker: "marker", RefFrame: "frames"}
-
-        self.add_multi_representer(BaseSoTHasTraits, SotDumper.task_representer)
-        self.add_multi_representer(Enum, SotDumper.enum_representer)
-        self.add_representer(ndarray, SotDumper.array_representer)
-
-    def represent(self, data):
-        _ = self.represent_data(data)
-
-        full_data = {"sot": data}
-
+        objs = {}
         for obj in self.object_keeper:
             for cls, category in self.categories.items():
                 if isinstance(obj, cls):
-                    d: list = full_data.setdefault(category, [])
+                    d: list = objs.setdefault(category, [])
                     d.append(obj)
 
-        full_node = self.represent_data(full_data)
+        obs_nodes = self.represent_data(objs)
 
-        self.serialize(full_node)
-        self.represented_objects = {}
-        self.object_keeper = []
-        self.alias_key = None
+        data.value.extend(obs_nodes.value)
+        data.value.extend(sot_node.value)
 
-    @staticmethod
-    def task_representer(dumper, data: BaseSoTHasTraits):
-        state = data.__get_yml_state__()
+        return data
 
-        return dumper.represent_mapping(f"!SOT_{data.__class__.__name__}", state)
+    def _represent_enum(self: SotDumper, data: Enum):
+        return self.represent_scalar(
+            SOT_TAG_PREFIX + "enum",
+            f"{type(data).__name__}.{data.name}",
+        )
 
-    @staticmethod
-    def enum_representer(dumper, data: Enum):
-        return dumper.represent_scalar("!enum", f"{type(data).__name__}.{data.name}")
-
-    def array_representer(self, data: ndarray):
+    def _represent_np_array(self, data: ndarray):
         if len((s := data.shape)) == 2 and s[0] == 4 and s[1] == 4:
             xyz = data[:3, 3].tolist()
             rpy = Rotation.from_matrix(data[:3, :3]).as_euler("ZYX").tolist()
 
-            return self.represent_mapping("transform", {"xyz": xyz, "rpy": rpy}, True)
+            return self.represent_mapping(
+                SOT_TAG_PREFIX + "transform", {"xyz": xyz, "rpy": rpy}, True
+            )
         else:
-            ln = self.represent_sequence("!arr", data.tolist(), True)
+            ln = self.represent_sequence(SOT_TAG_PREFIX + "arr", data.tolist(), True)
             ln.flow_style = True
             return ln
 
 
+SotDumper.add_multi_representer(ta.MetaHasTraits, SotDumper._represent_sot_cls)
+SotDumper.add_multi_representer(BaseSoTHasTraits, SotDumper._represent_sot_object)
+SotDumper.add_multi_representer(ABCSoTHasTraits, SotDumper._represent_sot_object)
+SotDumper.add_multi_representer(Enum, SotDumper._represent_enum)
+
+SotDumper.add_representer(ndarray, SotDumper._represent_np_array)
+
+SotDumper.add_representer(ta.TraitListObject, SotDumper.represent_list)
+SotDumper.add_representer(ta.TraitDictObject, SotDumper.represent_dict)
+SotDumper.add_representer(ta.TraitSetObject, SotDumper.represent_set)
+
+
 def dump(data):
     return yaml.dump(data, Dumper=SotDumper)
+
+
+from stack_of_tasks.controller import Controller

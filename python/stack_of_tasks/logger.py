@@ -4,7 +4,6 @@ from logging import LogRecord
 
 class RosFilter(logging.Filter):
     def filter(self, record: LogRecord) -> bool:
-        print(vars(record))
         return True
 
 

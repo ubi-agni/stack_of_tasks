@@ -1,12 +1,19 @@
 from sys import version_info as vi
 
 from PyQt5 import Qt, QtWidgets
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QPushButton
 
 from .generated.MainWindow import Ui_MainWindow
 
 
 class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
+
+    open_file_signal = pyqtSignal()
+    new_signal = pyqtSignal()
+    save_signal = pyqtSignal()
+    save_as_signal = pyqtSignal()
+
     def __init__(self):
         super(Ui, self).__init__()
         self.setupUi(self)
@@ -14,8 +21,16 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         fileMenu = self.menu_bar.addMenu("File")
 
         self.new_action = fileMenu.addAction("New")
+        self.new_action.triggered.connect(self.new_signal)
+
+        self.load_action = fileMenu.addAction("Open File")
+        self.load_action.triggered.connect(self.open_file_signal)
+
         self.save_action = fileMenu.addAction("Save")
-        self.load_action = fileMenu.addAction("Load")
+        self.save_action.triggered.connect(self.save_signal)
+
+        self.save_as_action = fileMenu.addAction("Save as")
+        self.save_as_action.triggered.connect(self.save_as_signal)
 
         infoMenu = self.menu_bar.addMenu("Info")
 
@@ -41,4 +56,3 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setCentralWidget(self.tab_widget)
         self.run_Button = QPushButton("Start")
         self.status_bar.addPermanentWidget(self.run_Button)
-        self.show()

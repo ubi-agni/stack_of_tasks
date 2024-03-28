@@ -10,6 +10,7 @@ from typing import Any, Type
 import numpy as np
 import yaml
 from scipy.spatial.transform.rotation import Rotation
+from traits.has_traits import __newobj__
 
 from stack_of_tasks.config.config import Configuration
 from stack_of_tasks.utils.traits import BaseSoTHasTraits, register_all
@@ -40,45 +41,29 @@ class SoTInstancingData:
 
 
 class SotYamlLoader(yaml.Loader):
-    def __init__(self, stream) -> None:
-        super().__init__(stream)
+    def construct_document(self, node):
+        from pprint import pprint
 
-        self.add_multi_constructor("!SOT_", SotYamlLoader.sot_constructor)
-        self.add_constructor("!enum", SotYamlLoader.enum_constructor)
+        data = self.construct_mapping(node, deep=True)
 
-        self.add_constructor("!arr", SotYamlLoader.array_constructor)
-        self.add_constructor("transform", SotYamlLoader.transform_constructor)
+        config = Configuration.from_data(data)
 
-    @staticmethod
-    def sot_constructor(
-        loader: SotYamlLoader,
-        tag_suffix: str,
-        node: yaml.nodes.MappingNode | yaml.nodes.ScalarNode,
-    ):
-        cls: Type[BaseSoTHasTraits] = loader.find_sot_cls(tag_suffix)
-        print(tag_suffix, cls)
+        return config
 
+    def _sot_cls_contructor(self, data: yaml.ScalarNode):
+        cls = self.find_sot_cls(data.value)
         if cls is None:
-            raise Exception("CLS NOT FOUND")
-        else:
-            if isinstance(node, yaml.nodes.ScalarNode):
+            raise Exception(f"Class {data.value} cloud not be found in sot classes!")
 
-                return cls
+        return cls
 
-            else:
-                data = loader.construct_mapping(node)
+    def _sot_obj_constructor(self, cls_name, data: yaml.MappingNode):
+        cls: BaseSoTHasTraits = self.find_sot_cls(cls_name)
+        state = self.construct_mapping(data, deep=True)
 
-                return SoTInstancingData(cls, data)
+        return SoTInstancingData(cls, state)
 
-    def construct_document(self, node) -> Configuration:
-        data = super().construct_document(node)
-
-        settings = data.pop("settings")
-
-        return Configuration.from_data(settings, data)
-
-    @staticmethod
-    def find_sot_cls(cls_name: str):
+    def find_sot_cls(self, cls_name: str):
         return register_all.find_class_by_name(cls_name)
 
     def enum_constructor(self, node: yaml.nodes.ScalarNode):
@@ -103,6 +88,14 @@ class SotYamlLoader(yaml.Loader):
             dtype = s[0]
 
         return np.fromiter(s, dtype=type(dtype))
+
+
+SotYamlLoader.add_constructor("!SOT_cls", SotYamlLoader._sot_cls_contructor)
+SotYamlLoader.add_constructor("!SOT_enum", SotYamlLoader.enum_constructor)
+SotYamlLoader.add_multi_constructor("!SOT_object:", SotYamlLoader._sot_obj_constructor)
+
+SotYamlLoader.add_constructor("!arr", SotYamlLoader.array_constructor)
+SotYamlLoader.add_constructor("!transform", SotYamlLoader.transform_constructor)
 
 
 def load(toml: str) -> Configuration:

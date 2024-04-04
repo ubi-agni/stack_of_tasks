@@ -173,17 +173,14 @@ class Logic_Main:
 
     # Projecct management
 
-    def _safe(self):
-        pass
-        print(dump(self.current_project.controller))
+    def _safe(self, url: Path):
+        yaml_str = dump(self.current_project.controller)
+        # TODO PARSING SETTINGS NEEDS rework
+        # url.write_text(yaml_str)
 
-    def _safe_as(self, url: Path):
-        pass
-
-        # with open(url.path(), "w") as f:
-        # f.write(yml_str)
-        # url, _ = QFileDialog.getSaveFileUrl(filter="YAML - Files (*.yml)")
-        # yml_str = LoadSafe.save_config(self.controller.task_hierarchy)
+    def _safe_as(self):
+        url, _ = QFileDialog.getSaveFileName(filter="YAML - Files (*.yml)")
+        self._safe(Path(url))
 
     def new_project(self):
         pass
@@ -206,7 +203,7 @@ class Logic_Main:
         self._load_project(Path(self.latest[index]["url"]))
 
     def _open_from_file(self):
-        _, url = QFileDialog.getOpenFileUrl(filter="YAML - Files (*.yml)")
+        url, _ = QFileDialog.getOpenFileName(filter="YAML - Files (*.yml)")
         if url != "":
             self._load_project(Path(url))
 
@@ -280,6 +277,8 @@ class Logic_Project(BaseSoTHasTraits):
             "trait_object",
             set_post_init=True,
         )
+
+        # self.controller.observe(print, "solver")
 
         self.ui_window.tab_widget.solver.solverClassComboBox.current_object_changed.connect(
             self._solver_cls_changed

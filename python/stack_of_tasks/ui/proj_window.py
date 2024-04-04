@@ -57,7 +57,7 @@ class Ui_Project_Window(QMainWindow):
         # actions
 
         _open_recent_action = QAction("Open", self)
-        _open_recent_action.triggered.connect(lambda: print("open"))
+        _open_recent_action.triggered.connect(self._open_recent_action_triggered)
 
         self._open_recent_btn = QToolButton()
         self._open_recent_btn.setDefaultAction(_open_recent_action)

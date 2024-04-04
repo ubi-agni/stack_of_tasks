@@ -94,8 +94,8 @@ SotYamlLoader.add_constructor("!SOT_cls", SotYamlLoader._sot_cls_contructor)
 SotYamlLoader.add_constructor("!SOT_enum", SotYamlLoader.enum_constructor)
 SotYamlLoader.add_multi_constructor("!SOT_object:", SotYamlLoader._sot_obj_constructor)
 
-SotYamlLoader.add_constructor("!arr", SotYamlLoader.array_constructor)
-SotYamlLoader.add_constructor("!transform", SotYamlLoader.transform_constructor)
+SotYamlLoader.add_constructor("!SOT_arr", SotYamlLoader.array_constructor)
+SotYamlLoader.add_constructor("!SOT_transform", SotYamlLoader.transform_constructor)
 
 
 def load(toml: str) -> Configuration:

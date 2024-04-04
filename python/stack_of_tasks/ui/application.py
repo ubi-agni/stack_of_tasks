@@ -14,6 +14,7 @@ import numpy as np
 import traits.api as ta
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QApplication, QFileDialog
+from traits.trait_notifiers import set_ui_handler
 
 import rospy
 
@@ -92,6 +93,29 @@ class SolverThread(Thread):
             self.worker.wait()
 
 
+class TraitsEvent(QtCore.QEvent):
+    _QT_TRAITS_EVENT = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())
+
+    def __init__(self, handler, args, kwargs):
+        super().__init__(TraitsEvent._QT_TRAITS_EVENT)
+
+        self.handler = handler
+        self.args = args
+        self.kwargs = kwargs
+
+
+class EventProcessor(QtCore.QObject):
+    def event(self, a0: TraitsEvent) -> bool:
+        # print("process event thread ", threading.current_thread().native_id)
+        if a0.type() == TraitsEvent._QT_TRAITS_EVENT:
+            a0.handler(*a0.args, **a0.kwargs)
+            return True
+        return super().event(a0)
+
+    def postEvent(self, handler, *args, **kwargs):
+        QApplication.instance().postEvent(self, TraitsEvent(handler, args, kwargs))
+
+
 class UI_Controller(Controller):
     def __init__(self, config: Configuration):
         super().__init__(config)
@@ -126,6 +150,9 @@ class Logic_Main:
         self.ui.open_project_from_file.connect(self._open_from_file)
         self.ui.open_project.connect(self._open_recent)
         self.ui.new_project.connect(self.new_project)
+
+        self._evt_processor = EventProcessor()
+        set_ui_handler(self._evt_processor.postEvent)
 
     def _load_latest(self):
         latest = platformdirs.user_cache_path("stack_of_tasks") / "latest.txt"
@@ -243,9 +270,6 @@ class Logic_Project(BaseSoTHasTraits):
             lambda evt: self.task_hierachy_model.set_task_hierarchy(evt.new), "task_hierarchy"
         )
 
-        self.residual_update_timer = QtCore.QTimer()
-        self.residual_update_timer.timeout.connect(self.update_residuals)
-
         self.ui_window = Ui()
         ### UI STuff
 
@@ -314,10 +338,8 @@ class Logic_Project(BaseSoTHasTraits):
     def toggle_start_stop(self):
         if self.controller.toggle_solver_state():
             self.ui_window.run_Button.setText("Stop")
-            self.residual_update_timer.start(100)
         else:
             self.ui_window.run_Button.setText("Start")
-            self.residual_update_timer.stop()
 
 
 def main():

@@ -108,7 +108,7 @@ class TraitWidgetBinding:
         )
 
         if self.widget_prop.isWritable():
-            self._hasTrait.observe(self, self._trait_name)
+            self._hasTrait.observe(self, self._trait_name, dispatch="ui")
 
             if set_post_init:
                 val = getattr(self._hasTrait, self._trait_name)
@@ -117,7 +117,7 @@ class TraitWidgetBinding:
         self._widget.destroyed.connect(self._widget_removed)
 
     def _widget_removed(self):
-        self._hasTrait.observe(self, self._trait_name, remove=True)
+        self._hasTrait.observe(self, self._trait_name, remove=True, dispatch="ui")
 
     def __call__(self, val) -> Any:
         self._widget.setProperty(self.prop_name, val.new)
@@ -155,8 +155,8 @@ class TraitObjectModelBinder:
 
         self._observe_name = f"{self._trait_name}:items"
 
-        self._hasTrait().observe(self._list_set, self._trait_name)
-        self._hasTrait().observe(self._list_changed, self._observe_name)
+        self._hasTrait().observe(self._list_set, self._trait_name, dispatch="ui")
+        self._hasTrait().observe(self._list_changed, self._observe_name, dispatch="ui")
 
         self._model().rowsInserted.connect(self._model_inserted)
 
@@ -164,8 +164,8 @@ class TraitObjectModelBinder:
 
     def _remove_listener(self, obj=None):
         if (t := self._hasTrait()) is not None and self.alive:
-            t.observe(self._list_set, self._trait_name, remove=True)
-            t.observe(self._list_changed, self._observe_name, remove=True)
+            t.observe(self._list_set, self._trait_name, remove=True, dispatch="ui")
+            t.observe(self._list_changed, self._observe_name, remove=True, dispatch="ui")
 
             self.alive = False
 

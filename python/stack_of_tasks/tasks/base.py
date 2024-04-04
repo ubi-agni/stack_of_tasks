@@ -88,6 +88,7 @@ class Task(ABCSoTHasTraits):
     # function to trigger computation
     def _trigger_recompute(self, *args):
         self._recompute = True
+        self._residual_update = True
 
     _compute_val = ta.Property()
 

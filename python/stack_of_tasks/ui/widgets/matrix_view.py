@@ -221,10 +221,10 @@ class MatrixWidget(QTableView):
         if not e.isAccepted():
             return super().keyPressEvent(e)
 
-    def dataChanged(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles=None) -> None:
-        pass
-        # self.matrix_changed.emit(self.get_matrix())
-        # super().dataChanged(topLeft, bottomRight, roles)
+    # def dataChanged(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles=None) -> None:
+    #    pass
+    #    # self.matrix_changed.emit(self.get_matrix())
+    #    # super().dataChanged(topLeft, bottomRight, roles)
 
     def get_matrix(self):
         return self.matrix_model.matrix().reshape(self.shape)

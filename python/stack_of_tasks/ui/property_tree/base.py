@@ -54,11 +54,11 @@ class RawDataItem(Generic[_DataType], RawDataBase):
         super().__init__()
         self._obj: _DataType = obj
         if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
-            self._obj.observe(self._nameChanged, "name")
+            self._obj.observe(self._nameChanged, "name", dispatch="ui")
 
     def __del__(self):
         if isinstance(self._obj, ta.HasTraits) and hasattr(self._obj, "name"):
-            self._obj.observe(self._nameChanged, "name", remove=True)
+            self._obj.observe(self._nameChanged, "name", remove=True, dispatch="ui")
 
     def _nameChanged(self, event):
         self.emitDataChanged()

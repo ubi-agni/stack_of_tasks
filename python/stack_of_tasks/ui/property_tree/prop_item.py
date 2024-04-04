@@ -50,7 +50,7 @@ class TaskItem(RawDataItem, TraitTreeBase):
     def __init__(self, obj: ta.HasTraits):
         super().__init__(obj)
         self._setup_children(self._obj)
-        obj.observe(self._remove_child, "trait_removed")
+        obj.observe(self._remove_child, "trait_removed", dispatch="ui")
 
 
 class AttrNameItem(TraitTreeBase):
@@ -67,7 +67,7 @@ class AttrNameItem(TraitTreeBase):
 
         data = getattr(obj, attr_name)
         if isinstance(data, ta.HasTraits):
-            obj.observe(self._attr_change_cb, attr_name)
+            obj.observe(self._attr_change_cb, attr_name, dispatch="ui")
             self._setup_children(data)
 
     def _attr_change_cb(self, evt):
@@ -88,10 +88,10 @@ class AttrValueItem(RawDataBase):
         self.setDropEnabled(False)
         self.setToolTip(self._trait.desc)
 
-        obj.observe(self._data_changed, attr_name)
+        obj.observe(self._data_changed, attr_name, dispatch="ui")
 
     def __del__(self):
-        self._obj.observe(self._data_changed, self._attr_name, remove=True)
+        self._obj.observe(self._data_changed, self._attr_name, remove=True, dispatch="ui")
 
     def _data_changed(self, evt):
         self.emitDataChanged()

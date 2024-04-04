@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QTabWidget
 
-from stack_of_tasks.ui.tabs import Hierarchy, Marker, Parameter, RefFrames, SolverSettings
+from stack_of_tasks.ui.tabs import Hierarchy, Marker, RefFrames, SolverSettings
 
 
 class TabWidget(QTabWidget):
@@ -17,8 +17,5 @@ class TabWidget(QTabWidget):
 
         self.marker = Marker()
         self.addTab(self.marker, "Marker")
-
-        self.parameter = Parameter()
-        self.addTab(self.parameter, "Parameter")
 
         self.setCurrentIndex(1)

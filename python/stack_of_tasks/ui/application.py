@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
 from sys import argv
 from threading import Event, Thread
 
-from typing import Any, List, Type
+from typing import Any, List, Tuple, Type, TypedDict
 
 import numpy as np
 import traits.api as ta
@@ -139,10 +140,18 @@ class UI_Controller(Controller):
         return self.thread is not None and self.thread.is_alive()
 
 
+LATEST_PATH = platformdirs.user_cache_path("stack_of_tasks") / "latest.json"
+
+
 class Logic_Main:
+
+    latest: dict[Path, Tuple[str, datetime]]
+
     def __init__(self) -> None:
 
         self.ui = Ui_Project_Window()
+
+        self.latest: dict[Path, List[str, datetime]] = {}
         self._load_latest()
 
         self.current_project = None
@@ -155,28 +164,33 @@ class Logic_Main:
         set_ui_handler(self._evt_processor.postEvent)
 
     def _load_latest(self):
-        latest = platformdirs.user_cache_path("stack_of_tasks") / "latest.txt"
+        if LATEST_PATH.exists():
+            data = json.loads(LATEST_PATH.read_text())
+            self.latest = {
+                Path(k): [v[0], datetime.fromtimestamp(v[1])] for k, v in data.items()
+            }
 
-        if latest.exists():
-            with open(latest, "r") as f:
-                self.latest = json.load(f)
-
-        self.ui.set_last_items(self.latest)
+            self.ui.set_last_items(self.latest)
 
     def _save_latest(self):
-        latest = platformdirs.user_cache_path("stack_of_tasks")
-        if not latest.exists():
-            latest.mkdir()
+        data = {k.as_posix(): (v[0], v[1].timestamp()) for k, v in self.latest.items()}
+        LATEST_PATH.write_text(json.dumps(data))
 
-        with open(latest / "latest.txt", "w") as f:
-            json.dump(self.latest, f)
+    def _update_latest_project_list(self, url: Path, name: str = None):
+        if url in self.latest:
+            self.latest[url][1] = datetime.now()
+        else:
+            self.latest[url] = ("Project name", datetime.now())
+
+        self._save_latest()
 
     # Projecct management
 
     def _safe(self, url: Path):
         yaml_str = dump(self.current_project.controller)
-        # TODO PARSING SETTINGS NEEDS rework
-        # url.write_text(yaml_str)
+        url.write_text(yaml_str)
+
+        self._update_latest_project_list(url)
 
     def _safe_as(self):
         url, _ = QFileDialog.getSaveFileName(filter="YAML - Files (*.yml)")
@@ -187,6 +201,7 @@ class Logic_Main:
 
     def _load_project(self, config_location: Path):
         config = load(config_location.read_text())
+        self._update_latest_project_list(config_location)
 
         self.ui.close()
         self.current_project = Logic_Project(config)
@@ -200,7 +215,7 @@ class Logic_Main:
         self.current_project.ui_window.show()
 
     def _open_recent(self, index: int):
-        self._load_project(Path(self.latest[index]["url"]))
+        self._load_project(list(self.latest.keys())[index])
 
     def _open_from_file(self):
         url, _ = QFileDialog.getOpenFileName(filter="YAML - Files (*.yml)")

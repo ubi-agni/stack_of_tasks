@@ -4,6 +4,8 @@ import numpy as np
 import osqp
 import scipy.sparse as snp
 
+from stack_of_tasks import syringe
+from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.solver.HQPSolver import HqpSolver
 from stack_of_tasks.tasks import EqTask
 from stack_of_tasks.utils import prettyprintMatrix
@@ -12,8 +14,9 @@ pp = lambda x: print(prettyprintMatrix(x))
 
 
 class OSQPSolver(HqpSolver):
-    def __init__(self, number_of_joints, task_hierarchy, **options) -> None:
-        super().__init__(number_of_joints, task_hierarchy, **options)
+    @syringe.inject
+    def __init__(self, robot_model: RobotModel, task_hierarchy=None, **options) -> None:
+        super().__init__(robot_model, task_hierarchy, **options)
         self.slack_joint_matrix = None
 
     def _create_matrix(self):

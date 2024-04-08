@@ -1,39 +1,29 @@
-
 settings:
-  solver:
-    cls: !SOT_cls OSQPSolver
-    parameter:
-      rho: 0.1
-
-  actuator:
-    cls: !SOT_cls JointStatePublisherActuator
-    actuator_parameter:
-
+  actuator: !SOT_object:JointStatePublisherActuator {}
+  solver: !SOT_object:OSQPSolver
+    rho: 0.1
 frames:
 - &id002 !SOT_object:MarkerFrame
   marker: &id001 !SOT_object:FullMovementMarker
     frame_id: panda_link0
     name: pose
     scale: 0.25
-    transform: !transform {rpy: [0.0003981633974480628, 0.0, 3.141592653589793],
+    transform: !SOT_transform {rpy: [0.0003981633974480628, 0.0, 3.141592653589793],
       xyz: [0.3070195700516105, -7.425014216296793e-17, 0.4868695582766445]}
   name: Marker
-
 - &id003 !SOT_object:RobotRefFrame
   link_name: panda_hand_tcp
   name: panda_hand_tcp
-
 marker:
 - *id001
-
 stack_of_tasks:
   0:
   - !SOT_object:PositionTask
     name: Position
     refA: *id002
     refB: *id003
-    relType: &id004 !SOT_enum 'RelativeType.A_FIXED'
-    softness_type: &id005 !SOT_enum 'TaskSoftnessType.linear'
+    relType: &id004 !SOT_enum RelativeType.A_FIXED
+    softness_type: &id005 !SOT_enum TaskSoftnessType.linear
     weight: 1.0
   - !SOT_object:OrientationTask
     name: Orientation

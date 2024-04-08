@@ -33,11 +33,8 @@ class InstanceData:
 
 class Parameter:
     def __init__(self) -> None:
-        self.solver_cls = None
-        self.solver_parameter = {}
-
-        self.actuator_cls = None
-        self.actuator_parameter = {}
+        self.solver = None
+        self.actuator = None
 
         self.params = {}
 
@@ -57,17 +54,10 @@ class Configuration:
         settings: dict = data.pop("settings")
 
         i._task_data = data.pop("stack_of_tasks")
-        print(i._task_data)
         i._object_data = data
 
-        solver_data = settings.pop("solver")
-        actuator_data = settings.pop("actuator")
-
-        p.solver_cls = solver_data["cls"]
-        p.solver_parameter = solver_data.get("parameter", {})
-
-        p.actuator_cls = actuator_data["cls"]
-        p.actuator_parameter = actuator_data.get("parameter", {})
+        p.solver = settings.pop("solver")
+        p.actuator = settings.pop("actuator")
 
         p.params = settings
 

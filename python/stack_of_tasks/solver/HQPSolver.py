@@ -6,6 +6,8 @@ from typing import Any
 import numpy as np
 import traits.api as ta
 
+from stack_of_tasks import syringe
+from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import EqTask, IeqTask, TaskHierarchy, TaskSoftnessType
 from stack_of_tasks.tasks.base import task_kind_check
@@ -43,10 +45,11 @@ class HqpSolver(Solver):
 
     rho = ta.Range(0.0, value=0.1, exclude_low=True)
 
+    @syringe.inject
     def __init__(
-        self, number_of_joints: int, task_hierarchy: TaskHierarchy, **options
+        self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options
     ) -> None:
-        super().__init__(number_of_joints, task_hierarchy, **options)
+        super().__init__(robot_model, task_hierarchy, **options)
 
         self.m_slacks = 0
         self.m_eq = 0
@@ -81,9 +84,6 @@ class HqpSolver(Solver):
 
         self.sieq_matrix: NDArray
         self.sieq_bound: NDArray
-
-        self._calculate_sot_sizes()
-        self._create_matrix()
 
     def tasks_changed(self):
         super().tasks_changed()

@@ -40,16 +40,13 @@ class Controller(BaseSoTHasTraits):
         syringe[RobotModel] = self.robot_model
         syringe[RobotState] = self.robot_state
 
-        self.actuator: Actuator = config.parameter.actuator_cls(
-            **config.parameter.actuator_parameter
-        )
+        self.actuator: Actuator = config.parameter.actuator.instance
+        self.solver: Solver = config.parameter.solver.instance
 
         # collection of tasks
         self.task_hierarchy = config.instancing_data.stack_of_tasks
 
-        self.solver: Solver = config.parameter.solver_cls(
-            self.robot_model.N, self.task_hierarchy, **config.parameter.solver_parameter
-        )
+        self.solver.set_task_hierarchy(self.task_hierarchy)
 
     def control_loop(self, stopping_condition: Callable[[], bool], rate: int):
         rrate = rospy.Rate(rate)

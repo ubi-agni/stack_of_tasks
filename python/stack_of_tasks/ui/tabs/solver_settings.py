@@ -1,4 +1,12 @@
-from PyQt5.QtWidgets import QAction, QFormLayout, QToolButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QAction,
+    QFormLayout,
+    QGroupBox,
+    QLineEdit,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
@@ -11,23 +19,40 @@ class SolverSettings(QWidget):
         super().__init__(parent)
 
         self.verticalLayout = QVBoxLayout()
-        self.cls_layout = QFormLayout()
-        self.cls_layout.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
+        self.setLayout(self.verticalLayout)
 
+        layout = self._new_region("Settings", QFormLayout())
+
+        layout.addRow("Project name TODO", QLineEdit())
+
+        layout = self._new_region("Solver (Only OSQP is working)", QVBoxLayout())
+
+        cls_layout = QFormLayout()
+        cls_layout.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
+        layout.addLayout(cls_layout)
         self.solverClassComboBox = ObjectDropdown()
-        self.cls_layout.addRow("Class", self.solverClassComboBox)
+        cls_layout.addRow("Class", self.solverClassComboBox)
 
         model = ModelMapping.get_mapping(ClassKey(Solver))
-
-        self.verticalLayout.addLayout(self.cls_layout)
+        self.solverClassComboBox.setModel(model)
 
         self.edit_solver = HasTraitWidget()
-        self.verticalLayout.addWidget(self.edit_solver)
-        self.verticalLayout.setStretch(1, 1)
+        layout.addWidget(self.edit_solver)
+
+        layout = self._new_region("TODO Actuator", QVBoxLayout())
+        actuator_layout = QFormLayout()
+        actuator_layout.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
+        layout.addLayout(actuator_layout)
+        self.actuatorClassComboBox = ObjectDropdown()
+        actuator_layout.addRow("Class", self.actuatorClassComboBox)
+
+        self.verticalLayout.addStretch()
 
         self._set_solver_action = QAction
         self._set_button = QToolButton()
 
-        self.setLayout(self.verticalLayout)
-
-        self.solverClassComboBox.setModel(model)
+    def _new_region(self, name, layout):
+        group = QGroupBox(name)
+        group.setLayout(layout)
+        self.verticalLayout.addWidget(group)
+        return layout

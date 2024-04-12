@@ -27,7 +27,7 @@ from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
-from stack_of_tasks.solver import SolverRegister
+from stack_of_tasks.solver import AbstractSolver, SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import Task, TaskRegister
 from stack_of_tasks.ui.mainwindow import Ui
@@ -38,6 +38,7 @@ from stack_of_tasks.ui.property_tree.prop_tree import SOT_Model
 from stack_of_tasks.ui.traits_mapping.bindings import (
     TraitObjectModelBinder,
     TraitWidgetBinding,
+    trait_widget_binding,
 )
 from stack_of_tasks.ui.utils.dependency_injection import DependencyInjection
 from stack_of_tasks.utils.traits import BaseSoTHasTraits
@@ -197,13 +198,21 @@ class Logic_Main:
         self._safe(Path(url))
 
     def new_project(self):
-        pass
+        if self.current_project is not None:
+            self.current_project.teardown()
+            self.current_project.ui_window.close()
+            del self.current_project
 
-    def _load_project(self, config_location: Path):
-        config = load(config_location.read_text())
-        self._update_latest_project_list(config_location)
+        from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
+        from stack_of_tasks.solver.OSQPSolver import OSQPSolver
 
+        config = Configuration(
+            actuator_cls=JointStatePublisherActuator, solver_cls=OSQPSolver
+        )
+        self._create_procect(config)
         self.ui.close()
+
+    def _create_procect(self, config):
         self.current_project = Logic_Project(config)
 
         self.current_project.ui_window.new_signal.connect(self.new_project)
@@ -213,6 +222,12 @@ class Logic_Main:
         self.current_project.ui_window.save_as_signal.connect(self._safe_as)
 
         self.current_project.ui_window.show()
+
+    def _load_project(self, config_location: Path):
+        config = load(config_location.read_text())
+        self._update_latest_project_list(config_location)
+        self._create_procect(config)
+        self.ui.close()
 
     def _open_recent(self, index: int):
         self._load_project(list(self.latest.keys())[index])
@@ -227,6 +242,7 @@ class Logic_Project(BaseSoTHasTraits):
 
     ref_objects: List[RefFrame] = ta.List(RefFrame)
     marker_objects: List[IAMarker] = ta.List(IAMarker)
+    solver_cls = ta.Property()
 
     def __init__(self, config: Configuration):
         super().__init__()
@@ -267,6 +283,7 @@ class Logic_Project(BaseSoTHasTraits):
         ].enum_selection = self.link_model  # temp. workaround
 
         ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
+        # ModelMapping.add_mapping(ClassKey(Actu), self.solver_cls_model)
         ModelMapping.add_mapping(ClassKey(Task), self.task_class_model)
         ModelMapping.add_mapping(ClassKey(RefFrame), self.refs_cls_model)
         ModelMapping.add_mapping(ClassKey(IAMarker), self.marker_cls_model)
@@ -293,10 +310,11 @@ class Logic_Project(BaseSoTHasTraits):
             set_post_init=True,
         )
 
-        # self.controller.observe(print, "solver")
-
-        self.ui_window.tab_widget.solver.solverClassComboBox.current_object_changed.connect(
-            self._solver_cls_changed
+        trait_widget_binding(
+            self,
+            "solver_cls",
+            self.ui_window.tab_widget.solver.solverClassComboBox,
+            set_widget_post=True,
         )
 
         self.ui_window.tab_widget.refs.new_ref_signal.connect(self.new_ref)
@@ -306,6 +324,13 @@ class Logic_Project(BaseSoTHasTraits):
     def update_residuals(self):
         for task in self.controller.task_hierarchy.all_tasks():
             task._residual_update = True
+
+    def _set_solver_cls(self, solver_cls: Type[AbstractSolver.Solver]):
+        solver = solver_cls(task_hierarchy=self.controller.task_hierarchy)
+        self.controller.solver = solver
+
+    def _get_solver_cls(self):
+        return type(self.controller.solver)
 
     def _solver_cls_changed(self, solver_cls: Type[Solver]):
         solver = solver_cls(self.controller.robot_model.N, self.controller.task_hierarchy)

@@ -8,8 +8,8 @@ from stack_of_tasks.tasks.hierarchy import TaskHierarchy
 
 class InstanceData:
     def __init__(self) -> None:
-        self._object_data: dict = None
-        self._task_data: dict[int, list[SoTInstancingData]] = None
+        self._object_data: dict = {"frames": [], "marker": []}
+        self._task_data: dict[int, list[SoTInstancingData]] = {}
 
         self._instanced_objects = None
         self._instanced_stack = None
@@ -40,13 +40,16 @@ class Parameter:
 
 
 class Configuration:
-    def __init__(self) -> None:
+    def __init__(self, actuator_cls, solver_cls) -> None:
         self.parameter: Parameter = Parameter()
+        self.parameter.actuator = SoTInstancingData(actuator_cls, {})
+        self.parameter.solver = SoTInstancingData(solver_cls, {})
+
         self.instancing_data: InstanceData = InstanceData()
 
     @classmethod
     def from_data(cls, data: dict) -> "Configuration":
-        c = Configuration()
+        c = Configuration(None, None)
 
         p = c.parameter
         i = c.instancing_data

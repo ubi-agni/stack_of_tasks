@@ -83,7 +83,7 @@ class HasTraitsFormLayout(QFormLayout):
                 widget = me.widget()
 
                 me.setup_function(trait, widget, init_value=getattr(inst, name))
-                trait_widget_binding(inst, name, widget)
+                trait_widget_binding(inst, name, widget, set_widget_post=True)
 
                 widget.setToolTip(trait.desc)
                 self.addRow(trait.label or name, widget)
@@ -111,6 +111,7 @@ class HasTraitWidget(QWidget):
         self.setLayout(self.trait_form_layout)
 
     def set_trait_object(self, obj):
+        print("set", obj)
         self.trait_form_layout.clear()
         if obj is not None:
             self.trait_form_layout.fill(obj)

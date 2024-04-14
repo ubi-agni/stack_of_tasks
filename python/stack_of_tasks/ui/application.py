@@ -164,6 +164,9 @@ class Logic_Main:
         self._evt_processor = EventProcessor()
         set_ui_handler(self._evt_processor.postEvent)
 
+        if len(self.latest) == 0:
+            self.new_project()
+
     def _load_latest(self):
         if LATEST_PATH.exists():
             data = json.loads(LATEST_PATH.read_text())

@@ -209,10 +209,10 @@ class Logic_Main:
         config = Configuration(
             actuator_cls=JointStatePublisherActuator, solver_cls=OSQPSolver
         )
-        self._create_procect(config)
+        self._create_project(config)
         self.ui.close()
 
-    def _create_procect(self, config):
+    def _create_project(self, config):
         self.current_project = Logic_Project(config)
 
         self.current_project.ui_window.new_signal.connect(self.new_project)
@@ -226,16 +226,16 @@ class Logic_Main:
     def _load_project(self, config_location: Path):
         config = load(config_location.read_text())
         self._update_latest_project_list(config_location)
-        self._create_procect(config)
+        self._create_project(config)
         self.ui.close()
 
     def _open_recent(self, index: int):
         self._load_project(list(self.latest.keys())[index])
 
     def _open_from_file(self):
-        url, _ = QFileDialog.getOpenFileName(filter="YAML - Files (*.yml)")
-        if url != "":
-            self._load_project(Path(url))
+        name, _ = QFileDialog.getOpenFileName(filter="YAML - Files (*.yml)")
+        if name != "":
+            self._load_project(Path(name))
 
 
 class Logic_Project(BaseSoTHasTraits):

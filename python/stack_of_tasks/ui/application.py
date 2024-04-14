@@ -358,9 +358,8 @@ class Logic_Project(BaseSoTHasTraits):
     def _marker_list_changed(self, evt):
         for x in evt.added:
             self._add_marker_to_server(x)
-        else:
-            for x in evt.removed:
-                self.marker_server.remove(x)
+        for x in evt.removed:
+            self.marker_server.remove(x)
 
     def _add_marker_to_server(self, marker):
         self.marker_server.add_marker(marker)

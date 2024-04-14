@@ -386,10 +386,6 @@ def main():
     fix_rospy_logging(sot_logger)
     sot_logger.setLevel(logging.DEBUG)
 
-    logger.info("create main")
-
-    logger.info("create application ")
-
     app = QApplication(argv)
     _ = Logic_Main()
 

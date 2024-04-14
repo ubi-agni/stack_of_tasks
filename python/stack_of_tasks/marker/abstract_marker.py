@@ -55,7 +55,6 @@ class IAMarker(ABCSoTHasTraits):
     # trait method for dynamic default
     @classmethod
     def _frame_id_default(cls):
-        print("get default frame")
         return cls._default_frame_id
 
     @ta.observe("name", post_init=True)

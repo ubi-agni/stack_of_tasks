@@ -189,15 +189,23 @@ class Logic_Main:
 
     # Projecct management
 
-    def _safe(self, url: Path):
+    def _safe_file(self, url: Path):
         yaml_str = dump(self.current_project.controller)
         url.write_text(yaml_str)
 
+        self.current_project.url = url
         self._update_latest_project_list(url)
+
+    def _safe(self):
+        if self.current_project.url is None:
+            self._safe_as()
+        else:
+            self._safe_file(self.current_project.url)
 
     def _safe_as(self):
         url, _ = QFileDialog.getSaveFileName(filter="YAML - Files (*.yml)")
-        self._safe(Path(url))
+        if url:  # only save if a file was chosen
+            self._safe_file(Path(url))
 
     def new_project(self):
         from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
@@ -225,6 +233,7 @@ class Logic_Main:
         config = load(config_location.read_text())
         self._update_latest_project_list(config_location)
         self._create_project(config)
+        self.current_project.url = config_location
         self.ui.close()
 
     def _open_recent(self, index: int):
@@ -238,6 +247,7 @@ class Logic_Main:
 
 class Logic_Project(BaseSoTHasTraits):
 
+    url: Path = None
     ref_objects: List[RefFrame] = ta.List(RefFrame)
     marker_objects: List[IAMarker] = ta.List(IAMarker)
     solver_cls = ta.Property()

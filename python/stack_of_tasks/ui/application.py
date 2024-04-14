@@ -200,11 +200,6 @@ class Logic_Main:
         self._safe(Path(url))
 
     def new_project(self):
-        if self.current_project is not None:
-            self.current_project.teardown()
-            self.current_project.ui_window.close()
-            del self.current_project
-
         from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
         from stack_of_tasks.solver.OSQPSolver import OSQPSolver
 
@@ -215,10 +210,11 @@ class Logic_Main:
         self.ui.close()
 
     def _create_project(self, config):
+        if self.current_project is not None:
+            self.current_project.teardown()
         self.current_project = Logic_Project(config)
 
         self.current_project.ui_window.new_signal.connect(self.new_project)
-
         self.current_project.ui_window.open_file_signal.connect(self._open_from_file)
         self.current_project.ui_window.save_signal.connect(self._safe)
         self.current_project.ui_window.save_as_signal.connect(self._safe_as)
@@ -364,6 +360,7 @@ class Logic_Project(BaseSoTHasTraits):
         self.marker_server.add_marker(marker)
 
     def teardown(self):
+        self.ui_window.close()
         if self.controller.is_thread_running():
             self.controller.toggle_solver_state()
 

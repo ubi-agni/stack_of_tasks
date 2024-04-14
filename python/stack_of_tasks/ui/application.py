@@ -178,13 +178,12 @@ class Logic_Main:
 
     def _save_latest(self):
         data = {k.as_posix(): (v[0], v[1].timestamp()) for k, v in self.latest.items()}
+        LATEST_PATH.parent.mkdir(parents=True, exist_ok=True)
         LATEST_PATH.write_text(json.dumps(data))
 
-    def _update_latest_project_list(self, url: Path, name: str = None):
-        if url in self.latest:
-            self.latest[url][1] = datetime.now()
-        else:
-            self.latest[url] = ("Project name", datetime.now())
+    def _update_latest_project_list(self, url: Path):
+        name = self.latest[url][0] if url in self.latest else url.as_posix()
+        self.latest[url] = (name, datetime.now())
 
         self._save_latest()
 

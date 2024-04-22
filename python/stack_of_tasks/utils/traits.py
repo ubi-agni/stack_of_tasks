@@ -18,7 +18,8 @@ register_all = ClassRegister("all")
 
 @register_all.base
 class BaseSoTHasTraits(ta.HasTraits):
-    # Make 'private' traits (leading '_') have no type checking:
+    # all traits defined after instance creation are transient/are not dumped
+    # Make 'private' traits (leading '_') have no type checking # TODO docu verlinken:
 
     _ = ta.Any(transient=True)
     __ = ta.Any(private=True, transient=True)
@@ -49,19 +50,6 @@ class BaseSoTHasTraits(ta.HasTraits):
             for prefix in prefix_names:
                 if name.startswith(prefix):
                     trait.__dict__.update(self.__prefix_traits__[prefix].__dict__)
-
-    # def __get_yml_state__(self):
-    #    def is_none(val):
-    #        return val is None
-
-
-#
-#    def not_py(val):
-#        return val != "python"
-#
-#    result = self.trait_get(transient=is_none, type=not_py)
-#
-#    return result
 
 
 class ABCSoTHasTraits(BaseSoTHasTraits, ta.ABCHasTraits):

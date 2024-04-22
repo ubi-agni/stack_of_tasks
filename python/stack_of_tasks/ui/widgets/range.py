@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from enum import IntFlag
 
-import PyQt5.QtWidgets as QTW
-from PyQt5.QtWidgets import QAbstractSpinBox
+from PyQt5.QtWidgets import QAbstractSpinBox, QDoubleSpinBox
 
 
 class HasBound(IntFlag):
@@ -18,7 +17,7 @@ class ExcludeBound(IntFlag):
     EXCLUDE_MAX = 0x2
 
 
-class Range(QTW.QDoubleSpinBox):
+class Range(QDoubleSpinBox):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 

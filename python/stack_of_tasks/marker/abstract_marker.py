@@ -17,7 +17,7 @@ from visualization_msgs.msg import (
 )
 
 from stack_of_tasks.utils import ClassRegister
-from stack_of_tasks.utils.tf_mappings import matrix_to_pose
+from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 from stack_of_tasks.utils.traits import ABCSoTHasTraits, Guard
 
 MarkerRegister = ClassRegister("MarkerRegister")
@@ -25,10 +25,10 @@ MarkerRegister = ClassRegister("MarkerRegister")
 
 @MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
-    name = ta.Str(value="")
+    name = ta.Str()
 
     _default_frame_id = ""
-    frame_id = ta.Str("")
+    frame_id = ta.Str()
 
     transform = ta.Array(
         shape=(4, 4), value=np.identity(4), comparison_mode=ta.ComparisonMode.none
@@ -55,7 +55,6 @@ class IAMarker(ABCSoTHasTraits):
     # trait method for dynamic default
     @classmethod
     def _frame_id_default(cls):
-        print("get default frame")
         return cls._default_frame_id
 
     @ta.observe("name", post_init=True)
@@ -74,9 +73,11 @@ class IAMarker(ABCSoTHasTraits):
             self.marker.scale = self.scale
             self.sync = self.name
 
-    @abstractmethod
     def feedback(self, fb: InteractiveMarkerFeedback):
-        pass
+        with self.lg("transform"):
+            self.trait_set(transform=pose_to_matrix(fb.pose))
+            self.marker.pose = fb.pose
+            self.sync = self.name
 
     @staticmethod
     def _create_interactive_marker(name: str, scale: float, frame_id: str, pose):

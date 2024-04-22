@@ -36,13 +36,21 @@ class NewInstanceWidget(QWidget):
         self.setLayout(self.fl)
 
     def _setup_widgets(self):
+        old_args = {k: get_user_property(v) for k, v in self.args.items()}
         self.args.clear()
 
         while self.fl.rowCount() > 0:
             self.fl.removeRow(0)
 
-        cls_trs = self.cls.class_traits()
+        def get_default(cls, trait, name):
+            if trait.value is not None:
+                return trait.value
+            if callable(f := getattr(cls, f"_{name}_default", None)):
+                # HACK: this assumes that the default method acts like a class method
+                return f()
+            return trait.trait_type.default_value
 
+        cls_trs = self.cls.class_traits()
         for name in get_init_arg_trait_names(self.cls):
             trait: ta.CTrait = cls_trs[name]
             me = ui_mapping.Mapping.find_entry(trait)
@@ -51,7 +59,8 @@ class NewInstanceWidget(QWidget):
                 widget = me.widget()
 
                 me.setup_function(trait, widget)
-
+                value = old_args.get(name, get_default(self.cls, trait, name))
+                set_user_property(widget, value)
                 self.fl.addRow(name, widget)
                 self.args[name] = widget
 
@@ -82,7 +91,8 @@ class HasTraitsFormLayout(QFormLayout):
             if me is not None:
                 widget = me.widget()
 
-                me.setup_function(trait, widget, init_value=getattr(inst, name))
+                me.setup_function(trait, widget)
+                set_user_property(widget, getattr(inst, name))
                 trait_widget_binding(inst, name, widget, set_widget_post=True)
 
                 widget.setToolTip(trait.desc)

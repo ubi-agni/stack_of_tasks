@@ -84,5 +84,5 @@ class Guard(object):
             if self.locked_items[item] <= 0:
                 del self.locked_items[item]
 
-    def __contains__(self, items):
-        return items in self.locked_items
+    def __contains__(self, item):
+        return item in self.locked_items

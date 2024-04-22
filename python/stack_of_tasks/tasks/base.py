@@ -61,7 +61,7 @@ class Task(ABCSoTHasTraits):
     task_size = -1
 
     # universal task properties
-    softness_type = ta.Enum(TaskSoftnessType, default=TaskSoftnessType.linear)
+    softness_type = ta.Enum(TaskSoftnessType.linear, TaskSoftnessType)
 
     weight = ta.Range(
         low=0.0,
@@ -73,7 +73,7 @@ class Task(ABCSoTHasTraits):
     A: A = ta.Property(depends_on="_recompute", trait=ta.Array, visible=False)
 
     def _get_A(self):
-        return self._compute_val[0]
+        return np.atleast_2d(self._compute_val[0])
 
     def __init__(
         self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits
@@ -102,7 +102,7 @@ class Task(ABCSoTHasTraits):
 
 
 class RelativeTask(Task, ABC):
-    relType: RelativeType = ta.Enum(RelativeType, default=RelativeType.A_FIXED)
+    relType: RelativeType = ta.Enum(RelativeType.A_FIXED, RelativeType)
 
     refA: RefFrame = ta.Instance(RefFrame, label="frame A")
     refB: RefFrame = ta.Instance(RefFrame, label="frame B")
@@ -148,18 +148,19 @@ class RelativeTask(Task, ABC):
 
 class TargetTask(Task, ABC):
     target: RefFrame = ta.Instance(RefFrame)
-    robot: RobotRefFrame = ta.Instance(RobotRefFrame)
+    robot: RefFrame = ta.Instance(RefFrame)
 
     _J: Jacobian = ta.DelegatesTo("robot", "J")
 
     def __init__(
         self,
         target: RefFrame,
-        robotFrame: RobotRefFrame,
+        robot: RefFrame,
         softness_type: TaskSoftnessType,
         weight: float = 1,
+        **traits,
     ) -> None:
-        super().__init__(softness_type, weight, target=target, robot=robotFrame)
+        super().__init__(softness_type, weight, target=target, robot=robot, **traits)
         self.observe(self._trigger_recompute, "target:T, robot:T, _J")
 
 
@@ -168,7 +169,7 @@ class EqTask(Task, ABC):
     residual = ta.Property(trait=ta.Array, visible=False, depends_on="_residual_update")
 
     def _get_bound(self):
-        return self._compute_val[1]
+        return np.atleast_1d(self._compute_val[1])
 
     def _get_residual(self):
         return self.bound

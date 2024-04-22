@@ -164,6 +164,9 @@ class Logic_Main:
         self._evt_processor = EventProcessor()
         set_ui_handler(self._evt_processor.postEvent)
 
+        if len(self.latest) == 0:
+            self.new_project()
+
     def _load_latest(self):
         if LATEST_PATH.exists():
             data = json.loads(LATEST_PATH.read_text())
@@ -175,48 +178,51 @@ class Logic_Main:
 
     def _save_latest(self):
         data = {k.as_posix(): (v[0], v[1].timestamp()) for k, v in self.latest.items()}
+        LATEST_PATH.parent.mkdir(parents=True, exist_ok=True)
         LATEST_PATH.write_text(json.dumps(data))
 
-    def _update_latest_project_list(self, url: Path, name: str = None):
-        if url in self.latest:
-            self.latest[url][1] = datetime.now()
-        else:
-            self.latest[url] = ("Project name", datetime.now())
+    def _update_latest_project_list(self, url: Path):
+        name = self.latest[url][0] if url in self.latest else url.as_posix()
+        self.latest[url] = (name, datetime.now())
 
         self._save_latest()
 
     # Projecct management
 
-    def _safe(self, url: Path):
+    def _safe_file(self, url: Path):
         yaml_str = dump(self.current_project.controller)
         url.write_text(yaml_str)
 
+        self.current_project.url = url
         self._update_latest_project_list(url)
+
+    def _safe(self):
+        if self.current_project.url is None:
+            self._safe_as()
+        else:
+            self._safe_file(self.current_project.url)
 
     def _safe_as(self):
         url, _ = QFileDialog.getSaveFileName(filter="YAML - Files (*.yml)")
-        self._safe(Path(url))
+        if url:  # only save if a file was chosen
+            self._safe_file(Path(url))
 
     def new_project(self):
-        if self.current_project is not None:
-            self.current_project.teardown()
-            self.current_project.ui_window.close()
-            del self.current_project
-
         from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
         from stack_of_tasks.solver.OSQPSolver import OSQPSolver
 
         config = Configuration(
             actuator_cls=JointStatePublisherActuator, solver_cls=OSQPSolver
         )
-        self._create_procect(config)
+        self._create_project(config)
         self.ui.close()
 
-    def _create_procect(self, config):
+    def _create_project(self, config):
+        if self.current_project is not None:
+            self.current_project.teardown()
         self.current_project = Logic_Project(config)
 
         self.current_project.ui_window.new_signal.connect(self.new_project)
-
         self.current_project.ui_window.open_file_signal.connect(self._open_from_file)
         self.current_project.ui_window.save_signal.connect(self._safe)
         self.current_project.ui_window.save_as_signal.connect(self._safe_as)
@@ -226,20 +232,22 @@ class Logic_Main:
     def _load_project(self, config_location: Path):
         config = load(config_location.read_text())
         self._update_latest_project_list(config_location)
-        self._create_procect(config)
+        self._create_project(config)
+        self.current_project.url = config_location
         self.ui.close()
 
     def _open_recent(self, index: int):
         self._load_project(list(self.latest.keys())[index])
 
     def _open_from_file(self):
-        url, _ = QFileDialog.getOpenFileName(filter="YAML - Files (*.yml)")
-        if url != "":
-            self._load_project(Path(url))
+        name, _ = QFileDialog.getOpenFileName(filter="YAML - Files (*.yml)")
+        if name != "":
+            self._load_project(Path(name))
 
 
 class Logic_Project(BaseSoTHasTraits):
 
+    url: Path = None
     ref_objects: List[RefFrame] = ta.List(RefFrame)
     marker_objects: List[IAMarker] = ta.List(IAMarker)
     solver_cls = ta.Property()
@@ -355,14 +363,14 @@ class Logic_Project(BaseSoTHasTraits):
     def _marker_list_changed(self, evt):
         for x in evt.added:
             self._add_marker_to_server(x)
-        else:
-            for x in evt.removed:
-                self.marker_server.remove(x)
+        for x in evt.removed:
+            self.marker_server.remove(x)
 
     def _add_marker_to_server(self, marker):
         self.marker_server.add_marker(marker)
 
     def teardown(self):
+        self.ui_window.close()
         if self.controller.is_thread_running():
             self.controller.toggle_solver_state()
 
@@ -385,10 +393,6 @@ def main():
     rospy.init_node("ik")
     fix_rospy_logging(sot_logger)
     sot_logger.setLevel(logging.DEBUG)
-
-    logger.info("create main")
-
-    logger.info("create application ")
 
     app = QApplication(argv)
     _ = Logic_Main()

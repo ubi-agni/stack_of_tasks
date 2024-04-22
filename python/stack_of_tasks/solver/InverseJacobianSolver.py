@@ -27,7 +27,7 @@ class InverseJacobianSolver(Solver):
         for task_level in self._task_hierarchy:
             # combine tasks of this level into one
             J = np.concatenate([task.A for task in task_level], axis=0)
-            e = np.concatenate([np.atleast_1d(task.bound) for task in task_level], axis=0)
+            e = np.concatenate([task.bound for task in task_level], axis=0)
 
             U, S, Vt = np.linalg.svd(J.dot(N))  # * self.joint_weights[None, :]
 

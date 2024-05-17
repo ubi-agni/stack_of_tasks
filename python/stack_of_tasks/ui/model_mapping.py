@@ -23,6 +23,9 @@ class ClassKey:
         self.item = item
 
 
+from weakref import WeakValueDictionary
+
+
 class ModelMapping:
     _instance = None
 
@@ -33,7 +36,7 @@ class ModelMapping:
         return ModelMapping._instance
 
     def __init__(self) -> None:
-        self._mapping = {}
+        self._mapping = WeakValueDictionary()
 
     @classmethod
     def add_mapping(cls: ModelMapping, key: Hashable, val):
@@ -42,6 +45,12 @@ class ModelMapping:
     @classmethod
     def get_mapping(cls: ModelMapping, key):
         return cls._get_instance()._mapping.get(key, None)
+
+    @classmethod
+    def clear_mapping(cls: ModelMapping):
+        print(len(cls._get_instance()._mapping))
+        cls._get_instance()._mapping.clear()
+        print(len(cls._get_instance()._mapping))
 
 
 class InjectionArg:

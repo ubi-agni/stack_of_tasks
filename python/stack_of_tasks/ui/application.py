@@ -9,11 +9,11 @@ from pathlib import Path
 from sys import argv
 from threading import Event, Thread
 
-from typing import Any, List, Tuple, Type, TypedDict
+from typing import Any, List, Tuple, Type
 
 import numpy as np
 import traits.api as ta
-from PyQt5 import QtCore
+from PyQt5 import QtCore, sip
 from PyQt5.QtWidgets import QApplication, QFileDialog
 from traits.trait_notifiers import set_ui_handler
 
@@ -34,8 +34,9 @@ from stack_of_tasks.ui.mainwindow import Ui
 from stack_of_tasks.ui.model.object_model import ObjectModel
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
 from stack_of_tasks.ui.proj_window import Ui_Project_Window
-from stack_of_tasks.ui.property_tree.prop_tree import SOT_Model
+from stack_of_tasks.ui.property_tree.sot_model import SOT_Model
 from stack_of_tasks.ui.traits_mapping.bindings import (
+    SOT_Model_Binder,
     TraitObjectModelBinder,
     TraitWidgetBinding,
     trait_widget_binding,
@@ -196,30 +197,21 @@ class Logic_Main:
         self.current_project.url = url
         self._update_latest_project_list(url)
 
+    def _safe_as(self):
+        url, _ = QFileDialog.getSaveFileName(filter="YAML - Files (*.yml)")
+        if url:  # only save if a file was chosen
+            self._safe_file(Path(url))
+
     def _safe(self):
         if self.current_project.url is None:
             self._safe_as()
         else:
             self._safe_file(self.current_project.url)
 
-    def _safe_as(self):
-        url, _ = QFileDialog.getSaveFileName(filter="YAML - Files (*.yml)")
-        if url:  # only save if a file was chosen
-            self._safe_file(Path(url))
-
-    def new_project(self):
-        from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
-        from stack_of_tasks.solver.OSQPSolver import OSQPSolver
-
-        config = Configuration(
-            actuator_cls=JointStatePublisherActuator, solver_cls=OSQPSolver
-        )
-        self._create_project(config)
-        self.ui.close()
-
     def _create_project(self, config):
         if self.current_project is not None:
             self.current_project.teardown()
+
         self.current_project = Logic_Project(config)
 
         self.current_project.ui_window.new_signal.connect(self.new_project)
@@ -244,6 +236,18 @@ class Logic_Main:
         if name != "":
             self._load_project(Path(name))
 
+    def new_project(self):
+        from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
+        from stack_of_tasks.solver.OSQPSolver import OSQPSolver
+
+        config = Configuration(
+            actuator_cls=JointStatePublisherActuator, solver_cls=OSQPSolver
+        )
+
+        self._create_project(config)
+
+        self.ui.close()
+
 
 class Logic_Project(BaseSoTHasTraits):
 
@@ -252,12 +256,12 @@ class Logic_Project(BaseSoTHasTraits):
     marker_objects: List[IAMarker] = ta.List(IAMarker)
     solver_cls = ta.Property()
 
+    controller = ta.Instance(UI_Controller)
+
     def __init__(self, config: Configuration):
         super().__init__()
 
         self.controller = UI_Controller(config)
-
-        QApplication.instance().aboutToQuit.connect(self.teardown)
 
         self.marker_server = MarkerServer()
         IAMarker._default_frame_id = self.controller.robot_model.root_link
@@ -279,7 +283,8 @@ class Logic_Project(BaseSoTHasTraits):
         self.refs_model = ObjectModel()
         self.marker_model = ObjectModel()
 
-        self.task_hierachy_model = SOT_Model(self.controller.task_hierarchy)
+        self.task_hierachy_model = SOT_Model()
+        SOT_Model_Binder(self.task_hierachy_model, self.controller.task_hierarchy)
 
         # set all robot model links globally
         self.link_model = ObjectModel(
@@ -298,25 +303,13 @@ class Logic_Project(BaseSoTHasTraits):
 
         ModelMapping.add_mapping(RefFrame, self.refs_model)
         ModelMapping.add_mapping(IAMarker, self.marker_model)
+
         ModelMapping.add_mapping(Task, self.task_hierachy_model)
 
         TraitObjectModelBinder(self, "ref_objects", self.refs_model, True)
         TraitObjectModelBinder(self, "marker_objects", self.marker_model, True)
 
-        self.controller.observe(
-            lambda evt: self.task_hierachy_model.set_task_hierarchy(evt.new), "task_hierarchy"
-        )
-
         self.ui_window = Ui()
-        ### UI STuff
-
-        TraitWidgetBinding(
-            self.controller,
-            "solver",
-            self.ui_window.tab_widget.solver.edit_solver,
-            "trait_object",
-            set_post_init=True,
-        )
 
         trait_widget_binding(
             self,
@@ -369,24 +362,33 @@ class Logic_Project(BaseSoTHasTraits):
     def _add_marker_to_server(self, marker):
         self.marker_server.add_marker(marker)
 
-    def teardown(self):
-        self.ui_window.close()
-        if self.controller.is_thread_running():
-            self.controller.toggle_solver_state()
-
-    def clear_data(self):
-        for l in self.controller.task_hierarchy.levels:
-            l.clear()
-        self.controller.task_hierarchy.levels.clear()
-
-        self.ref_objects.clear()
-        self.marker_objects.clear()
-
     def toggle_start_stop(self):
         if self.controller.toggle_solver_state():
             self.ui_window.run_Button.setText("Stop")
         else:
             self.ui_window.run_Button.setText("Start")
+
+    ## logic deletion procedure
+
+    def teardown(self):
+        logger.debug("Teardown project")
+
+        self.clear_data()
+
+        if not sip.isdeleted(self.ui_window):
+            self.ui_window.close()
+            self.ui_window.deleteLater()
+
+        if self.controller.is_thread_running():
+            self.controller.toggle_solver_state()
+
+    def clear_data(self):
+        logger.debug("Clearing logic data.")
+
+        self.ref_objects.clear()
+        self.marker_objects.clear()
+
+        ModelMapping.clear_mapping()
 
 
 def main():

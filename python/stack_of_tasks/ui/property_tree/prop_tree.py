@@ -4,9 +4,23 @@ from __future__ import annotations
 import typing
 
 import traits.observation.events as te
-from PyQt5.QtCore import QMimeData, QModelIndex, Qt
-from PyQt5.QtGui import QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QHeaderView, QTreeView, QWidget
+from PyQt5.QtCore import (
+    QAbstractItemModel,
+    QMimeData,
+    QModelIndex,
+    QPersistentModelIndex,
+    QRect,
+    Qt,
+)
+from PyQt5.QtGui import (
+    QDrag,
+    QDragEnterEvent,
+    QPainter,
+    QPixmap,
+    QStandardItem,
+    QStandardItemModel,
+)
+from PyQt5.QtWidgets import QHeaderView, QStyleOptionViewItem, QTreeView, QWidget
 
 from stack_of_tasks.logger import sot_logger
 from stack_of_tasks.tasks import Task, TaskHierarchy
@@ -19,9 +33,10 @@ logger = sot_logger.getChild("TaskView")
 
 
 class InternalMoveMimeData(QMimeData):
-    def __init__(self, items: typing.Iterable[QStandardItem]) -> None:
+    def __init__(self, parent: QModelIndex, row: int) -> None:
         super().__init__()
-        self.items = items
+        self.parent_index = QPersistentModelIndex(parent)
+        self.row = row
 
 
 class SOT_Model(QStandardItemModel):
@@ -197,8 +212,12 @@ class SOT_View(QTreeView):
         self.setAcceptDrops(True)
         self.setDragDropMode(self.InternalMove)
 
+    def model(self) -> QStandardItemModel:
+        return super().model()
+
     def setModel(self, model) -> None:
         super().setModel(model)
+
         if model is not None:
             model.rowsInserted.connect(self.expand_levels)
             self.expand_levels(QModelIndex(), 0, model.rowCount() - 1)
@@ -211,8 +230,37 @@ class SOT_View(QTreeView):
 
     def add_tasks(self, tasks: list[Task]):
         selected_indices = self.selectedIndexes()
-        parent = QModelIndex() if len(selected_indices) == 0 else selected_indices[0]
-        self.model().add_tasks(tasks, parent)
+        parent = self.rootIndex() if len(selected_indices) == 0 else selected_indices[0]
+
+        self.model().insert_task(tasks[0], parent)
 
     def remove_selected(self):
-        self.model().remove(self.selectedIndexes())
+        self.model().remove_task(self.selectedIndexes())
+
+    def startDrag(self, supportedActions: Qt.DropActions | Qt.DropAction) -> None:
+
+        index = self.selectedIndexes()[0]
+        mimeData = self.model().mimeData(self.selectedIndexes())
+
+        drag = QDrag(self)
+
+        delegate = self.itemDelegate()
+        style = QStyleOptionViewItem()
+
+        delegate.initStyleOption(style, index)
+
+        size = delegate.sizeHint(style, index)
+        rect = QRect()
+        rect.setSize(size)
+        style.rect = rect
+
+        pm = QPixmap(rect.size())
+        pm.fill(Qt.transparent)
+
+        painter = QPainter(pm)
+        delegate.paint(painter, style, index)
+        painter.end()
+
+        drag.setPixmap(pm)
+        drag.setMimeData(mimeData)
+        drag.exec()

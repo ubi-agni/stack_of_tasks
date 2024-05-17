@@ -9,7 +9,6 @@ from PyQt5.QtCore import Qt
 
 from stack_of_tasks.ui import MappingEntryRole, RawDataRole, TraitRole
 from stack_of_tasks.ui.traits_mapping import is_editable_trait
-from stack_of_tasks.ui.traits_mapping.ui_mapping import Mapping, MappingEntry
 
 from .base import QStandardItem, RawDataBase, RawDataItem
 
@@ -112,3 +111,6 @@ class AttrValueItem(RawDataBase):
             setattr(self._obj, self._attr_name, value)
         else:
             return super().setData(value, role)
+
+
+from stack_of_tasks.ui.traits_mapping.ui_mapping import Mapping, MappingEntry

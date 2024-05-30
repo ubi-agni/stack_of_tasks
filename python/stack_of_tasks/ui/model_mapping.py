@@ -48,9 +48,7 @@ class ModelMapping:
 
     @classmethod
     def clear_mapping(cls: ModelMapping):
-        print(len(cls._get_instance()._mapping))
         cls._get_instance()._mapping.clear()
-        print(len(cls._get_instance()._mapping))
 
 
 class InjectionArg:

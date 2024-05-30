@@ -12,7 +12,7 @@ from stack_of_tasks.ui.widgets.has_trait_widgets import EditorGroupBox
 from .base import Base
 
 
-class Marker(Base):
+class MarkerTabWidget(Base):
     new_marker_signal = pyqtSignal([type, dict])
 
     def __init__(self) -> None:

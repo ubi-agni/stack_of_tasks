@@ -2,12 +2,15 @@ from sys import version_info as vi
 
 from PyQt5 import Qt, QtWidgets
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QMainWindow, QMenuBar, QPushButton, QStatusBar, QTabWidget
 
-from .generated.MainWindow import Ui_MainWindow
+from stack_of_tasks.ui.tabs.hierarchy import HierarchyTabWidget
+from stack_of_tasks.ui.tabs.marker import MarkerTabWidget
+from stack_of_tasks.ui.tabs.refs import RefFramesTabWidget
+from stack_of_tasks.ui.tabs.solver_settings import SettingsTabWidget
 
 
-class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
+class ProjectUI(QMainWindow):
 
     open_file_signal = pyqtSignal()
     new_signal = pyqtSignal()
@@ -15,8 +18,17 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
     save_as_signal = pyqtSignal()
 
     def __init__(self):
-        super(Ui, self).__init__()
-        self.setupUi(self)
+        super(ProjectUI, self).__init__()
+
+        self.setWindowTitle("Task hierarchy Editor")
+
+        self.menu_bar = QMenuBar()
+        self.menu_bar.setObjectName("menu_bar")
+
+        self.setMenuBar(self.menu_bar)
+        self.status_bar = QStatusBar()
+        self.status_bar.setObjectName("status_bar")
+        self.setStatusBar(self.status_bar)
 
         fileMenu = self.menu_bar.addMenu("File")
 
@@ -52,6 +64,22 @@ class Ui(QtWidgets.QMainWindow, Ui_MainWindow):
         infoMenu.addAction(info1)
         infoMenu.addAction(info2)
         infoMenu.addAction(info3)
+
+        self.tab_widget = QTabWidget()
+
+        self.settings_tab = SettingsTabWidget()
+        self.tab_widget.addTab(self.settings_tab, "Settings")
+
+        self.hierarchy_tab = HierarchyTabWidget()
+        self.tab_widget.addTab(self.hierarchy_tab, "Hierarchy")
+
+        self.refs_tab = RefFramesTabWidget()
+        self.tab_widget.addTab(self.refs_tab, "Refs")
+
+        self.marker_tab = MarkerTabWidget()
+        self.tab_widget.addTab(self.marker_tab, "Marker")
+
+        self.tab_widget.setCurrentIndex(1)
 
         self.setCentralWidget(self.tab_widget)
         self.run_Button = QPushButton("Start")

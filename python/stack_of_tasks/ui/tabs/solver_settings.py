@@ -14,7 +14,7 @@ from stack_of_tasks.ui.widgets.has_trait_widgets import HasTraitWidget
 from stack_of_tasks.ui.widgets.object_dropbown import ObjectDropdown
 
 
-class SolverSettings(QWidget):
+class SettingsTabWidget(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 

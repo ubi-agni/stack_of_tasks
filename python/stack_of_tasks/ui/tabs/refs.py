@@ -12,7 +12,7 @@ from stack_of_tasks.ui.widgets.has_trait_widgets import EditorGroupBox
 from .base import Base
 
 
-class RefFrames(Base):
+class RefFramesTabWidget(Base):
     new_ref_signal = pyqtSignal([type, dict])
 
     def __init__(self) -> None:

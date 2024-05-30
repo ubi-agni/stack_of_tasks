@@ -24,7 +24,7 @@ class SoTInstancingData:
         self._instance = None
 
     def _instanciate(self) -> BaseSoTHasTraits:
-        print(self.cls, self.data)
+        # print(self.cls, self.data)
         kwargs = {
             k: v.instance if isinstance(v, SoTInstancingData) else v
             for k, v in self.data.items()
@@ -43,7 +43,6 @@ class SoTInstancingData:
 
 class SotYamlLoader(yaml.Loader):
     def construct_document(self, node):
-        from pprint import pprint
 
         data = self.construct_mapping(node, deep=True)
 

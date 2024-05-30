@@ -9,7 +9,7 @@ from stack_of_tasks.ui.widgets.button_dialog import NewInstanceDialog
 from .base import Base
 
 
-class Hierarchy(Base):
+class HierarchyTabWidget(Base):
     def __init__(self) -> None:
         super().__init__()
 

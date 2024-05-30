@@ -27,5 +27,3 @@ import stack_of_tasks.ref_frame.frames
 import stack_of_tasks.tasks.Eq_Tasks
 from stack_of_tasks.robot_model.actuators import *
 from stack_of_tasks.solver import *
-
-# print(stack_of_tasks.tasks.base.TaskRegister.classes)

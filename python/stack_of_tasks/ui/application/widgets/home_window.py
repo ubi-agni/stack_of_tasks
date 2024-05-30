@@ -16,10 +16,8 @@ from PyQt5.QtWidgets import (
     qApp,
 )
 
-from .generated.MainWindow import Ui_MainWindow
 
-
-class Ui_Project_Window(QMainWindow):
+class HomeWindow(QMainWindow):
 
     open_project = pyqtSignal(int)
     open_project_from_file = pyqtSignal()

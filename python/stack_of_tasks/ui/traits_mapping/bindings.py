@@ -8,18 +8,13 @@ import typing
 from typing import Any
 
 import traits.api as ta
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, pyqtBoundSignal
+from PyQt5.QtCore import QModelIndex, pyqtBoundSignal
 from PyQt5.QtWidgets import QWidget
-from sip import isdeleted
 from traits.observation.events import ListChangeEvent, TraitChangeEvent
 
 from stack_of_tasks.tasks.base import Task
 from stack_of_tasks.tasks.hierarchy import TaskHierarchy
 from stack_of_tasks.ui import RawDataRole
-from stack_of_tasks.ui.model.object_model import ObjectModel
-from stack_of_tasks.ui.property_tree.sot_model import SOT_Model
-
-# from stack_of_tasks.ui.property_tree.prop_tree import SOT_Model
 from stack_of_tasks.utils.traits import Guard
 
 
@@ -106,15 +101,6 @@ class WidgetTraitBinding(Binder):
 
     def _teardown(self):
         pass
-
-    # def _has_trait_obj_finalized(self, ref):
-    #    logging.debug("delete widget-trait-binder: %s", self.name)
-    #    if (w := self._widget()) is not None:
-    #        signal: pyqtBoundSignal = getattr(
-    #            w, str(self.widget_prop.notifySignal().name(), "utf-8")
-    #        )
-    #
-    #        signal.disconnect(self)
 
     def __call__(self, value) -> Any:
         self._hasTrait().trait_set(**{self._trait_name: value})
@@ -312,3 +298,7 @@ class SOT_Model_Binder(Binder):
             level = model.itemFromIndex(self.level_index(event.object))
             level.removeRows(event.index, len(event.removed))
             level.removeRows(event.index, len(event.removed))
+
+
+from stack_of_tasks.ui.model.object_model import ObjectModel
+from stack_of_tasks.ui.model.sot_model import SOT_Model

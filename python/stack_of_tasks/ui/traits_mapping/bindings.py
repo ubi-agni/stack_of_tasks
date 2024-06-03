@@ -139,6 +139,8 @@ class TraitWidgetBinding(Binder):
                 val = getattr(self._hasTrait(), self._trait_name)
                 widget.setProperty(self.prop_name, val)
 
+        print(self.prop_name, self._trait_name)
+
     def _teardown(self):
 
         if self.finalizer.alive:
@@ -146,6 +148,7 @@ class TraitWidgetBinding(Binder):
                 t.observe(self, self._trait_name, remove=True, dispatch="ui")
 
     def __call__(self, val) -> Any:
+        print(self.prop_name, val)
         self._widget().setProperty(self.prop_name, val.new)
 
 

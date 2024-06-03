@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import (
     QAction,
+    QCheckBox,
     QFormLayout,
     QGroupBox,
     QLineEdit,
@@ -8,6 +9,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from stack_of_tasks.robot_model.actuators import Actuator
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
 from stack_of_tasks.ui.widgets.has_trait_widgets import HasTraitWidget
@@ -23,7 +25,12 @@ class SettingsTabWidget(QWidget):
 
         layout = self._new_region("Settings", QFormLayout())
 
-        layout.addRow("Project name TODO", QLineEdit())
+        self.proj_name = QLineEdit()
+        layout.addRow("Project name", self.proj_name)
+
+        self.plot_switch = QCheckBox()
+        self.plot_switch.setEnabled(False)
+        layout.addRow("Plot", self.plot_switch)
 
         layout = self._new_region("Solver (Only OSQP is working)", QVBoxLayout())
 
@@ -39,12 +46,16 @@ class SettingsTabWidget(QWidget):
         self.edit_solver = HasTraitWidget()
         layout.addWidget(self.edit_solver)
 
-        layout = self._new_region("TODO Actuator", QVBoxLayout())
+        layout = self._new_region("Actuator class", QVBoxLayout())
         actuator_layout = QFormLayout()
         actuator_layout.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
         layout.addLayout(actuator_layout)
+
         self.actuatorClassComboBox = ObjectDropdown()
         actuator_layout.addRow("Class", self.actuatorClassComboBox)
+        self.actuatorClassComboBox.setModel(ModelMapping.get_mapping(ClassKey(Actuator)))
+        self.edit_actuator = HasTraitWidget()
+        layout.addWidget(self.edit_actuator)
 
         self.verticalLayout.addStretch()
 

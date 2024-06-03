@@ -8,6 +8,7 @@ from PyQt5.QtGui import QPainter, QPaintEvent
 from PyQt5.QtWidgets import QComboBox, QStyle, QStyleOptionButton, QStyleOptionComboBox
 
 from stack_of_tasks.ui import RawDataRole
+from stack_of_tasks.ui.model.object_model import ObjectModel
 
 logger = Logger(__name__)
 

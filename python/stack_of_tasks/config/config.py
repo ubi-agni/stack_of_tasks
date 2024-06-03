@@ -41,6 +41,7 @@ class Parameter:
 
 class Configuration:
     def __init__(self, actuator_cls, solver_cls) -> None:
+        self.name = None
         self.parameter: Parameter = Parameter()
         self.parameter.actuator = SoTInstancingData(actuator_cls, {})
         self.parameter.solver = SoTInstancingData(solver_cls, {})
@@ -53,6 +54,9 @@ class Configuration:
 
         p = c.parameter
         i = c.instancing_data
+
+        name = data.pop("name", "")
+        c.name = name
 
         settings: dict = data.pop("settings")
 

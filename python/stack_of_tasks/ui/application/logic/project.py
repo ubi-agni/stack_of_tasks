@@ -6,7 +6,7 @@ from threading import Event, Thread
 from typing import Any, List, Type
 
 import traits.api as ta
-from PyQt5 import QtCore, sip
+from PyQt5 import sip
 
 import rospy
 
@@ -16,6 +16,7 @@ from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
 from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
+from stack_of_tasks.robot_model.actuators import Actuator, ActuatorRegister
 from stack_of_tasks.solver import AbstractSolver, SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import Task, TaskRegister
@@ -76,9 +77,13 @@ class WorkerThread(Thread):
 class Logic_Project(BaseSoTHasTraits):
 
     url: Path = None
+
     ref_objects: List[RefFrame] = ta.List(RefFrame)
     marker_objects: List[IAMarker] = ta.List(IAMarker)
     solver_cls = ta.Property()
+    actuator_cls = ta.Property()
+
+    name = ta.Str()
 
     controller = ta.Instance(Controller)
 
@@ -86,6 +91,7 @@ class Logic_Project(BaseSoTHasTraits):
         super().__init__()
 
         self.controller = Controller(config)
+        self.name = config.name
 
         self.marker_server = MarkerServer()
         IAMarker._default_frame_id = self.controller.robot_model.root_link
@@ -98,6 +104,7 @@ class Logic_Project(BaseSoTHasTraits):
 
         # class models -> should be global state
         self.solver_cls_model = ObjectModel.from_class_register(SolverRegister)
+        self.actuator_cls_model = ObjectModel.from_class_register(ActuatorRegister)
         self.task_class_model = ObjectModel.from_class_register(TaskRegister)
         self.refs_cls_model = ObjectModel.from_class_register(RefFrameRegister)
         self.marker_cls_model = ObjectModel.from_class_register(MarkerRegister)
@@ -120,7 +127,7 @@ class Logic_Project(BaseSoTHasTraits):
         ].enum_selection = self.link_model  # temp. workaround
 
         ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
-        # ModelMapping.add_mapping(ClassKey(Actu), self.solver_cls_model)
+        ModelMapping.add_mapping(ClassKey(Actuator), self.actuator_cls_model)
         ModelMapping.add_mapping(ClassKey(Task), self.task_class_model)
         ModelMapping.add_mapping(ClassKey(RefFrame), self.refs_cls_model)
         ModelMapping.add_mapping(ClassKey(IAMarker), self.marker_cls_model)
@@ -141,10 +148,29 @@ class Logic_Project(BaseSoTHasTraits):
             self.ui.settings_tab.solverClassComboBox,
             set_widget_post=True,
         )
+        self.ui.settings_tab.edit_solver.set_trait_object(self.controller.solver)
+
+        trait_widget_binding(
+            self,
+            "actuator_cls",
+            self.ui.settings_tab.actuatorClassComboBox,
+            set_widget_post=True,
+        )
+        self.ui.settings_tab.edit_actuator.set_trait_object(self.controller.actuator)
+
+        trait_widget_binding(
+            self, "name", self.ui.settings_tab.proj_name, set_widget_post=True
+        )
 
         self.ui.refs_tab.new_ref_signal.connect(self.new_ref)
         self.ui.marker_tab.new_marker_signal.connect(self.new_marker)
         self.ui.run_Button.clicked.connect(self.toggle_start_stop)
+
+        self._proj_name_change(None)
+
+    @ta.observe("name")
+    def _proj_name_change(self, evt):
+        self.ui.setWindowTitle(f"Stack of Tasks - {self.name}")
 
     def update_residuals(self):
         for task in self.controller.task_hierarchy.all_tasks():
@@ -157,9 +183,12 @@ class Logic_Project(BaseSoTHasTraits):
     def _get_solver_cls(self):
         return type(self.controller.solver)
 
-    def _solver_cls_changed(self, solver_cls: Type[Solver]):
-        solver = solver_cls(self.controller.robot_model.N, self.controller.task_hierarchy)
-        self.controller.solver = solver
+    def _set_actuator_cls(self, act_cls: Type[Actuator]):
+        act = act_cls()
+        self.controller.actuator = act
+
+    def _get_actuator_cls(self):
+        return type(self.controller.actuator)
 
     def new_ref(self, cls, args):
         new_ref = cls(**args)

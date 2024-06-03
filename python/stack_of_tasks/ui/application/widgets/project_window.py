@@ -20,8 +20,6 @@ class ProjectUI(QMainWindow):
     def __init__(self):
         super(ProjectUI, self).__init__()
 
-        self.setWindowTitle("Task hierarchy Editor")
-
         self.menu_bar = QMenuBar()
         self.menu_bar.setObjectName("menu_bar")
 

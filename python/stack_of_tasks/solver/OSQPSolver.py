@@ -8,6 +8,7 @@ from stack_of_tasks import syringe
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.solver.HQPSolver import HqpSolver
 from stack_of_tasks.tasks import EqTask
+from stack_of_tasks.tasks.hierarchy import TaskHierarchy
 from stack_of_tasks.utils import prettyprintMatrix
 
 pp = lambda x: print(prettyprintMatrix(x))

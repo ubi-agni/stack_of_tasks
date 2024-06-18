@@ -1,13 +1,18 @@
 import numpy as np
 
+from stack_of_tasks import syringe
+from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.tasks import TaskHierarchy
 
 from .AbstractSolver import Solver
 
 
 class InverseJacobianSolver(Solver):
-    def __init__(self, number_of_joints, task_hierarchy: TaskHierarchy, **options) -> None:
-        super().__init__(number_of_joints, task_hierarchy, **options)
+    @syringe.inject
+    def __init__(
+        self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options
+    ) -> None:
+        super().__init__(robot_model, task_hierarchy, **options)
         self.threshold = options.get("threshold", 0.01)
 
     def tasks_changed(self):

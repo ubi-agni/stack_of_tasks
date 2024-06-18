@@ -128,9 +128,15 @@ class VelocityCommandActuator(Actuator, JointStateSubscriber):
 
     @syringe.inject
     def __init__(
-        self, robot_state: RobotState, rate: float, ns: str = "/joint_velocity_controller"
+        self,
+        robot_state: RobotState,
+        rate: float = 50,
+        ns: str = "/joint_velocity_controller",
     ) -> None:
-        super().__init__(robot_state)
+
+        Actuator.__init__(self)
+        JointStateSubscriber.__init__(self, robot_state)
+
         self._pub = rospy.Publisher(
             ns + "/command", Float64MultiArray, queue_size=1, latch=True
         )

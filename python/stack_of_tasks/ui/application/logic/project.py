@@ -91,6 +91,7 @@ class Logic_Project(BaseSoTHasTraits):
         super().__init__()
 
         self.controller = Controller(config)
+
         self.name = config.name
 
         self.marker_server = MarkerServer()

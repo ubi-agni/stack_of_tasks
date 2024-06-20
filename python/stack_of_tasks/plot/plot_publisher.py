@@ -3,48 +3,61 @@ from time import time
 
 from typing import List
 
-from plotjuggler_msgs.msg import DataPoint, DataPoints, Dictionary
+from plotjuggler_msgs.msg import StatisticsNames, StatisticsValues
 
 from rospy import Duration, Publisher
 from rospy.timer import Timer, TimerEvent
 
+from stack_of_tasks.tasks.hierarchy import TaskHierarchy
+
 
 class PlotPublisher:
-    def __init__(self) -> None:
-        self.dict_publisher = Publisher(f"sot/names", Dictionary, queue_size=1)
-        self.data_publisher = Publisher(f"sot", DataPoints, queue_size=10)
-        self.plots = {}
+    def __init__(self, sot: TaskHierarchy) -> None:
+        self._prefix = "stack_of_tasks"
+        self._stack_of_tasks = sot
 
-        self.republishtimer = Timer(Duration(1.0 / 10), self._resend_dict)
+        self.name_publisher = Publisher(
+            f"{self._prefix}/names", StatisticsNames, latch=True, queue_size=1
+        )
 
-    def _resend_dict(self, evt: TimerEvent):
-        for d in self.plots.values():
-            self.dict_publisher.publish(d)
+        self.data_publisher = Publisher(
+            f"{self._prefix}", StatisticsValues, latch=True, queue_size=10
+        )
 
-    def _create_data_msg(self, index, time, value):
-        d = DataPoint()
-        d.stamp = time
-        d.name_index = index
-        d.value = value
-        return d
+        self._send_names()
+        self._stack_of_tasks.observe(self._resend, "levels:items:items:residual")
 
-    def add_plot(self, name: str, data_names: List[str]):
-        dictionary = Dictionary()
-        dictionary.dictionary_uuid = getrandbits(32)
-        for n in data_names:
-            dictionary.names.append(n)
+    def _resend(self, _):
+        self._send_data()
 
-        self.plots[name] = dictionary
-        self.dict_publisher.publish(dictionary)
+    def _names(self):
+        names = []
+        for i, level in enumerate(self._stack_of_tasks.levels):
+            prefx = f"level {i}"
+            for task in level:
+                name = f"{prefx}/{task.name}"
+                names.extend([f"{name}/residual[{i}]" for i in range(task.task_size)])
 
-    def plot(self, name: str, values: List[float], timestamp=None):
-        d = DataPoints()
-        d.dictionary_uuid = self.plots[name].dictionary_uuid
+        return names
 
-        if timestamp is None:
-            timestamp = time()
+    def _send_names(self):
+        mssg = StatisticsNames()
+        mssg.names = self._names()
+        mssg.names_version = 0
 
-        for i, v in enumerate(values):
-            d.samples.append(self._create_data_msg(i, timestamp, v))
+        self.name_publisher.publish(mssg)
 
-        self.data_publisher.publish(d)
+    def _send_data(self):
+        mssg = StatisticsValues()
+        mssg.values = self._values()
+        mssg.names_version = 0
+
+        self.data_publisher.publish(mssg)
+
+    def _values(self):
+        values = []
+        for level in self._stack_of_tasks.levels:
+            for task in level:
+                values.extend(task.residual)
+
+        return values

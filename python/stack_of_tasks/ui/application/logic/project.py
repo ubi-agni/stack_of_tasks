@@ -14,6 +14,7 @@ from stack_of_tasks.config import Configuration
 from stack_of_tasks.controller import Controller
 from stack_of_tasks.marker import IAMarker, MarkerRegister
 from stack_of_tasks.marker.marker_server import MarkerServer
+from stack_of_tasks.plot.plot_publisher import PlotPublisher
 from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
 from stack_of_tasks.robot_model.actuators import Actuator, ActuatorRegister
@@ -162,6 +163,8 @@ class Logic_Project(BaseSoTHasTraits):
         trait_widget_binding(
             self, "name", self.ui.settings_tab.proj_name, set_widget_post=True
         )
+
+        self.plot = PlotPublisher(self.controller.task_hierarchy)
 
         self.ui.refs_tab.new_ref_signal.connect(self.new_ref)
         self.ui.marker_tab.new_marker_signal.connect(self.new_marker)

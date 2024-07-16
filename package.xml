@@ -15,9 +15,10 @@
   <build_depend>message_generation</build_depend>
 
   <exec_depend>plotjuggler</exec_depend>
+  <exec_depend>plotjuggler_ros</exec_depend>
   <exec_depend>message_runtime</exec_depend>
 
-  <depend>plotjuggler_msg</depend>
+  <depend>plotjuggler_msgs</depend>
   <depend>rospy</depend>
 
   <!-- The export tag contains other, unspecified, tags -->

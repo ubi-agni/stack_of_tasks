@@ -76,14 +76,12 @@ class WorkerThread(Thread):
 
 class Logic_Project(BaseSoTHasTraits):
 
-    url: Path = None
+    url = ta.Property()
 
     ref_objects: List[RefFrame] = ta.List(RefFrame)
     marker_objects: List[IAMarker] = ta.List(IAMarker)
     solver_cls = ta.Property()
     actuator_cls = ta.Property()
-
-    name = ta.Str()
 
     controller = ta.Instance(Controller)
 
@@ -91,8 +89,6 @@ class Logic_Project(BaseSoTHasTraits):
         super().__init__()
 
         self.controller = Controller(config)
-
-        self.name = config.name
 
         self.marker_server = MarkerServer()
         IAMarker._default_frame_id = self.controller.robot_model.root_link
@@ -124,9 +120,7 @@ class Logic_Project(BaseSoTHasTraits):
             data=[*self.controller.robot_model.links.keys()]
         )  # all robot links
 
-        RobotRefFrame.class_traits()[
-            "link_name"
-        ].enum_selection = self.link_model  # temp. workaround
+        RobotRefFrame.class_traits()["link_name"].enum_selection = self.link_model  # temp. workaround
 
         ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
         ModelMapping.add_mapping(ClassKey(Actuator), self.actuator_cls_model)
@@ -168,11 +162,14 @@ class Logic_Project(BaseSoTHasTraits):
         self.ui.marker_tab.new_marker_signal.connect(self.new_marker)
         self.ui.run_Button.clicked.connect(self.toggle_start_stop)
 
-        self._proj_name_change(None)
+        self.url = None
 
-    @ta.observe("name")
-    def _proj_name_change(self, evt):
-        self.ui.setWindowTitle(f"Stack of Tasks - {self.name}")
+    def _set_url(self, url: Path):
+        self._url = url
+        self.ui.setWindowTitle(f"Stack of Tasks - {self.url.name if self.url else 'New Project'}")
+
+    def _get_url(self):
+        return self._url
 
     def update_residuals(self):
         for task in self.controller.task_hierarchy.all_tasks():

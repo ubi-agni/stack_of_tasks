@@ -176,16 +176,16 @@ class Logic_Project(BaseSoTHasTraits):
             task._residual_update = True
 
     def _set_solver_cls(self, solver_cls: Type[AbstractSolver.Solver]):
-        solver = solver_cls(task_hierarchy=self.controller.task_hierarchy)
-        self.controller.solver = solver
+        if not isinstance(self.controller.solver, solver_cls):
+            self.controller.solver = solver_cls(task_hierarchy=self.controller.task_hierarchy)
         self.ui.settings_tab.edit_solver.set_trait_object(self.controller.solver)
 
     def _get_solver_cls(self):
         return type(self.controller.solver)
 
-    def _set_actuator_cls(self, act_cls: Type[Actuator]):
-        act = act_cls()
-        self.controller.actuator = act
+    def _set_actuator_cls(self, actuator_cls: Type[Actuator]):
+        if not isinstance(self.controller.actuator, actuator_cls):
+            self.controller.actuator = actuator_cls()
         self.ui.settings_tab.edit_actuator.set_trait_object(self.controller.actuator)
 
     def _get_actuator_cls(self):

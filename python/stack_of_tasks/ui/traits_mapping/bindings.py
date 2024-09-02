@@ -139,8 +139,6 @@ class TraitWidgetBinding(Binder):
                 val = getattr(self._hasTrait(), self._trait_name)
                 widget.setProperty(self.prop_name, val)
 
-        print(self.prop_name, self._trait_name)
-
     def _teardown(self):
 
         if self.finalizer.alive:
@@ -148,7 +146,6 @@ class TraitWidgetBinding(Binder):
                 t.observe(self, self._trait_name, remove=True, dispatch="ui")
 
     def __call__(self, val) -> Any:
-        print(self.prop_name, val)
         self._widget().setProperty(self.prop_name, val.new)
 
 
@@ -271,9 +268,7 @@ class SOT_Model_Binder(Binder):
             self._stack().levels[level].pop(task)
 
     def _level_removed(self, level: int):
-        print("remove level ", level)
         with self._guard(self):
-            x = self._stack().levels[level]
             self._stack().levels.pop(level)
 
     # changes from list
@@ -288,7 +283,7 @@ class SOT_Model_Binder(Binder):
     def _stack_changed(self, event: ListChangeEvent):
         """Handle changes in the task hierarchy's levels list"""
         if self not in self._guard:
-            logging.debug(f"stack chagne {event}")
+            logging.debug(f"stack change {event}")
             self._model().removeRows(event.index, len(event.removed))
             self._model().insert_level_rows(event.added, row=event.index)
 

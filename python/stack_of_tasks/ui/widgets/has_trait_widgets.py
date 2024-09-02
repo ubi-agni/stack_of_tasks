@@ -121,7 +121,6 @@ class HasTraitWidget(QWidget):
         self.setLayout(self.trait_form_layout)
 
     def set_trait_object(self, obj):
-        print("set", obj)
         self.trait_form_layout.clear()
         if obj is not None:
             self.trait_form_layout.fill(obj)

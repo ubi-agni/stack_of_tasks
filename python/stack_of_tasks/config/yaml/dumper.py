@@ -24,24 +24,22 @@ class SotDumper(yaml.CDumper):
         return self.represent_scalar(SOT_TAG_PREFIX + "cls", data.__name__)
 
     def _represent_sot_object(self, data: BaseSoTHasTraits):
-        if isinstance(data, Controller):
-            return self.controller_repr(data)
-
         _, (cls,), state = data.__reduce_ex__(2)
 
         if "__traits_version__" in state:  # remove traits version info
             state.pop("__traits_version__")
 
-        return self.represent_mapping(SOT_TAG_PREFIX + "object:" + cls.__name__, state)
+        if isinstance(data, Controller):
+            return self.controller_repr(data, state)
+        else:
+            return self.represent_mapping(SOT_TAG_PREFIX + "object:" + cls.__name__, state)
 
-    def controller_repr(self, controller: Controller):
-        data = {}
-        settings = data.setdefault("settings", {})
-
-        settings["solver"] = controller.solver
-        settings["actuator"] = controller.actuator
-
-        data = self.represent_data(data)
+    def controller_repr(self, controller: Controller, settings: dict[str, Any]):
+        # store all traits except robot_model, robot_state, and task_hierarchy as "settings"
+        settings.pop("robot_model")
+        settings.pop("robot_state")
+        settings.pop("task_hierarchy")
+        data = self.represent_data({"settings": settings})
 
         sot_node = self.represent_data(
             {"stack_of_tasks": {k: l for k, l in enumerate(controller.task_hierarchy.levels)}}

@@ -113,9 +113,7 @@ class Logic_Main:
         from stack_of_tasks.robot_model.actuators import JointStatePublisherActuator
         from stack_of_tasks.solver.OSQPSolver import OSQPSolver
 
-        config = Configuration(
-            actuator_cls=JointStatePublisherActuator, solver_cls=OSQPSolver
-        )
+        config = Configuration(OSQPSolver, JointStatePublisherActuator)
 
         self._create_project(config)
 

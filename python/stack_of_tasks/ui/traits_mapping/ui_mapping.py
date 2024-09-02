@@ -80,7 +80,7 @@ class RangeEntry(MappingEntry):
         widget.setMaximum(rng._high)
         widget.setExcludeHigh(rng._exclude_high)
         widget.setExcludeLow(rng._exclude_low)
-        widget.setSingleStep(0.01)
+        widget.setSingleStep(rng._metadata.get("step", 0.01))
 
 
 class Selection(MappingEntry):

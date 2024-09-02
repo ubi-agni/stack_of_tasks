@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from collections import namedtuple
-from collections.abc import Mapping
 from enum import Enum
-from weakref import ref
 
 from typing import Any, Type
 
@@ -43,12 +40,8 @@ class SoTInstancingData:
 
 class SotYamlLoader(yaml.Loader):
     def construct_document(self, node):
-
         data = self.construct_mapping(node, deep=True)
-
-        config = Configuration.from_data(data)
-
-        return config
+        return Configuration(data)
 
     def _sot_cls_contructor(self, data: yaml.ScalarNode):
         cls = self.find_sot_cls(data.value)

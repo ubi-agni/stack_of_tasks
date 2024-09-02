@@ -24,21 +24,11 @@ class SettingsTabWidget(QWidget):
         self.verticalLayout = QVBoxLayout()
         self.setLayout(self.verticalLayout)
 
-        layout = self._new_region("Settings", QFormLayout())
+        layout = self._new_region("Settings", QVBoxLayout())
+        self.settings = HasTraitWidget()
+        layout.addWidget(self.settings)
 
-        self.proj_name = QLineEdit()
-        layout.addRow("Project name", self.proj_name)
-
-        self.rate = QSpinBox()
-        self.rate.setRange(1, 1000)
-        layout.addRow("Rate", self.rate)
-
-        self.plot_switch = QCheckBox()
-        self.plot_switch.setEnabled(False)
-        layout.addRow("Plot", self.plot_switch)
-
-        layout = self._new_region("Solver (Only OSQP is working)", QVBoxLayout())
-
+        layout = self._new_region("Solver", QVBoxLayout())
         cls_layout = QFormLayout()
         cls_layout.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
         layout.addLayout(cls_layout)

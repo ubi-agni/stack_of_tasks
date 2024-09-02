@@ -16,21 +16,22 @@ from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
 class Controller(BaseSoTHasTraits):
-    config: Configuration = ta.Instance(Configuration)
+    robot_model: RobotModel = ta.Instance(RobotModel, visible=False)
+    robot_state: RobotState = ta.Instance(RobotState, visible=False)
 
-    robot_model: RobotModel = ta.Instance(RobotModel)
-    robot_state: RobotState = ta.Instance(RobotState)
+    solver: Solver = ta.Instance(Solver, visible=False)
+    actuator: Actuator = ta.Instance(Actuator, visible=False)
 
-    solver: Solver = ta.Instance(Solver)
+    task_hierarchy: TaskHierarchy = ta.Instance(TaskHierarchy, visible=False)
 
-    task_hierarchy: TaskHierarchy = ta.Instance(TaskHierarchy)
+    rate = ta.Range(1.0, value=50, step=1.0)
 
     def __init__(self, config: Configuration) -> None:
         super().__init__()
 
         # robotmodel
-        if "robot_model_param" in config.parameter.params:
-            self.robot_model = RobotModel(config.parameter.params["robot_model_param"])
+        if "robot_model_param" in config.settings:
+            self.robot_model = RobotModel(config.settings.pop("robot_model_param"))
         else:
             self.robot_model = RobotModel()
         # robotstate
@@ -40,28 +41,32 @@ class Controller(BaseSoTHasTraits):
         syringe[RobotModel] = self.robot_model
         syringe[RobotState] = self.robot_state
 
-        self.actuator: Actuator = config.parameter.actuator.instance
-        self.solver: Solver = config.parameter.solver.instance
+        self.actuator: Actuator = config.settings.pop("actuator").instance
+        self.solver: Solver = config.settings.pop("solver").instance
+
+        # settings
+        for k, v in config.settings.items():
+            setattr(self, k, v)
 
         # collection of tasks
-        self.task_hierarchy = config.instancing_data.stack_of_tasks
-
+        self.task_hierarchy = config.stack_of_tasks
         self.solver.set_task_hierarchy(self.task_hierarchy)
 
-    def control_loop(self, stopping_condition: Callable[[], bool], rate: int):
-        rrate = rospy.Rate(rate)
+    def control_loop(self, stopping_condition: Callable[[], bool]):
+        rate = rospy.Rate(self.rate)
         warmstart_dq = None
         self.solver.tasks_changed()
 
         while not stopping_condition():
-            warmstart_dq = self.control_step(rate, warmstart_dq)
-            rrate.sleep()
+            warmstart_dq = self.control_step(warmstart_dq)
+            rate.sleep()
 
-    def control_step(self, rate, warmstart):
+    def control_step(self, warmstart):
         self.robot_state.update()  # read current joint values
         m = self.robot_model
-        lb = np.maximum(-m.vmaxs / rate, np.minimum(0.0, m.mins - self.robot_state.joint_values))
-        ub = np.minimum(+m.vmaxs / rate, np.maximum(0.0, m.maxs - self.robot_state.joint_values))
+        dq_max = m.vmaxs / self.rate
+        lb = np.maximum(-dq_max, np.minimum(0.0, m.mins - self.robot_state.joint_values))
+        ub = np.minimum(+dq_max, np.maximum(0.0, m.maxs - self.robot_state.joint_values))
         dq = self.solver.solve(lb, ub, warmstart=warmstart)
 
         if dq is not None:
@@ -70,11 +75,3 @@ class Controller(BaseSoTHasTraits):
             pass
 
         return dq
-
-    def create_config(self) -> Configuration:
-        conf = Configuration()
-        conf.parameter.actuator_cls = self.actuator.__class__
-        conf.parameter.solver_cls = self.solver.__class__
-        conf.instancing_data._instanced_stack = self.task_hierarchy
-
-        return conf

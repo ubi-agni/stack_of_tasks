@@ -40,21 +40,20 @@ class WorkerThread(Thread):
     _current_worker: WorkerThread = None
     _stop_event = Event()
 
-    def __init__(self, controller: Controller, rate: int) -> None:
+    def __init__(self, controller: Controller) -> None:
         super().__init__(daemon=True, name="SolverThread")
 
         self._warmstart = None
-        self._rosrate = rospy.Rate(rate)
-        self._rate = rate
+        self._rosrate = rospy.Rate(controller.rate)
         self._c = controller
 
         self._c.solver.tasks_changed()
 
     @classmethod
-    def toggle_running(cls, controller: Controller, rate: int):
+    def toggle_running(cls, controller: Controller):
 
         if cls._current_worker is None:
-            cls._current_worker = WorkerThread(controller, rate)
+            cls._current_worker = WorkerThread(controller)
             cls._current_worker.start()
             return True
         else:
@@ -71,7 +70,7 @@ class WorkerThread(Thread):
     def run(self) -> None:
 
         while not self._stop_event.is_set():
-            self._warmstart = self._c.control_step(rate=self._rate, warmstart=self._warmstart)
+            self._warmstart = self._c.control_step(warmstart=self._warmstart)
             self._rosrate.sleep()
 
 
@@ -81,7 +80,6 @@ class Logic_Project(BaseSoTHasTraits):
 
     ref_objects: List[RefFrame] = ta.List(RefFrame)
     marker_objects: List[IAMarker] = ta.List(IAMarker)
-    rate = ta.Int(50)
     solver_cls = ta.Property()
     actuator_cls = ta.Property()
 
@@ -100,8 +98,9 @@ class Logic_Project(BaseSoTHasTraits):
         IAMarker._default_frame_id = self.controller.robot_model.root_link
 
         ##
-        self.ref_objects.extend(config.instancing_data.objects["frames"])
-        self.marker_objects.extend(config.instancing_data.objects["marker"])
+        objects = config.objects
+        self.ref_objects.extend(objects["frames"])
+        self.marker_objects.extend(objects["marker"])
 
         # QT-Models
 
@@ -145,7 +144,7 @@ class Logic_Project(BaseSoTHasTraits):
 
         self.ui = ProjectUI()
 
-        trait_widget_binding(self, "rate", self.ui.settings_tab.rate, set_widget_post=True)
+        self.ui.settings_tab.settings.set_trait_object(self.controller)
 
         trait_widget_binding(
             self,
@@ -162,10 +161,6 @@ class Logic_Project(BaseSoTHasTraits):
             set_widget_post=True,
         )
         self.ui.settings_tab.edit_actuator.set_trait_object(self.controller.actuator)
-
-        trait_widget_binding(
-            self, "name", self.ui.settings_tab.proj_name, set_widget_post=True
-        )
 
         self.plot = PlotPublisher(self.controller.task_hierarchy)
 
@@ -225,7 +220,7 @@ class Logic_Project(BaseSoTHasTraits):
         self.marker_server.add_marker(marker)
 
     def toggle_start_stop(self):
-        if WorkerThread.toggle_running(self.controller, self.rate):
+        if WorkerThread.toggle_running(self.controller):
             self.ui.run_Button.setText("Stop")
         else:
             self.ui.run_Button.setText("Start")
@@ -241,7 +236,7 @@ class Logic_Project(BaseSoTHasTraits):
             self.ui.deleteLater()
 
         if WorkerThread.is_running():
-            WorkerThread.toggle_running(None, 0)
+            WorkerThread.toggle_running(None)
 
     def clear_data(self):
 

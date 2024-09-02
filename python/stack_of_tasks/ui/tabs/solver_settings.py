@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QLineEdit,
+    QSpinBox,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -27,6 +28,10 @@ class SettingsTabWidget(QWidget):
 
         self.proj_name = QLineEdit()
         layout.addRow("Project name", self.proj_name)
+
+        self.rate = QSpinBox()
+        self.rate.setRange(1, 1000)
+        layout.addRow("Rate", self.rate)
 
         self.plot_switch = QCheckBox()
         self.plot_switch.setEnabled(False)

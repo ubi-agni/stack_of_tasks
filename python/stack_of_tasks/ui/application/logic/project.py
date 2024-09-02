@@ -51,7 +51,7 @@ class WorkerThread(Thread):
         self._c.solver.tasks_changed()
 
     @classmethod
-    def toggle_solver(cls, controller: Controller, rate: int):
+    def toggle_running(cls, controller: Controller, rate: int):
 
         if cls._current_worker is None:
             cls._current_worker = WorkerThread(controller, rate)
@@ -81,6 +81,7 @@ class Logic_Project(BaseSoTHasTraits):
 
     ref_objects: List[RefFrame] = ta.List(RefFrame)
     marker_objects: List[IAMarker] = ta.List(IAMarker)
+    rate = ta.Int(50)
     solver_cls = ta.Property()
     actuator_cls = ta.Property()
 
@@ -143,6 +144,8 @@ class Logic_Project(BaseSoTHasTraits):
         TraitObjectModelBinder(self, "marker_objects", self.marker_model, True)
 
         self.ui = ProjectUI()
+
+        trait_widget_binding(self, "rate", self.ui.settings_tab.rate, set_widget_post=True)
 
         trait_widget_binding(
             self,
@@ -220,7 +223,7 @@ class Logic_Project(BaseSoTHasTraits):
         self.marker_server.add_marker(marker)
 
     def toggle_start_stop(self):
-        if WorkerThread.toggle_solver(self.controller, 50):
+        if WorkerThread.toggle_running(self.controller, self.rate):
             self.ui.run_Button.setText("Stop")
         else:
             self.ui.run_Button.setText("Start")
@@ -236,7 +239,7 @@ class Logic_Project(BaseSoTHasTraits):
             self.ui.deleteLater()
 
         if WorkerThread.is_running():
-            WorkerThread.toggle_solver(None, 0)
+            WorkerThread.toggle_running(None, 0)
 
     def clear_data(self):
 

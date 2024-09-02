@@ -186,6 +186,7 @@ class Logic_Project(BaseSoTHasTraits):
     def _set_solver_cls(self, solver_cls: Type[AbstractSolver.Solver]):
         solver = solver_cls(task_hierarchy=self.controller.task_hierarchy)
         self.controller.solver = solver
+        self.ui.settings_tab.edit_solver.set_trait_object(self.controller.solver)
 
     def _get_solver_cls(self):
         return type(self.controller.solver)
@@ -193,6 +194,7 @@ class Logic_Project(BaseSoTHasTraits):
     def _set_actuator_cls(self, act_cls: Type[Actuator]):
         act = act_cls()
         self.controller.actuator = act
+        self.ui.settings_tab.edit_actuator.set_trait_object(self.controller.actuator)
 
     def _get_actuator_cls(self):
         return type(self.controller.actuator)

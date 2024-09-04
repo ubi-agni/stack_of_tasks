@@ -52,10 +52,9 @@ class PlaneTask(TargetTask, EqTask):
 
         normal = Tt[0:3, 2]
         dist = normal.dot(Tt[0:3, 3])
+        current = normal.dot(Tc[0:3, 3])
 
-        return np.array([normal.T.dot(self._J[:3])]), np.array(
-            [-(normal.dot(Tc[0:3, 3]) - dist)]
-        )
+        return normal.T.dot(self._J[:3]), dist - current
 
 
 RobotAxis = ta.Array(shape=(3,), value=np.array([0, 0, 1]))

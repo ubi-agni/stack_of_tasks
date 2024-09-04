@@ -12,9 +12,8 @@ import rospy
 
 from stack_of_tasks.config import Configuration
 from stack_of_tasks.controller import Controller
-from stack_of_tasks.marker import IAMarker, MarkerRegister
-from stack_of_tasks.marker.marker_server import MarkerServer
-from stack_of_tasks.plot.plot_publisher import PlotPublisher
+from stack_of_tasks.marker import IAMarker, MarkerRegister, MarkerServer
+from stack_of_tasks.plot import PlotPublisher
 from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
 from stack_of_tasks.robot_model.actuators import Actuator, ActuatorRegister
@@ -116,10 +115,7 @@ class Logic_Project(BaseSoTHasTraits):
         SOT_Model_Binder(self.task_hierachy_model, self.controller.task_hierarchy)
 
         # set all robot model links globally
-        self.link_model = ObjectModel(
-            data=[*self.controller.robot_model.links.keys()]
-        )  # all robot links
-
+        self.link_model = ObjectModel(data=self.controller.robot_model.link_names)  # all robot links
         RobotRefFrame.class_traits()["link_name"].enum_selection = self.link_model  # temp. workaround
 
         ModelMapping.add_mapping(ClassKey(Solver), self.solver_cls_model)
@@ -204,17 +200,13 @@ class Logic_Project(BaseSoTHasTraits):
     def new_marker(self, cls, args):
         new_marker = DependencyInjection.create_instance(cls, args)
         self.marker_objects.append(new_marker)
-        self._add_marker_to_server(new_marker)
 
     @ta.observe("marker_objects:items")
     def _marker_list_changed(self, evt):
         for x in evt.added:
-            self._add_marker_to_server(x)
+            self.marker_server.add_marker(x)
         for x in evt.removed:
             self.marker_server.remove(x)
-
-    def _add_marker_to_server(self, marker):
-        self.marker_server.add_marker(marker)
 
     def toggle_start_stop(self):
         if WorkerThread.toggle_running(self.controller):

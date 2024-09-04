@@ -13,7 +13,7 @@ import rospy
 from stack_of_tasks.config import Configuration
 from stack_of_tasks.controller import Controller
 from stack_of_tasks.marker import IAMarker, MarkerRegister, MarkerServer
-from stack_of_tasks.plot import PlotPublisher
+from stack_of_tasks.plot import PlotCSV, PlotPublisher
 from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
 from stack_of_tasks.robot_model.actuators import Actuator, ActuatorRegister

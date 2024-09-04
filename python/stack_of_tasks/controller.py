@@ -25,6 +25,7 @@ class Controller(BaseSoTHasTraits):
     task_hierarchy: TaskHierarchy = ta.Instance(TaskHierarchy, visible=False)
 
     rate = ta.Range(1.0, value=50, step=1.0)
+    _updated = ta.Event()  # event triggered after each control step
 
     def __init__(self, config: Configuration) -> None:
         super().__init__()
@@ -52,6 +53,8 @@ class Controller(BaseSoTHasTraits):
         self.task_hierarchy = config.stack_of_tasks
         self.solver.set_task_hierarchy(self.task_hierarchy)
 
+        self.dq = None
+
     def control_loop(self, stopping_condition: Callable[[], bool]):
         rate = rospy.Rate(self.rate)
         warmstart_dq = None
@@ -67,10 +70,11 @@ class Controller(BaseSoTHasTraits):
         dq_max = m.vmaxs / self.rate
         lb = np.maximum(-dq_max, np.minimum(0.0, m.mins - self.robot_state.joint_values))
         ub = np.minimum(+dq_max, np.maximum(0.0, m.maxs - self.robot_state.joint_values))
-        dq = self.solver.solve(lb, ub, warmstart=warmstart)
+        self.dq = dq = self.solver.solve(lb, ub, warmstart=warmstart)
 
         if dq is not None:
             self.actuator.actuate(dq)
+            self._updated = True
         else:
             pass
 

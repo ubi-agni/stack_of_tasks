@@ -156,7 +156,7 @@ class Logic_Project(BaseSoTHasTraits):
         )
         self.ui.settings_tab.edit_actuator.set_trait_object(self.controller.actuator)
 
-        self.plot = PlotPublisher(self.controller.task_hierarchy)
+        self.plot = PlotPublisher(self.controller, frames=self.ref_objects)
 
         self.ui.refs_tab.new_ref_signal.connect(self.new_ref)
         self.ui.marker_tab.new_marker_signal.connect(self.new_marker)

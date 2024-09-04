@@ -109,12 +109,10 @@ class HomeWindow(QMainWindow):
     def set_last_items(self, latest_projects: dict):
         self._proj_list.setRowCount(len(latest_projects))
 
-        for i, (url, (name, time)) in enumerate(latest_projects.items()):
+        for i, (url, time) in enumerate(latest_projects.items()):
             time: datetime
-            self._proj_list.setItem(i, 0, self._table_item(name, url))
-            self._proj_list.setItem(
-                i, 1, self._table_item(time.strftime("%d.%m.%Y %H.%M"), url)
-            )
+            self._proj_list.setItem(i, 0, self._table_item(url.as_posix(), url))
+            self._proj_list.setItem(i, 1, self._table_item(time.strftime("%d.%m.%Y %H.%M"), url))
 
         self._proj_list.selectRow(0)
         self._open_recent_action.setDisabled(False)

@@ -25,7 +25,7 @@ class Logic_Main:
         self.ui = HomeWindow()
         QApplication.instance().aboutToQuit.connect(self._app_quit)
 
-        self.latest: dict[Path, List[str, datetime]] = {}
+        self.latest: dict[Path, datetime] = {}
         self._load_latest()
 
         self.current_project = None
@@ -41,20 +41,21 @@ class Logic_Main:
         if LATEST_PATH.exists():
             data = json.loads(LATEST_PATH.read_text())
             self.latest = {
-                Path(k): [v[0], datetime.fromtimestamp(v[1])] for k, v in data.items()
+                # handle both, old and new formats: path: datetime | [name, datetime]
+                Path(k): datetime.fromtimestamp(v[-1] if isinstance(v, list) else v)
+                for k, v in data.items()
+                if Path(k).exists()
             }
 
             self.ui.set_last_items(self.latest)
 
     def _save_latest(self):
-        data = {k.as_posix(): (v[0], v[1].timestamp()) for k, v in self.latest.items()}
+        data = {k.as_posix(): v.timestamp() for k, v in self.latest.items()}
         LATEST_PATH.parent.mkdir(parents=True, exist_ok=True)
         LATEST_PATH.write_text(json.dumps(data))
 
     def _update_latest_project_list(self, url: Path):
-        name = self.latest[url][0] if url in self.latest else url.as_posix()
-        self.latest[url] = (name, datetime.now())
-
+        self.latest[url] = datetime.now()
         self._save_latest()
 
     def _app_quit(self):

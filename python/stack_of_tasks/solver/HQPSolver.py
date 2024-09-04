@@ -75,9 +75,6 @@ class HqpSolver(Solver):
         self.eq_matrix: NDArray
         self.eq_bound: NDArray
 
-        self.sieq_matrix: NDArray
-        self.sieq_bound: NDArray
-
         self.ieq_matrix: NDArray
         self.ieq_upper: NDArray
         self.ieq_lower: NDArray
@@ -131,7 +128,7 @@ class HqpSolver(Solver):
     def _create_matrix(self):
         # Objective matrix P and vector q
         self.objective_matrix = np.identity(self.N + self.m_slacks)
-        self.objective_matrix[self.N :, self.N :] = self.rho
+        self.objective_matrix[: self.N, : self.N] *= self.rho
 
         self.objective_vector = np.zeros((self.N + self.m_slacks,))
 

@@ -2,7 +2,6 @@
 This module contains different Joint and RobotModel representation with an forward kinematic.
 """
 
-
 from enum import Enum
 from xml.dom import Node, minidom
 

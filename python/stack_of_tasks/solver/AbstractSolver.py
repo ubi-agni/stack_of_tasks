@@ -24,7 +24,7 @@ class Solver(ABCSoTHasTraits):
         super().__init__(**options)
 
         self.N = robot_model.N
-        self._task_hierarchy = task_hierarchy
+        self._task_hierarchy: TaskHierarchy = task_hierarchy
         if self._task_hierarchy is not None:
             self.tasks_changed()
 

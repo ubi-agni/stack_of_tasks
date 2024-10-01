@@ -1,9 +1,8 @@
 import numpy as np
 import traits.api as ta
 
+from stack_of_tasks.tasks.base import A, IeqTask, LowerBound, RelativeTask, Tuple, UpperBound
 from stack_of_tasks.utils.transform_math import skew
-
-from .Task import A, IeqTask, LowerBound, RelativeTask, Tuple, UpperBound
 
 
 class ConeTask(RelativeTask, IeqTask):

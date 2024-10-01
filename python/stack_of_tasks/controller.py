@@ -67,7 +67,7 @@ class Controller(BaseSoTHasTraits):
         if dq is not None:
             self.actuator.actuate(dq)
         else:
-            print("dq is none")
+            pass
 
         return dq
 

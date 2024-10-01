@@ -106,7 +106,7 @@ catkin_package(
 CATKIN_DEPENDS
   rospy
   message_runtime
-  plotjuggler_msg
+  plotjuggler_msgs
 #  DEPENDS system_lib
 )
 

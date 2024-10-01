@@ -1,19 +1,20 @@
 [project]
-name = "Stack of Tasks"
+name = "Stack_of_Tasks"
 version = "0.0.1"
 
+dynamic = ["authors","license","maintainers","description"]
 
 dependencies = [
     'cvxopt',
     'numpy',
     'osqp',
-    # 'PyQt5',
+    'PyQt5',
     'rospy',
     'scipy',
     'scs',
-    # 'traits',
-    'https://github.com/rhaschke/traits#egg=maint/6.4',
-    'typing_extensions',
+    'traits',
+    #'https://github.com/rhaschke/traits#egg=maint/6.4',
+    'typing_extensions'
 ]
 
 [tool.black]

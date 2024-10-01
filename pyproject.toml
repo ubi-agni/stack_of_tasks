@@ -14,7 +14,8 @@ dependencies = [
     'scs',
     'traits',
     #'https://github.com/rhaschke/traits#egg=maint/6.4',
-    'typing_extensions'
+    'typing_extensions',
+    'pybullet'
 ]
 
 [tool.black]

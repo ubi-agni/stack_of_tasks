@@ -24,7 +24,7 @@ class OSQPSolver(Solver):
 
         self.rho = options.get("rho", 0.1)
 
-    def _solve_level(self, level: int, l, u):
+    def _create_problem_matrices(self, level: int, l, u, solved_A, solved_b):
         As = []
         ls = []
         us = []
@@ -59,8 +59,17 @@ class OSQPSolver(Solver):
             else:
                 Aslacks.append(np.ndarray((task.task_size, 0)))
 
-        Atask = np.vstack(As)
+        if solved_A is not None and solved_b is not None:
+            As.append(solved_A)
+            ls.append(solved_b)
+            us.append(solved_b)
 
+            Aslacks.append(np.ndarray((solved_b.shape[0], 0)))
+
+        if len(As) == 0:
+            return None, None, None, None, None
+
+        Atask = np.vstack(As)
         Atask_slack = block_diag(*Aslacks)
 
         task_lower = np.concatenate(ls)
@@ -89,20 +98,46 @@ class OSQPSolver(Solver):
     def tasks_changed(self):
         pass
 
+    def _create_solved_matrices(self, level, dq, sA_old, sb_old):
+
+        sA = [] if sA_old is None else [sA_old]
+        sb = [] if sb_old is None else [sb_old]
+
+        for task in self._task_hierarchy[level]:
+            b = task.A.dot(dq.T)
+            sA.append(task.A)
+            sb.append(b)
+
+        if len(sA) == 0:
+            return None, None
+
+        return np.vstack(sA), np.concatenate(sb)
+
     def solve(self, lower_dq, upper_dq, warmstart, **options):
-        solver = osqp.OSQP()
-        P, q, A, lower, upper = self._solve_level(0, lower_dq, upper_dq)
 
-        #        print(f"P:{P.shape}, q:{q.shape} A:{A.shape}, l:{lower.shape}, u:{upper.shape}")
-        solver.setup(P, q, A, lower, upper, verbose=False)
+        sA = None
+        sb = None
 
-        if warmstart is not None:
-            pass
-            # warmstart = np.hstack([warmstart, np.zeros(len(lower) - len(lower_dq))])
-            # solver.warm_start(warmstart)
+        for l in range(len(self._task_hierarchy)):
+            solver = osqp.OSQP()
+            P, q, A, lower, upper = self._create_problem_matrices(
+                l, lower_dq, upper_dq, sA, sb
+            )
+            if P is None:
+                continue
 
-        dq = solver.solve()
-        if any([x is None for x in dq.x]):
+            solver.setup(P, q, A, lower, upper, verbose=False)
+
+            if warmstart is not None:
+                warmstart = np.concatenate([warmstart, np.zeros(len(q) - self.N)])
+                solver.warm_start(warmstart)
+
+            solution = solver.solve()
+
+            dq = solution.x[: self.N]
+            sA, sb = self._create_solved_matrices(l, dq, sA, sb)
+
+        if any([x is None for x in dq]):
             return None
 
-        return dq.x[: len(lower_dq)]
+        return dq

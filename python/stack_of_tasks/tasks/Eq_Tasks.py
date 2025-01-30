@@ -3,8 +3,10 @@ import traits.api as ta
 
 from tf.transformations import rotation_from_matrix
 
+from stack_of_tasks import syringe
 from stack_of_tasks.ref_frame import Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame
+from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.tasks.base import A, Bound, EqTask, RelativeTask, TargetTask, TaskSoftnessType, Tuple
 from stack_of_tasks.utils.transform_math import skew
 
@@ -119,8 +121,18 @@ class LineTask(RelativeTask, EqTask):
         return skew(axis) @ dJ + skew(dp) @ self._JA[3:], np.cross(dp, axis)
 
 
-# class JointPos(JointTask, EqTask):
-#    name = "Joint Position"
-#
-#    def _compute(self, current_joint_pose, desired_joint_pose):
-#        self.bound = (current_joint_pose - desired_joint_pose) * self.weight
+class JointTask(EqTask):
+    name = "Joint"
+    _robot: RobotState = ta.Instance(RobotState)
+    target = ta.Array(dtype="float", comparison_mode=ta.ComparisonMode.none)
+
+    @syringe.inject
+    def __init__(self, robot_state: RobotState, **traits) -> None:
+        super().__init__(_robot=robot_state, **traits)
+        self.task_size = self._robot.robot_model.N
+        if len(self.target) != self.task_size:
+            self.target = 0.5 * (self._robot.robot_model.mins + self._robot.robot_model.maxs)
+        self.observe(self._trigger_recompute, "_robot:joint_values")
+
+    def compute(self) -> Tuple[A, Bound]:
+        return np.eye(self.task_size), self.target - self._robot.joint_values

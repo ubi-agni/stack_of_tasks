@@ -25,5 +25,6 @@ syringe = Syringe()
 import stack_of_tasks.marker.abstract_marker
 import stack_of_tasks.ref_frame.frames
 import stack_of_tasks.tasks.Eq_Tasks
+import stack_of_tasks.tasks.Ieq_Tasks
 from stack_of_tasks.robot_model.actuators import *
 from stack_of_tasks.solver import *

@@ -24,7 +24,7 @@ class Controller(BaseSoTHasTraits):
 
     task_hierarchy: TaskHierarchy = ta.Instance(TaskHierarchy, visible=False)
 
-    rate = ta.Range(1.0, value=50, step=1.0)
+    rate = ta.Range(1.0, 500, value=50, step=1.0)
     _updated = ta.Event()  # event triggered after each control step
 
     def __init__(self, config: Configuration) -> None:

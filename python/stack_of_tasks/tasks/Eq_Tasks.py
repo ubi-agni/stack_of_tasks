@@ -14,7 +14,7 @@ class PositionTask(RelativeTask, EqTask):
     task_size: int = 3
 
     def compute(self) -> Tuple[A, Bound]:
-        return self._J[:3], self.refB.T[:3, 3] - self.refA.T[:3, 3]
+        return self._JA[:3] - self._JB[:3], self.refB.T[:3, 3] - self.refA.T[:3, 3]
 
 
 class OrientationTask(RelativeTask, EqTask):
@@ -26,7 +26,7 @@ class OrientationTask(RelativeTask, EqTask):
         delta = np.identity(4)
         delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.refB.T[0:3, 0:3])
         angle, axis, _ = rotation_from_matrix(delta)
-        return self._J[3:], tA[0:3, 0:3].dot(angle * axis)
+        return self._JA[:3] - self._JB[:3], tA[0:3, 0:3].dot(angle * axis)
 
 
 class RotationTask(EqTask):
@@ -67,8 +67,7 @@ class DistanceTask(RelativeTask, EqTask):
 
     def compute(self) -> Tuple[A, Bound]:
         delta = self.refA.T[0:3, 3] - self.refB.T[0:3, 3]
-
-        return delta.dot(self._J[:3]), 0.1 * (self.distance - np.linalg.norm(delta))
+        return delta.dot(self._JA[:3] - self._JB[:3]), 0.1 * (self.distance - np.linalg.norm(delta))
 
 
 class PlaneTask(TargetTask, EqTask):
@@ -98,16 +97,19 @@ class ParallelTask(RelativeTask, EqTask):
     refB_axis = Axis()
 
     def compute(self) -> Tuple[A, Bound]:
-        """Align axis in eef frame to be parallel to reference axis in base frame"""
+        """Align axis in refA to be parallel to axis in refB"""
 
-        # transform axis from eef frame to base frame
+        # transform axes into base frame
+        axisA = self.refA.T[0:3, 0:3].dot(self.refA_axis)
+        axisB = self.refB.T[0:3, 0:3].dot(self.refB_axis)
+        J = (skew(axisB) @ skew(axisA)) @ self._JA[3:] - (skew(axisA) @ skew(axisB)) @ self._JB[3:]
+        return J, -np.cross(axisA, axisB)
+
         axis = self.refA.T[0:3, 0:3].dot(self.refA_axis)
         ref = self.refB.T[0:3, 0:3].dot(self.refB_axis)
         return (skew(ref).dot(skew(axis))).dot(self._J[3:]), np.cross(ref, axis)
 
 
-#
-#
 # class LineTask(EqTask):
 #    name = "Line"
 #    task_size: int = 3

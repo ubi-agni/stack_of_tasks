@@ -25,15 +25,11 @@ class ConeTask(RelativeTask, IeqTask):
     angle = ta.Float(default_value=0.5)
 
     def compute(self) -> Tuple[A, LowerBound, UpperBound]:
-        """Align axis in eef frame to lie in cone spanned by reference axis and opening angle"""
+        """Constrain axes in refA and refB to have an angle smaller than self.angle"""
 
         threshold = np.cos(self.angle)
         # transform axes into base frame
-        u = self.refA.T[0:3, 0:3].dot(self.refA_axis)
-        uref = self.refB.T[0:3, 0:3].dot(self.refB_axis)
-
-        return (
-            np.array([uref.T.dot(skew(u)).dot(self._J[3:])]),
-            -np.array([(uref.T.dot(u) - threshold)]),
-            np.array([10e20]),
-        )
+        axisA = self.refA.T[0:3, 0:3].dot(self.refA_axis)
+        axisB = self.refB.T[0:3, 0:3].dot(self.refB_axis)
+        J = -(axisB.T @ skew(axisA)) @ self._JA[3:] - (axisA.T @ skew(axisB)) @ self._JB[3:]
+        return J, threshold - axisA.T @ axisB.T, 10e20

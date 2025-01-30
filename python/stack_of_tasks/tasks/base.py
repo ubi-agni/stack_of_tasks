@@ -105,9 +105,8 @@ class RelativeTask(Task, ABC):
     refA: RefFrame = ta.Instance(RefFrame, label="frame A")
     refB: RefFrame = ta.Instance(RefFrame, label="frame B")
 
-    _J: Jacobian = ta.Property(
-        observe=(maybe_child("refA", "J") | maybe_child("refB", "J") | te.trait("relType"))
-    )
+    _JA: Jacobian = ta.Property(observe=(maybe_child("refA", "J") | te.trait("relType")))
+    _JB: Jacobian = ta.Property(observe=(maybe_child("refB", "J") | te.trait("relType")))
 
     def __init__(
         self,
@@ -118,30 +117,19 @@ class RelativeTask(Task, ABC):
         **traits,
     ) -> None:
         super().__init__(softness_type, weight, refA=refA, refB=refB, **traits)
-        self.observe(self._trigger_recompute, "refA:T, refB:T, _J")
+        self.observe(self._trigger_recompute, "refA:T, refB:T, relType")
 
     @ta.cached_property
-    def _get__J(self):
-        a_is_J = "J" in self.refA.trait_names()
-        b_is_J = "J" in self.refB.trait_names()
+    def _get__JA(self):
+        if "J" not in self.refA.trait_names() or self.relType is RelativeType.A_FIXED:
+            return np.zeros((6, 1))
+        return self.refA.J
 
-        if a_is_J and (not b_is_J):
-            J = self.refA.J
-
-        elif (not a_is_J) and b_is_J:
-            J = -self.refB.J
-
-        elif a_is_J and b_is_J:
-            if self.relType is RelativeType.A_FIXED:
-                J = -self.refB.J
-            elif self.relType is RelativeType.B_FIXED:
-                J = self.refA.J
-            else:
-                J = self.refA.J - self.refB.J
-        else:
-            raise ValueError("Either REF A or REF B has to have J")
-
-        return J
+    @ta.cached_property
+    def _get__JB(self):
+        if "J" not in self.refB.trait_names() or self.relType is RelativeType.B_FIXED:
+            return np.zeros((6, 1))
+        return self.refB.J
 
 
 class TargetTask(Task, ABC):

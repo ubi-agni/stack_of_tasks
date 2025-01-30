@@ -48,7 +48,7 @@ stack_of_tasks:
     angle: 0.5
     name: ''
     refA: *id003
-    refA_axis: !SOT_arr [0, 0, 1]
+    refA_axis: !SOT_arr [0, 0, -1]
     refB: *id002
     refB_axis: !SOT_arr [0, 0, 1]
     relType: *id005

@@ -105,28 +105,20 @@ class ParallelTask(RelativeTask, EqTask):
         J = (skew(axisB) @ skew(axisA)) @ self._JA[3:] - (skew(axisA) @ skew(axisB)) @ self._JB[3:]
         return J, -np.cross(axisA, axisB)
 
+
+class LineTask(RelativeTask, EqTask):
+    name = "Line"
+    task_size: int = 3
+    refA_axis = Axis()
+
+    def compute(self) -> Tuple[A, Bound]:
+        """Constrain refB to lie on a line going through refA and pointing along refA_axis"""
         axis = self.refA.T[0:3, 0:3].dot(self.refA_axis)
-        ref = self.refB.T[0:3, 0:3].dot(self.refB_axis)
-        return (skew(ref).dot(skew(axis))).dot(self._J[3:]), np.cross(ref, axis)
+        dp = self.refB.T[0:3, 3] - self.refA.T[0:3, 3]
+        dJ = self._JB[:3] - self._JA[:3]
+        return skew(axis) @ dJ + skew(dp) @ self._JA[3:], np.cross(dp, axis)
 
 
-# class LineTask(EqTask):
-#    name = "Line"
-#    task_size: int = 3
-#
-#    def _compute(self, line_point: OffsetTransform):
-#        Tc, Jc = self.fk(self.frame)
-#        Tt, Jt = self.fk(line_point)
-#
-#        normal = line_point[0:3, 2]
-#        sw = skew(normal)
-#
-#        d = Tc[0:3, 3] - line_point[0:3, 3]
-#
-#        self.A = sw.dot(Jc[:3] - Jt[:3])
-#        self.bound = -sw.dot(d)
-#
-#
 # class JointPos(JointTask, EqTask):
 #    name = "Joint Position"
 #

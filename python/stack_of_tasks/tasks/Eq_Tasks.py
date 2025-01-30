@@ -5,15 +5,7 @@ from tf.transformations import rotation_from_matrix
 
 from stack_of_tasks.ref_frame import Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame
-from stack_of_tasks.tasks.base import (
-    A,
-    Bound,
-    EqTask,
-    RelativeTask,
-    TargetTask,
-    TaskSoftnessType,
-    Tuple,
-)
+from stack_of_tasks.tasks.base import A, Bound, EqTask, RelativeTask, TargetTask, TaskSoftnessType, Tuple
 from stack_of_tasks.utils.transform_math import skew
 
 
@@ -95,22 +87,22 @@ class PlaneTask(TargetTask, EqTask):
         return normal.T.dot(self._J[:3]), dist - current
 
 
-RobotAxis = ta.Array(shape=(3,), value=np.array([0, 0, 1]))
+Axis = ta.Array(shape=(3,), value=np.array([0, 0, 1]))
 
 
 class ParallelTask(RelativeTask, EqTask):
     name = "Parallel"
     task_size: int = 3
 
-    robot_axis = RobotAxis()
-    target_axis = RobotAxis()
+    refA_axis = Axis()
+    refB_axis = Axis()
 
     def compute(self) -> Tuple[A, Bound]:
         """Align axis in eef frame to be parallel to reference axis in base frame"""
 
         # transform axis from eef frame to base frame
-        axis = self.refA.T[0:3, 0:3].dot(self.robot_axis)
-        ref = self.refB.T[0:3, 0:3].dot(self.target_axis)
+        axis = self.refA.T[0:3, 0:3].dot(self.refA_axis)
+        ref = self.refB.T[0:3, 0:3].dot(self.refB_axis)
         return (skew(ref).dot(skew(axis))).dot(self._J[3:]), np.cross(ref, axis)
 
 

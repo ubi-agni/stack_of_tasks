@@ -42,9 +42,7 @@ class BaseSoTHasTraits(ta.HasTraits):
         super().__init__(**traits)
 
     def _update_private_metadata(self):
-        prefix_names = list(
-            filter(lambda x: not (x == "" or x == "*"), self.__prefix_traits__["*"])
-        )
+        prefix_names = list(filter(lambda x: not (x == "" or x == "*"), self.__prefix_traits__["*"]))
 
         for name, trait in self.traits().items():
             for prefix in prefix_names:

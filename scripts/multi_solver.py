@@ -61,9 +61,7 @@ class Main:
         )
 
         self.plot.add_plot(f"pos{name}", [f"pos{name}/x", f"pos{name}/y", f"pos{name}/z"])
-        controller.control_step_callback.append(
-            lambda: self.plot.plot(f"{name}/dq", controller.last_dq)
-        )
+        controller.control_step_callback.append(lambda: self.plot.plot(f"{name}/dq", controller.last_dq))
         frame = JointFrame(controller=controller, joint=f"{name}_hand_tcp")
 
         controller.control_step_callback.append(

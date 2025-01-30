@@ -22,10 +22,7 @@ class SoTInstancingData:
 
     def _instanciate(self) -> BaseSoTHasTraits:
         # print(self.cls, self.data)
-        kwargs = {
-            k: v.instance if isinstance(v, SoTInstancingData) else v
-            for k, v in self.data.items()
-        }
+        kwargs = {k: v.instance if isinstance(v, SoTInstancingData) else v for k, v in self.data.items()}
 
         return self.cls(**kwargs)
 

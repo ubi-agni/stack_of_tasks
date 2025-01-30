@@ -19,9 +19,7 @@ class ObjectDropdown(QComboBox):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-        self.currentIndexChanged.connect(
-            lambda: self.current_object_changed.emit(self.current_object)
-        )
+        self.currentIndexChanged.connect(lambda: self.current_object_changed.emit(self.current_object))
 
         self._button_state = QStyle.State_Raised
 

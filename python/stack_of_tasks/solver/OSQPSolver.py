@@ -37,9 +37,7 @@ class OSQPSolver(HqpSolver):
         return dq
 
     def _solve(self, warmstart, **options) -> Any:
-        P = snp.csc_matrix(
-            self.objective_matrix[: self.N + self.slacks, : self.N + self.slacks]
-        )
+        P = snp.csc_matrix(self.objective_matrix[: self.N + self.slacks, : self.N + self.slacks])
         q = self.objective_vector[: self.N + self.slacks]
 
         l = np.r_[

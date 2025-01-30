@@ -5,18 +5,7 @@ import sys
 from functools import partial, update_wrapper
 from inspect import unwrap
 
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    ForwardRef,
-    Generic,
-    Optional,
-    Set,
-    Type,
-    TypeVar,
-    _eval_type,
-)
+from typing import Any, Callable, Dict, ForwardRef, Generic, Optional, Set, Type, TypeVar, _eval_type
 
 _MethodType = TypeVar("_MethodType", bound=Callable)
 
@@ -78,9 +67,7 @@ class _InjectionDescriptor(Generic[_MethodType]):
         unwrapped: _MethodType = unwrap(self._method)
         code = unwrapped.__code__
 
-        self._type_annotations = _resolve_annotations(
-            unwrapped.__annotations__, unwrapped.__module__
-        )
+        self._type_annotations = _resolve_annotations(unwrapped.__annotations__, unwrapped.__module__)
         self._args = inspect.getargs(code)
         self._p_n = code.co_argcount
 

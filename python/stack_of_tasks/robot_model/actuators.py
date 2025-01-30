@@ -68,9 +68,7 @@ class JointStateSubscriber:
     def __init__(self, robot_state: RobotState, ns_prefix: str = "") -> None:
         self._robot_state = robot_state
         self.ns_prefix = ns_prefix
-        self._sub = rospy.Subscriber(
-            ns_prefix + "joint_states", JointState, self._joint_states_cb
-        )
+        self._sub = rospy.Subscriber(ns_prefix + "joint_states", JointState, self._joint_states_cb)
 
     def _joint_states_cb(self, msg):
         incoming = dict(zip(msg.name, msg.position))
@@ -137,9 +135,7 @@ class VelocityCommandActuator(Actuator, JointStateSubscriber):
         Actuator.__init__(self)
         JointStateSubscriber.__init__(self, robot_state)
 
-        self._pub = rospy.Publisher(
-            ns + "/command", Float64MultiArray, queue_size=1, latch=True
-        )
+        self._pub = rospy.Publisher(ns + "/command", Float64MultiArray, queue_size=1, latch=True)
         # retrieve (sub)set of controlled joints
         controlled = rospy.get_param(ns + "/joints")
         active = robot_state.robot_model.active_joints

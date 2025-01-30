@@ -46,9 +46,7 @@ class HqpSolver(Solver):
     rho = ta.Range(0.0, value=0.1, exclude_low=True)
 
     @syringe.inject
-    def __init__(
-        self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options
-    ) -> None:
+    def __init__(self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options) -> None:
         super().__init__(robot_model, task_hierarchy, **options)
 
         self.m_slacks = 0
@@ -173,22 +171,14 @@ class HqpSolver(Solver):
         for task in self._task_hierarchy[level_index]:
             if task_kind_check(task, TaskSoftnessType.hard, EqTask):
                 self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
-                self.eq_matrix[
-                    self.eq_rows : self.eq_rows + task.task_size, : self.N
-                ] = task.A
+                self.eq_matrix[self.eq_rows : self.eq_rows + task.task_size, : self.N] = task.A
 
             elif task_kind_check(task, TaskSoftnessType.hard, IeqTask):
-                self.ieq_lower[
-                    self.ieq_rows : self.ieq_rows + task.task_size
-                ] = task.lower_bound
+                self.ieq_lower[self.ieq_rows : self.ieq_rows + task.task_size] = task.lower_bound
 
-                self.ieq_upper[
-                    self.ieq_rows : self.ieq_rows + task.task_size
-                ] = task.upper_bound
+                self.ieq_upper[self.ieq_rows : self.ieq_rows + task.task_size] = task.upper_bound
 
-                self.ieq_matrix[
-                    self.ieq_rows : self.ieq_rows + task.task_size, : self.N
-                ] = task.A
+                self.ieq_matrix[self.ieq_rows : self.ieq_rows + task.task_size, : self.N] = task.A
 
                 self.ieq_rows += task.task_size
 
@@ -199,9 +189,7 @@ class HqpSolver(Solver):
 
                 self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
 
-                self.eq_matrix[
-                    self.eq_rows : self.eq_rows + task.task_size, : self.N
-                ] = task.A
+                self.eq_matrix[self.eq_rows : self.eq_rows + task.task_size, : self.N] = task.A
 
                 self.eq_matrix[
                     self.eq_rows : self.eq_rows + task.task_size, self.N + self.slacks
@@ -226,13 +214,11 @@ class HqpSolver(Solver):
                     task.bound if isinstance(task, EqTask) else task.lower_bound
                 )
 
-                self.sieq_matrix[
-                    self.sieq_rows : self.sieq_rows + task.task_size, : self.N
-                ] = task.A
+                self.sieq_matrix[self.sieq_rows : self.sieq_rows + task.task_size, : self.N] = task.A
 
-                self.sieq_matrix[
-                    self.sieq_rows : self.sieq_rows + task.task_size, self.N :
-                ] = np.eye(task.task_size, self.m_slacks, self.slacks)
+                self.sieq_matrix[self.sieq_rows : self.sieq_rows + task.task_size, self.N :] = np.eye(
+                    task.task_size, self.m_slacks, self.slacks
+                )
 
                 self.sieq_rows += task.task_size
 
@@ -241,13 +227,11 @@ class HqpSolver(Solver):
                 )
 
                 # upper bounds are swapped
-                self.sieq_matrix[
-                    self.sieq_rows : self.sieq_rows + task.task_size, : self.N
-                ] = -task.A
+                self.sieq_matrix[self.sieq_rows : self.sieq_rows + task.task_size, : self.N] = -task.A
 
-                self.sieq_matrix[
-                    self.sieq_rows : self.sieq_rows + task.task_size, self.N :
-                ] = np.eye(task.task_size, self.m_slacks, self.slacks)
+                self.sieq_matrix[self.sieq_rows : self.sieq_rows + task.task_size, self.N :] = np.eye(
+                    task.task_size, self.m_slacks, self.slacks
+                )
 
                 self.sieq_rows += task.task_size
                 self.slacks += task.task_size

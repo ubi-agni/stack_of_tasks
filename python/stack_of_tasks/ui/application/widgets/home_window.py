@@ -46,9 +46,7 @@ class HomeWindow(QMainWindow):
         self._proj_list.verticalHeader().hide()
 
         self._proj_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self._proj_list.horizontalHeader().setSectionResizeMode(
-            1, QHeaderView.ResizeToContents
-        )
+        self._proj_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
         self._proj_list.setSelectionBehavior(QTableWidget.SelectRows)
         self._proj_list.setEditTriggers(QTableWidget.NoEditTriggers)

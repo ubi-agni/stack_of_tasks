@@ -11,9 +11,7 @@ from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
 class TaskHierarchy(BaseSoTHasTraits):
-    levels: list[Task] = ta.List(
-        trait=ta.List(trait=ta.Instance(Task), items=False), items=False
-    )
+    levels: list[Task] = ta.List(trait=ta.List(trait=ta.Instance(Task), items=False), items=False)
 
     def __iter__(self) -> Iterator[List[Task]]:
         """Iterate over all levels in the hierarchy"""

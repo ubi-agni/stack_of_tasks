@@ -126,9 +126,7 @@ class FixedInteractiveMarkerServer(InteractiveMarkerServer):
         self.init_pub = rospy.Publisher(
             topic_ns + "/update_full", InteractiveMarkerInit, latch=True, queue_size=100
         )
-        self.update_pub = rospy.Publisher(
-            topic_ns + "/update", InteractiveMarkerUpdate, queue_size=100
-        )
+        self.update_pub = rospy.Publisher(topic_ns + "/update", InteractiveMarkerUpdate, queue_size=100)
 
         self.sc = rospy.Subscriber(
             topic_ns + "/feedback",

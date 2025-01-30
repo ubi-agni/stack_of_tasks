@@ -18,14 +18,14 @@ dependencies = [
 ]
 
 [tool.black]
-line-length = 94
+line-length = 105
 
 [tool.pylint]
 extension-pkg-whitelist = "PyQt5"
 
 [tool.pylint.'MESSAGES CONTROL']
 init-hook = 'import sys; sys.path.append("python")'
-max-line-length = 94
+max-line-length = 105
 disable = [
     "C0103", # (invalid-name)
     "C0114", # (missing-module-docstring)
@@ -35,7 +35,7 @@ disable = [
 
 [tool.isort]
 profile = "black"
-line_length = 94
+line_length = 105
 known_msgs = "controller_manager_msgs,std_msgs,sensor_msgs,geometry_msgs,visualization_msgs"
 known_ros = "rospy,tf,interactive_markers"
 known_first_party = "stack_of_tasks"

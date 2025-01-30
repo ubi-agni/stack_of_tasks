@@ -31,9 +31,7 @@ def get_user_property(widget: QWidget) -> Any:
 
 
 def get_user_prop_signal_name(widget: QWidget) -> typing.Optional[str]:
-    if (
-        user_prop := widget.metaObject().userProperty()
-    ) is not None and user_prop.hasNotifySignal():
+    if (user_prop := widget.metaObject().userProperty()) is not None and user_prop.hasNotifySignal():
         return user_prop.notifySignal().name().data().decode()
 
 
@@ -150,9 +148,7 @@ class TraitWidgetBinding(Binder):
 
 
 class TraitObjectModelBinder(Binder):
-    def __init__(
-        self, obj: ta.HasTraits, trait: str, model: ObjectModel, init_data=False
-    ) -> None:
+    def __init__(self, obj: ta.HasTraits, trait: str, model: ObjectModel, init_data=False) -> None:
 
         super().__init__()
         self._guard = Guard()

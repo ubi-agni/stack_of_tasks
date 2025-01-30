@@ -9,9 +9,7 @@ from .AbstractSolver import Solver
 
 class InverseJacobianSolver(Solver):
     @syringe.inject
-    def __init__(
-        self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options
-    ) -> None:
+    def __init__(self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options) -> None:
         super().__init__(robot_model, task_hierarchy, **options)
         self.threshold = options.get("threshold", 0.01)
 
@@ -43,9 +41,7 @@ class InverseJacobianSolver(Solver):
             for i in range(rank):
                 S[i] = self._invert_smooth_clip(S[i])
 
-            qdotn = np.dot(Vt.T[:, 0:rank], S * U.T.dot(np.array(e) - J.dot(qdot))).reshape(
-                qdot.shape
-            )
+            qdotn = np.dot(Vt.T[:, 0:rank], S * U.T.dot(np.array(e) - J.dot(qdot))).reshape(qdot.shape)
 
             qdot += qdotn
 

@@ -31,9 +31,7 @@ class PropItemDelegate(QStyledItemDelegate):
 
         return super().sizeHint(option, index)
 
-    def createEditor(
-        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> QWidget:
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
         me: MappingEntry = index.data(MappingEntryRole)
         trait: ta.CTrait = index.data(TraitRole)
 
@@ -70,9 +68,7 @@ class PropItemDelegate(QStyledItemDelegate):
         val = get_user_property(editor)
         model.setData(index, val, self._edit_role)
 
-    def paint(
-        self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> None:
+    def paint(self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         me: MappingEntry = index.data(MappingEntryRole)
         if me is not None and me.painter is not None:
             data = index.data(RawDataRole)

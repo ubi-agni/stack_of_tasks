@@ -5,8 +5,8 @@ from traits.api import Range, observe
 from traits.observation.events import TraitChangeEvent
 
 from tf import transformations as tf
-from visualization_msgs.msg import InteractiveMarkerControl, InteractiveMarkerFeedback
 from std_msgs.msg import ColorRGBA
+from visualization_msgs.msg import InteractiveMarkerControl, InteractiveMarkerFeedback
 
 from stack_of_tasks.utils.tf_mappings import matrix_to_pose, pose_to_matrix
 

@@ -15,9 +15,7 @@ from stack_of_tasks.tasks.hierarchy import TaskHierarchy
 
 class SCSSolver(HqpSolver):
     @syringe.inject
-    def __init__(
-        self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options
-    ) -> None:
+    def __init__(self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options) -> None:
         super().__init__(robot_model, task_hierarchy, **options)
         self.slack_joint_matrix = None
 
@@ -39,9 +37,7 @@ class SCSSolver(HqpSolver):
 
     def _solve(self, warmstart, **options) -> Any:
         data = {
-            "P": snp.csc_matrix(
-                self.objective_matrix[: self.N + self.slacks, : self.N + self.slacks]
-            ),
+            "P": snp.csc_matrix(self.objective_matrix[: self.N + self.slacks, : self.N + self.slacks]),
             "c": self.objective_vector[: self.N + self.slacks],
             "A": snp.vstack(
                 [

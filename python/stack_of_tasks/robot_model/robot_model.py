@@ -216,9 +216,7 @@ class RobotModel:
                     gxa(mimic, "multiplier", 1.0),
                     gxa(mimic, "offset", 0.0),
                 )
-                joint = MimicJoint(
-                    jtype, name, T, axis, jmin, jmax, vmax, base, multiplier, offset
-                )
+                joint = MimicJoint(jtype, name, T, axis, jmin, jmax, vmax, base, multiplier, offset)
             else:
                 joint = ActiveJoint(jtype, name, T, axis, jmin, jmax, vmax)
         else:

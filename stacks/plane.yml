@@ -1,5 +1,6 @@
 settings:
   actuator: !SOT_object:JointStatePublisherActuator {}
+  rate: 50.0
   solver: !SOT_object:OSQPSolver
     rho: 0.1
 frames:
@@ -30,7 +31,7 @@ stack_of_tasks:
     name: ''
     refA: *id003
     refB: *id002
-    relType: !SOT_enum RelativeType.A_FIXED
+    relType: &id005 !SOT_enum RelativeType.A_FIXED
     softness_type: *id004
     weight: 1.0
   2:
@@ -41,4 +42,15 @@ stack_of_tasks:
     omega: 0.1
     robot: *id002
     softness_type: *id004
+    weight: 1.0
+  3:
+  - !SOT_object:ConeTask
+    angle: 0.5
+    name: ''
+    refA: *id003
+    refA_axis: !SOT_arr [0, 0, 1]
+    refB: *id002
+    refB_axis: !SOT_arr [0, 0, 1]
+    relType: *id005
+    softness_type: !SOT_enum TaskSoftnessType.hard
     weight: 1.0

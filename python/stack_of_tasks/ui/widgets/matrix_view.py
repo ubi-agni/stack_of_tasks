@@ -3,16 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 import numpy as np
-from PyQt5.QtCore import (
-    QMargins,
-    QModelIndex,
-    QObject,
-    QSize,
-    Qt,
-    QVariant,
-    pyqtProperty,
-    pyqtSignal,
-)
+from PyQt5.QtCore import QMargins, QModelIndex, QObject, QSize, Qt, QVariant, pyqtProperty, pyqtSignal
 from PyQt5.QtGui import QClipboard, QKeyEvent, QStandardItem, QStandardItemModel
 from PyQt5.QtWidgets import (
     QApplication,
@@ -77,9 +68,7 @@ class NumpyTableModel(QStandardItemModel):
         self._is_1D: bool
 
     def valuesChanged(self):
-        self.dataChanged.emit(
-            self.index(0, 0), self.index(self.rowCount(), self.columnCount())
-        )
+        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), self.columnCount()))
 
     def _setup_items(self):
         shape = self._matrix.shape
@@ -133,9 +122,7 @@ class MatrixItemDelegate(QStyledItemDelegate):
         self._editor_widget.setFocusPolicy(Qt.StrongFocus)
         self._editor_widget.setAutoFillBackground(True)
 
-    def createEditor(
-        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> QWidget:
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
         self._editor_widget.setParent(parent)
         return self._editor_widget
 

@@ -14,9 +14,7 @@ from stack_of_tasks.tasks.hierarchy import TaskHierarchy
 
 class CVXOPTSolver(HqpSolver):
     @syringe.inject
-    def __init__(
-        self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options
-    ) -> None:
+    def __init__(self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options) -> None:
         super().__init__(robot_model, task_hierarchy, **options)
         self.slack_joint_matrix = None
 

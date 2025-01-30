@@ -21,9 +21,7 @@ class ButtonDialog(QtWidgets.QDialog):
 
 
 class NewInstanceDialog(ButtonDialog):
-    def __init__(
-        self, model: ObjectModel, parent: typing.Optional[QtWidgets.QWidget] = None
-    ) -> None:
+    def __init__(self, model: ObjectModel, parent: typing.Optional[QtWidgets.QWidget] = None) -> None:
         super().__init__(parent)
 
         self.cls_selection = ObjectDropdown()

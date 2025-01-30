@@ -15,10 +15,7 @@ SolverRegister = ClassRegister("SolverRegister")
 class Solver(ABCSoTHasTraits):
     @syringe.inject
     def __init__(
-        self,
-        robot_model: RobotModel,
-        task_hierarchy: Optional[TaskHierarchy] = None,
-        **options
+        self, robot_model: RobotModel, task_hierarchy: Optional[TaskHierarchy] = None, **options
     ) -> None:
 
         super().__init__(**options)

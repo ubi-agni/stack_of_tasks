@@ -75,9 +75,7 @@ class Task(ABCSoTHasTraits):
     def _get_A(self):
         return np.atleast_2d(self._compute_val[0])
 
-    def __init__(
-        self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits
-    ) -> None:
+    def __init__(self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits) -> None:
         super().__init__(softness_type=softness_type, weight=weight, **traits)
         # define which properties trigger recomputation
         self.observe(self._trigger_recompute, "weight")

@@ -52,10 +52,7 @@ def setup(app: Application):
         weight=0.1,
         distance=0.2,
     )
-    axis = np.array([0, 0, 1])
-    axisTask = ParallelTask(
-        marker, eef, TaskSoftnessType.linear, robot_axis=axis, target_axis=axis
-    )
+    axisTask = ParallelTask(marker, eef, TaskSoftnessType.linear)
 
     with app.task_hierarchy.new_level() as level:
         level.append(posTask)

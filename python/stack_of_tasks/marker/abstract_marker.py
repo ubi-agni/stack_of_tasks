@@ -30,9 +30,7 @@ class IAMarker(ABCSoTHasTraits):
     _default_frame_id = ""
     frame_id = ta.Str()
 
-    transform = ta.Array(
-        shape=(4, 4), value=np.identity(4), comparison_mode=ta.ComparisonMode.none
-    )
+    transform = ta.Array(shape=(4, 4), value=np.identity(4), comparison_mode=ta.ComparisonMode.none)
 
     scale = ta.Range(low=0.0, value=0.25, exclude_low=True)
 
@@ -141,9 +139,7 @@ class IAMarker(ABCSoTHasTraits):
     @staticmethod
     def sphere(radius=0.02, color=ColorRGBA(1, 0, 1, 0.5), **kwargs):
         """Create a sphere marker"""
-        return Marker(
-            type=Marker.SPHERE, scale=Vector3(radius, radius, radius), color=color, **kwargs
-        )
+        return Marker(type=Marker.SPHERE, scale=Vector3(radius, radius, radius), color=color, **kwargs)
 
     @staticmethod
     def cylinder(radius=0.02, length=0.1, color=ColorRGBA(1, 0, 0, 1), **kwargs):

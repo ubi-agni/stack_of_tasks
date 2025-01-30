@@ -119,6 +119,22 @@ class RelativeTask(Task, ABC):
         super().__init__(softness_type, weight, refA=refA, refB=refB, **traits)
         self.observe(self._trigger_recompute, "refA:T, refB:T, relType")
 
+    @ta.observe("refA, refB, relType")
+    def _validate(self, event):
+        if self.refA is None or self.refB is None:
+            return
+
+        a_fixed = "J" not in self.refA.trait_names()
+        b_fixed = "J" not in self.refB.trait_names()
+        if a_fixed and b_fixed:
+            raise ValueError("Both frames are fixed, no motion possible")
+        if self.relType is RelativeType.A_FIXED and b_fixed:
+            print("Falling back to RELATIVE motion as frame B is fixed")
+            self.relType = RelativeType.RELATIVE
+        if self.relType is RelativeType.B_FIXED and a_fixed:
+            print("Falling back to RELATIVE motion as frame A is fixed")
+            self.relType = RelativeType.RELATIVE
+
     @ta.cached_property
     def _get__JA(self):
         if "J" not in self.refA.trait_names() or self.relType is RelativeType.A_FIXED:

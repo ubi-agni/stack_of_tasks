@@ -177,8 +177,7 @@ class IeqTask(Task, ABC):
         return self._compute_val[2]
 
     def _get_residual(self) -> Bound:
-        # TODO
-        return self.lower_bound
+        return np.atleast_1d(np.maximum(0, np.maximum(self.lower_bound, -self.upper_bound)))
 
     @abstractmethod
     def compute(self) -> Tuple[A, LowerBound, UpperBound]:

@@ -1,6 +1,8 @@
 import numpy as np
 import traits.api as ta
 
+from tf.transformations import rotation_from_matrix
+
 from stack_of_tasks.tasks.base import (
     A,
     IeqTask,
@@ -13,6 +15,17 @@ from stack_of_tasks.tasks.base import (
 from stack_of_tasks.utils.transform_math import skew
 
 Axis = ta.Array(shape=(3,), value=np.array([0, 0, 1]))
+
+
+class BoxTask(RelativeTask, IeqTask):
+    name = "Position"
+    task_size: int = 3
+    lower_tol: LowerBound = ta.Array(shape=(3,), value=np.array([0.1, 0.1, 0.1]))
+    upper_tol: UpperBound = ta.Array(shape=(3,), value=np.array([0.1, 0.1, 0.1]))
+
+    def compute(self) -> Tuple[A, LowerBound, UpperBound]:
+        e = self.refB.T[:3, 3] - self.refA.T[:3, 3]
+        return self._JA[:3] - self._JB[:3], e - self.lower_tol, e + self.upper_tol
 
 
 class ConeTask(RelativeTask, IeqTask):

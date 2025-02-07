@@ -64,11 +64,13 @@ class SOT_Model(QStandardItemModel):
 
             if p_index.isValid():
                 # selected is task
-                self.removeRow(index.row(), index.parent())
+                self.removeRow(index.row(), p_index)
                 self.task_removed.emit(p_index.row(), index.row())
 
-            # if p_index.isValid() and self.rowCount(p_index) == 0:
-            #    self.removeRow(p_index.row())
+            # Remove level if empty
+            if p_index.isValid() and self.rowCount(p_index) == 0:
+                self.removeRow(p_index.row())
+                self.level_removed.emit(p_index.row())
 
     def mimeData(self, indexes: typing.Iterable[QModelIndex]) -> QMimeData:
         parent: QModelIndex = indexes[0].parent()

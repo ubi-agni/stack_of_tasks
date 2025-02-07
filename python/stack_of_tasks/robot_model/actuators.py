@@ -121,17 +121,10 @@ class JointStatePublisherActuator(DummyActuator, JointStateSubscriber, JointStat
         self.publish(self._robot_state.joint_values + dq, dq)
 
 
-class VelocityCommandActuator(Actuator, JointStateSubscriber):
-    """Publish joint state deltas to velocity controller"""
+class ControllerActuator(Actuator, JointStateSubscriber):
+    """Base class for ROS controller-based actuators"""
 
-    @syringe.inject
-    def __init__(
-        self,
-        robot_state: RobotState,
-        rate: float = 50,
-        ns: str = "/joint_velocity_controller",
-    ) -> None:
-
+    def __init__(self, robot_state: RobotState, ns: str, label: str) -> None:
         Actuator.__init__(self)
         JointStateSubscriber.__init__(self, robot_state)
 
@@ -142,13 +135,8 @@ class VelocityCommandActuator(Actuator, JointStateSubscriber):
         self.joint_mask = [j.name in controlled for j in active]
 
         self.msg = Float64MultiArray()
-        dim = MultiArrayDimension(label="dq", size=len(controlled), stride=len(controlled))
+        dim = MultiArrayDimension(label=label, size=len(controlled), stride=len(controlled))
         self.msg.layout.dim.append(dim)
-        self.rate = rate
-
-    def actuate(self, dq):
-        self.msg.data = dq[self.joint_mask] * self.rate
-        self._pub.publish(self.msg)
 
     @staticmethod
     def switch_controllers(start, stop=None, ns="/controller_manager"):
@@ -178,6 +166,33 @@ class VelocityCommandActuator(Actuator, JointStateSubscriber):
     def stop(self, stop=None):
         self.actuate(numpy.zeros(self._robot_state.robot_model.N))
         self.switch_controllers([], stop)
+
+
+class PositionCommandActuator(ControllerActuator):
+    """Publish joint state to position controller"""
+
+    @syringe.inject
+    def __init__(self, robot_state: RobotState, ns: str = "/joint_position_controller") -> None:
+        super().__init__(robot_state, ns, label="q")
+
+    def actuate(self, dq):
+        self.msg.data = self._robot_state.joint_values[self.joint_mask] + dq[self.joint_mask]
+        self._pub.publish(self.msg)
+
+
+class VelocityCommandActuator(ControllerActuator):
+    """Publish joint state deltas to velocity controller"""
+
+    @syringe.inject
+    def __init__(
+        self, robot_state: RobotState, ns: str = "/joint_velocity_controller", rate: float = 100.0
+    ) -> None:
+        super().__init__(robot_state, ns, label="qdot")
+        self.rate = rate
+
+    def actuate(self, dq):
+        self.msg.data = dq[self.joint_mask] * self.rate
+        self._pub.publish(self.msg)
 
 
 __all__ = [

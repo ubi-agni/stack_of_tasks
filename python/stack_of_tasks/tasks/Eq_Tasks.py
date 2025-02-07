@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import traits.api as ta
 
@@ -29,6 +31,21 @@ class OrientationTask(RelativeTask, EqTask):
         delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.refB.T[0:3, 0:3])
         angle, axis, _ = rotation_from_matrix(delta)
         return self._JA[:3] - self._JB[:3], tA[0:3, 0:3].dot(angle * axis)
+
+
+class LissajousTask(RelativeTask, EqTask):
+    name = "Lissajous"
+    task_size: int = 3
+    amplitude = ta.Array(shape=(2,), dtype="float", value=np.array([0.1, 0.1]))
+    ratio = ta.Array(shape=(2,), dtype="float", value=np.array([1, 2]))
+    omega = ta.Float(0.1)
+    phi = ta.Float(0)
+
+    def compute(self) -> Tuple[A, Bound]:
+        t = time.time()
+        p = self.amplitude * np.sin(self.omega * self.ratio * t + np.array([0, self.phi * np.pi]))
+        posA = self.refA.T @ np.array([p[0], p[1], 0, 1])
+        return self._JA[:3] - self._JB[:3], self.refB.T[:3, 3] - posA[:3]
 
 
 class RotationTask(EqTask):

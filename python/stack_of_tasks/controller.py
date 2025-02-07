@@ -7,7 +7,7 @@ import rospy
 
 from stack_of_tasks import syringe
 from stack_of_tasks.config import Configuration
-from stack_of_tasks.robot_model.actuators import Actuator
+from stack_of_tasks.robot_model.actuators import Actuator, DummyActuator
 from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.robot_model.robot_state import RobotState
 from stack_of_tasks.solver.AbstractSolver import Solver
@@ -42,7 +42,12 @@ class Controller(BaseSoTHasTraits):
         syringe[RobotModel] = self.robot_model
         syringe[RobotState] = self.robot_state
 
-        self.actuator: Actuator = config.settings.pop("actuator").instance
+        try:
+            actuator = config.settings.pop("actuator")
+            self.actuator: Actuator = actuator.instance
+        except Exception as e:
+            rospy.logerr(f"Failed creating {actuator.cls.__name__} with {e.__class__.__name__}: {e}")
+            self.actuator = DummyActuator()
         self.solver: Solver = config.settings.pop("solver").instance
 
         # settings

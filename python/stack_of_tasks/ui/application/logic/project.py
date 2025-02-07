@@ -16,7 +16,7 @@ from stack_of_tasks.marker import IAMarker, MarkerRegister, MarkerServer
 from stack_of_tasks.plot import PlotCSV, PlotPublisher
 from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
-from stack_of_tasks.robot_model.actuators import Actuator, ActuatorRegister
+from stack_of_tasks.robot_model.actuators import Actuator, ActuatorRegister, DummyActuator
 from stack_of_tasks.solver import AbstractSolver, SolverRegister
 from stack_of_tasks.solver.AbstractSolver import Solver
 from stack_of_tasks.tasks import Task, TaskRegister
@@ -181,7 +181,11 @@ class Logic_Project(BaseSoTHasTraits):
 
     def _set_actuator_cls(self, actuator_cls: Type[Actuator]):
         if not isinstance(self.controller.actuator, actuator_cls):
-            self.controller.actuator = actuator_cls()
+            try:
+                self.controller.actuator = actuator_cls()
+            except Exception as e:  # on failure, fallback to DummyActuator
+                rospy.logerr(f"Failed creating {actuator_cls.__name__} with {e.__class__.__name__}: {e}")
+                self.ui.settings_tab.actuatorClassComboBox.set_current_object(DummyActuator)
         self.ui.settings_tab.edit_actuator.set_trait_object(self.controller.actuator)
 
     def _get_actuator_cls(self):

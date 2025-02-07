@@ -94,8 +94,8 @@ class Logic_Project(BaseSoTHasTraits):
 
         ##
         objects = config.objects
-        self.ref_objects.extend(objects["frames"])
-        self.marker_objects.extend(objects["marker"])
+        self.ref_objects.extend(objects.get("frames", []))
+        self.marker_objects.extend(objects.get("marker", []))
 
         # QT-Models
 

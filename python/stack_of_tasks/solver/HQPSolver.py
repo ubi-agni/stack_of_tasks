@@ -261,5 +261,7 @@ class HqpSolver(Solver):
             solution = self._interpret_solution(level_index, solution)
             if solution is not None:
                 dq_warmstart = solution
+            else:
+                print("Failed to solve level", level_index + 1)
 
         return dq_warmstart

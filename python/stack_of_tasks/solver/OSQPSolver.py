@@ -25,7 +25,6 @@ class OSQPSolver(HqpSolver):
 
     def _interpret_solution(self, level_index, solution: object) -> Any:
         if solution.info.status_val != 1:
-            print(solution.info.status)
             return None
 
         dq = solution.x[: self.N]

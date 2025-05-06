@@ -138,6 +138,29 @@ class LineTask(RelativeTask, EqTask):
         return skew(axis) @ dJ + skew(dp) @ self._JA[3:], np.cross(dp, axis)
 
 
+class PointingTask(RelativeTask, EqTask):
+    name = "Pointing"
+    task_size: int = 3
+    refA_axis = Axis()
+
+    def compute(self) -> Tuple[A, Bound]:
+        """Constrain refB to lie on the ray pointing from refA along refA_axis"""
+        # constraint: axis.T @ (dp) / ∥dp∥ == 1 where dp = refB - refA
+        axis = self.refA.T[0:3, 0:3].dot(self.refA_axis)
+        dp = self.refB.T[0:3, 3] - self.refA.T[0:3, 3]
+        norm = np.linalg.norm(dp)
+        if norm < 1e-3:
+            return np.zeros((1, np.maximum(self._JA.shape[1], self._JB.shape[1]))), 0
+
+        err = (axis.T @ dp) / norm - 1.0
+        u = (dp.T / norm) @ skew(axis) @ self._JA[3:]
+        return u, err
+
+        dJ = self._JB[:3] - self._JA[:3]
+        v = ((axis.T / norm**3) @ (norm**2 - np.outer(dp, dp))) @ dJ
+        return u - v, err
+
+
 class JointTask(EqTask):
     name = "Joint"
     _robot: RobotState = ta.Instance(RobotState)

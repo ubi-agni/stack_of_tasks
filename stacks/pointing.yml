@@ -19,7 +19,7 @@ marker:
 - *id001
 stack_of_tasks:
   0:
-  - !SOT_object:LineTask
+  - !SOT_object:PointingTask
     name: ''
     refA: *id002
     refA_axis: !SOT_arr [0, 0, 1]

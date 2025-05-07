@@ -131,11 +131,12 @@ class LineTask(RelativeTask, EqTask):
     refA_axis = Axis()
 
     def compute(self) -> Tuple[A, Bound]:
-        """Constrain refB to lie on a line going through refA and pointing along refA_axis"""
+        """Constrain refB to lie on a line going through refA and along refA_axis"""
+        # constraint: axis x dp == 0 where dp = refB - refA
         axis = self.refA.T[0:3, 0:3].dot(self.refA_axis)
         dp = self.refB.T[0:3, 3] - self.refA.T[0:3, 3]
         dJ = self._JB[:3] - self._JA[:3]
-        return skew(axis) @ dJ + skew(dp) @ self._JA[3:], np.cross(dp, axis)
+        return skew(axis) @ dJ + (skew(dp) @ skew(axis)) @ self._JA[3:], np.cross(dp, axis)
 
 
 class PointingTask(RelativeTask, EqTask):

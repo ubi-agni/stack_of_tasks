@@ -12,15 +12,16 @@ frames:
     frame_id: panda_link0
     name: plane
     scale: 0.25
-    transform: !SOT_transform {rpy: [0.0, 0.0, 0.0], xyz: [0.5133827924728394, -0.22239606082439423,
-        0.7359517812728882]}
+    transform: !SOT_transform {rpy: [0.0, 0.0, 0.0], xyz: [0.5772772431373596, 0.05926451086997986,
+        -0.05290880799293518]}
   name: target
 marker:
 - *id001
 stack_of_tasks:
   0:
-  - !SOT_object:PointingTask
-    name: ''
+  - !SOT_object:RayTask
+    mode: acos
+    name: RayTask
     refA: *id002
     refA_axis: !SOT_arr [0, 0, 1]
     refB: *id003

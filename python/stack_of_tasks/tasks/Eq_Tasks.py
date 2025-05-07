@@ -139,10 +139,11 @@ class LineTask(RelativeTask, EqTask):
         return skew(axis) @ dJ + (skew(dp) @ skew(axis)) @ self._JA[3:], np.cross(dp, axis)
 
 
-class PointingTask(RelativeTask, EqTask):
-    name = "Pointing"
+class RayTask(RelativeTask, EqTask):
+    name = "Ray"
     task_size: int = 3
     refA_axis = Axis()
+    mode = ta.Enum("acos", "axis + dp", "axis only")
 
     def compute(self) -> Tuple[A, Bound]:
         """Constrain refB to lie on the ray pointing from refA along refA_axis"""
@@ -150,16 +151,24 @@ class PointingTask(RelativeTask, EqTask):
         axis = self.refA.T[0:3, 0:3].dot(self.refA_axis)
         dp = self.refB.T[0:3, 3] - self.refA.T[0:3, 3]
         norm = np.linalg.norm(dp)
-        if norm < 1e-3:
+
+        if norm < 1e-6:  # refA is close enough to refB
             return np.zeros((1, np.maximum(self._JA.shape[1], self._JB.shape[1]))), 0
 
-        err = (axis.T @ dp) / norm - 1.0
-        u = (dp.T / norm) @ skew(axis) @ self._JA[3:]
-        return u, err
+        if self.mode == "axis only":  # axis.T @ dp = ∥dp∥, ignoring derivative of dp
+            return (dp.T @ skew(axis)) @ self._JA[3:], axis.T @ dp - norm
 
-        dJ = self._JB[:3] - self._JA[:3]
-        v = ((axis.T / norm**3) @ (norm**2 - np.outer(dp, dp))) @ dJ
-        return u - v, err
+        elif self.mode == "axis + dp":  # axis.T @ dp = ∥dp∥, considering derivative of dp
+            dJp = self._JB[:3] - self._JA[:3]
+            return (dp.T @ skew(axis)) @ self._JA[3:] - (axis.T - dp.T / norm) @ dJp, axis.T @ dp - norm
+
+        elif self.mode == "acos":  # acos(axis.T @ dp / norm) == 0
+            dJp = self._JB[:3] - self._JA[:3]
+            dpn = dp / norm
+            sp = axis.T @ dpn
+            acos_scale = -1.0 / np.sqrt(max(1.0 - sp**2, 1e-8))
+            J = dpn.T @ skew(axis) @ self._JA[3:] + (((axis.T / norm) @ skew(dpn)) @ skew(dpn)) @ dJp
+            return acos_scale * J, np.arccos(sp)
 
 
 class JointTask(EqTask):

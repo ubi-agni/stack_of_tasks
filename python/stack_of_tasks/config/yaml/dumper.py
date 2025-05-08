@@ -66,10 +66,9 @@ class SotDumper(yaml.CDumper):
         )
 
     def _represent_np_array(self, data: ndarray):
-        if len((s := data.shape)) == 2 and s[0] == 4 and s[1] == 4:
+        if data.shape == (4, 4):
             xyz = data[:3, 3].tolist()
             rpy = Rotation.from_matrix(data[:3, :3]).as_euler("ZYX").tolist()
-
             return self.represent_mapping(SOT_TAG_PREFIX + "transform", {"xyz": xyz, "rpy": rpy}, True)
         else:
             ln = self.represent_sequence(SOT_TAG_PREFIX + "arr", data.tolist(), True)

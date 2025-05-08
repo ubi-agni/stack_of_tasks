@@ -73,11 +73,7 @@ class SotYamlLoader(yaml.Loader):
 
     def array_constructor(self, node: yaml.nodes.SequenceNode):
         s = self.construct_sequence(node, True)
-        dtype = s
-        while isinstance(dtype, list):
-            dtype = s[0]
-
-        return np.fromiter(s, dtype=type(dtype))
+        return np.array([float(item) if isinstance(item, str) else item for item in s])
 
 
 SotYamlLoader.add_constructor("!SOT_cls", SotYamlLoader._sot_cls_contructor)

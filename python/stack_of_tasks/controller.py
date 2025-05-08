@@ -31,10 +31,7 @@ class Controller(BaseSoTHasTraits):
         super().__init__()
 
         # robotmodel
-        if "robot_model_param" in config.settings:
-            self.robot_model = RobotModel(config.settings.pop("robot_model_param"))
-        else:
-            self.robot_model = RobotModel()
+        self.robot_model = RobotModel(config.settings.pop("robot_model_param", "robot_description"))
         # robotstate
         self.robot_state = RobotState(self.robot_model)
 

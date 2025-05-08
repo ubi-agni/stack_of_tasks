@@ -43,8 +43,6 @@ class HqpSolver(Solver):
 
     #  (soft ineq. task    {  1   J          lb   ub         lb ≤ 1 s + J dq ≤ ub)
 
-    rho = ta.Range(0.0, value=0.1, exclude_low=True)
-
     @syringe.inject
     def __init__(self, robot_model: RobotModel, task_hierarchy: TaskHierarchy = None, **options) -> None:
         super().__init__(robot_model, task_hierarchy, **options)
@@ -126,8 +124,6 @@ class HqpSolver(Solver):
     def _create_matrix(self):
         # Objective matrix P and vector q
         self.objective_matrix = np.identity(self.N + self.m_slacks)
-        self.objective_matrix[: self.N, : self.N] *= self.rho
-
         self.objective_vector = np.zeros((self.N + self.m_slacks,))
 
         # lower and upper bounds for joints and slacks,
@@ -168,6 +164,10 @@ class HqpSolver(Solver):
         self.sieq_rows = 0
         self.slacks = 0
 
+        # first task determines joint weighting
+        task = self._task_hierarchy[level_index][0]
+        self.objective_matrix[: self.N, : self.N] = np.diag(task.rho)
+
         for task in self._task_hierarchy[level_index]:
             if task_kind_check(task, TaskSoftnessType.hard, EqTask):
                 self.eq_bound[self.eq_rows : self.eq_rows + task.task_size] = task.bound
@@ -205,7 +205,6 @@ class HqpSolver(Solver):
                 self.joints_slack_lower[
                     self.N + self.slacks : self.N + self.slacks + task.task_size
                 ] = -np.inf
-
                 self.joints_slack_upper[
                     self.N + self.slacks : self.N + self.slacks + task.task_size
                 ] = np.inf

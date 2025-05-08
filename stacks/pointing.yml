@@ -1,8 +1,7 @@
 settings:
   actuator: !SOT_object:JointStatePublisherActuator {}
   rate: 50.0
-  solver: !SOT_object:OSQPSolver
-    rho: 0.1
+  solver: !SOT_object:OSQPSolver {}
 frames:
 - &id002 !SOT_object:RobotRefFrame
   link_name: panda_hand_tcp
@@ -23,8 +22,9 @@ stack_of_tasks:
     mode: acos
     name: RayTask
     refA: *id002
-    refA_axis: !SOT_arr [0, 0, 1]
+    refA_axis: !SOT_arr [0.0, 0.0, 1.0]
     refB: *id003
     relType: !SOT_enum RelativeType.RELATIVE
+    rho: !SOT_arr [1e3, 1e3, 1e3, 1e3, 1.0, 1.0, 1.0, 1.0]
     softness_type: !SOT_enum TaskSoftnessType.linear
     weight: 1.0

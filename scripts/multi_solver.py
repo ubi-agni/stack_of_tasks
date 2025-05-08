@@ -21,7 +21,7 @@ class Main:
         self.dqs = {}
         self.plot = PlotPublisher()
 
-        opt = {"rho": 1.0}
+        opt = {}
 
         self.target_frame = Offset(World()).transform(tf.quaternion_matrix([1, 0, 0, 0]))
 

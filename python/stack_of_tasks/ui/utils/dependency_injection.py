@@ -37,5 +37,4 @@ class DependencyInjection:
                     kwargs[param_name] = DependencyInjection.mapping[param_name]
 
         kwargs.update(DependencyInjection.inject(kwargs))
-        print(kwargs)
         return instance_cls(**kwargs)

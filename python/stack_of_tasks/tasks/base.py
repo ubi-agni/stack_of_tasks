@@ -12,8 +12,10 @@ import numpy as np
 import traits.api as ta
 import traits.observation.expression as te
 
+from stack_of_tasks import syringe
 from stack_of_tasks.ref_frame import Jacobian
 from stack_of_tasks.ref_frame.frames import RefFrame, RobotRefFrame
+from stack_of_tasks.robot_model.robot_model import RobotModel
 from stack_of_tasks.utils import ClassRegister
 from stack_of_tasks.utils.traits import ABCSoTHasTraits
 
@@ -69,14 +71,19 @@ class Task(ABCSoTHasTraits):
         exclude_low=True,
         desc="weight of this task w.r.t. other tasks in the same level",
     )
+    rho = ta.Array()
 
     A: A = ta.Property(depends_on="_recompute", trait=ta.Array, visible=False)
 
     def _get_A(self):
         return np.atleast_2d(self._compute_val[0])
 
-    def __init__(self, softness_type: TaskSoftnessType, weight: float = 1.0, **traits) -> None:
-        super().__init__(softness_type=softness_type, weight=weight, **traits)
+    @syringe.inject
+    def __init__(self, robot_model: RobotModel, **traits) -> None:
+        super().__init__(**traits)
+        self.N = robot_model.N
+        if len(self.rho) != self.N:
+            self.rho = np.ones(self.N)
         # define which properties trigger recomputation
         self.observe(self._trigger_recompute, "weight")
 
@@ -112,11 +119,9 @@ class RelativeTask(Task, ABC):
         self,
         refA: RefFrame,
         refB: RefFrame,
-        softness_type: TaskSoftnessType,
-        weight: float = 1,
         **traits,
     ) -> None:
-        super().__init__(softness_type, weight, refA=refA, refB=refB, **traits)
+        super().__init__(refA=refA, refB=refB, **traits)
         self.observe(self._trigger_recompute, "refA:T, refB:T, relType")
 
     @ta.observe("refA, refB, relType")

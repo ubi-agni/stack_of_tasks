@@ -153,7 +153,7 @@ class RayTask(RelativeTask, EqTask):
         norm = np.linalg.norm(dp)
 
         if norm < 1e-6:  # refA is close enough to refB
-            return np.zeros((1, np.maximum(self._JA.shape[1], self._JB.shape[1]))), 0
+            return np.zeros((1, self.N)), 0
 
         if self.mode == "axis only":  # axis.T @ dp = ∥dp∥, ignoring derivative of dp
             return (dp.T @ skew(axis)) @ self._JA[3:], axis.T @ dp - norm
@@ -179,7 +179,7 @@ class JointTask(EqTask):
     @syringe.inject
     def __init__(self, robot_state: RobotState, **traits) -> None:
         super().__init__(_robot=robot_state, **traits)
-        self.task_size = self._robot.robot_model.N
+        self.task_size = self.N
         if len(self.target) != self.task_size:
             self.target = 0.5 * (self._robot.robot_model.mins + self._robot.robot_model.maxs)
         self.observe(self._trigger_recompute, "_robot:joint_values")

@@ -26,7 +26,7 @@ class DummyConfig(Parameter):
         super().__init__()
 
         self.solver_cls = OSQPSolver
-        self.solver_parameter.update(rho=0.1)
+        self.solver_parameter.update()
         self.actuator_cls = JointStatePublisherActuator
 
 

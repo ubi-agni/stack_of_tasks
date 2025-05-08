@@ -182,7 +182,12 @@ class JointTask(EqTask):
         self.task_size = self.N
         if len(self.target) != self.task_size:
             self.target = 0.5 * (self._robot.robot_model.mins + self._robot.robot_model.maxs)
+        self.dqmax = 1e-3 * self._robot.robot_model.vmaxs
         self.observe(self._trigger_recompute, "_robot:joint_values")
 
     def compute(self) -> Tuple[A, Bound]:
-        return np.eye(self.task_size), self.target - self._robot.joint_values
+        err = self.target - self._robot.joint_values
+        # scale err to not exceed dqmax in any component
+        with np.errstate(divide="ignore"):
+            scale = np.minimum(1, np.min(self.dqmax / np.abs(err)))
+        return np.eye(self.task_size), scale * err

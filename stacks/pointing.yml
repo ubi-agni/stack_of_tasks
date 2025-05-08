@@ -25,6 +25,13 @@ stack_of_tasks:
     refA_axis: !SOT_arr [0.0, 0.0, 1.0]
     refB: *id003
     relType: !SOT_enum RelativeType.RELATIVE
-    rho: !SOT_arr [1e3, 1e3, 1e3, 1e3, 1.0, 1.0, 1.0, 1.0]
-    softness_type: !SOT_enum TaskSoftnessType.linear
+    rho: !SOT_arr [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    softness_type: &id004 !SOT_enum TaskSoftnessType.linear
+    weight: 1.0
+  1:
+  - !SOT_object:JointTask
+    name: ''
+    rho: !SOT_arr [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    softness_type: *id004
+    target: !SOT_arr [0.0, 0.0, 0.0, -1.5708, 0.0, 1.8675, 0.0, 0.02]
     weight: 1.0

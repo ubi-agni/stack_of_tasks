@@ -5,7 +5,6 @@ import typing
 from typing import Any
 
 import traits.api as ta
-from PyQt5 import sip
 from PyQt5.QtCore import Qt
 
 from stack_of_tasks.ui import MappingEntryRole, RawDataRole, TraitRole
@@ -94,8 +93,7 @@ class AttrValueItem(RawDataBase):
         self._obj.observe(self._data_changed, self._attr_name, remove=True, dispatch="ui")
 
     def _data_changed(self, evt):
-        if not sip.isdeleted(self):
-            self.emitDataChanged()
+        self.emitDataChanged()
 
     def raw_data(self):
         return getattr(self._obj, self._attr_name)

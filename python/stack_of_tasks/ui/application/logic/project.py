@@ -6,7 +6,6 @@ from threading import Event, Thread
 from typing import Any, List, Type
 
 import traits.api as ta
-from PyQt5 import sip
 
 import rospy
 
@@ -224,9 +223,8 @@ class Logic_Project(BaseSoTHasTraits):
 
         self.clear_data()
 
-        if not sip.isdeleted(self.ui):
-            self.ui.close()
-            self.ui.deleteLater()
+        self.ui.close()
+        self.ui.deleteLater()
 
         if WorkerThread.is_running():
             WorkerThread.toggle_running(None)

@@ -107,7 +107,7 @@ class Task(ABCSoTHasTraits):
 
 
 class RelativeTask(Task, ABC):
-    relType: RelativeType = ta.Enum(RelativeType.A_FIXED, RelativeType)
+    relType: RelativeType = ta.Enum(RelativeType.RELATIVE, RelativeType)
 
     refA: RefFrame = ta.Instance(RefFrame, label="frame A")
     refB: RefFrame = ta.Instance(RefFrame, label="frame B")

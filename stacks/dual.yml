@@ -1,0 +1,63 @@
+settings:
+  actuator: !SOT_object:DummyPublisherActuator {}
+  rate: 50.0
+  solver: !SOT_object:OSQPSolver {}
+frames:
+- &id003 !SOT_object:RobotRefFrame
+  link_name: left_hand_tcp
+  name: LeftTCP
+- &id001 !SOT_object:RobotRefFrame
+  link_name: right_hand_tcp
+  name: RightTCP
+- &id004 !SOT_object:Offset
+  frame: *id001
+  name: RTCP
+  offset: !SOT_transform {rpy: [0.0, 0.0, 3.141592653589793], xyz: [0.0, 0.0, 0.0]}
+- &id007 !SOT_object:MarkerFrame
+  marker: &id002 !SOT_object:PositionMarker
+    frame_id: base
+    name: ''
+    scale: 0.25
+    transform: !SOT_transform {rpy: [0.0, 0.0, 0.0], xyz: [-0.04128839448094368, -0.011111363768577576,
+        1.5959454774856567]}
+  name: Marker
+marker:
+- *id002
+stack_of_tasks:
+  0:
+  - !SOT_object:PositionTask
+    name: ''
+    refA: *id003
+    refB: *id001
+    relType: &id005 !SOT_enum RelativeType.RELATIVE
+    rho: !SOT_arr [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0]
+    softness_type: &id006 !SOT_enum TaskSoftnessType.linear
+    weight: 1.0
+  - !SOT_object:OrientationTask
+    name: ''
+    refA: *id003
+    refB: *id004
+    relType: *id005
+    rho: !SOT_arr [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0]
+    softness_type: *id006
+    weight: 0.1
+  - !SOT_object:PositionTask
+    name: ''
+    refA: *id003
+    refB: *id007
+    relType: *id005
+    rho: !SOT_arr [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0]
+    softness_type: *id006
+    weight: 1.0
+  1:
+  - !SOT_object:JointTask
+    name: JointTask
+    rho: !SOT_arr [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+      1.0, 1.0, 1.0]
+    softness_type: *id006
+    target: !SOT_arr [0.0, 0.0, 0.0, -1.5708, 0.0, 1.8675, 0.0, 0.02, 0.0, 0.0, 0.0,
+      -1.5708, 0.0, 1.8675, 0.0, 0.02]
+    weight: 5.0

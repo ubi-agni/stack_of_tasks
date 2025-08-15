@@ -47,7 +47,7 @@ class RobotState(ABCSoTHasTraits):
 
         if isinstance(joint, ActiveJoint):
             T = T @ joint.T @ joint.T_motion(self.joint_values[joint.idx])
-            J[:, joint.idx] += adjoint(T).dot(joint.twist)
+            J[:, joint.idx] += adjoint(T) @ joint.twist
         else:
             T = T @ joint.T
 
@@ -63,4 +63,4 @@ class RobotState(ABCSoTHasTraits):
         """
         T, J = self._fk(self.robot_model.links[link])
         # shift reference point of J into origin of frame T
-        return T, adjoint(T[:3, 3], inverse=True).dot(J)
+        return T, adjoint(T[:3, 3], inverse=True) @ J

@@ -30,7 +30,7 @@ class OrientationTask(RelativeTask, EqTask):
         delta = np.identity(4)
         delta[0:3, 0:3] = tA[0:3, 0:3].T.dot(self.refB.T[0:3, 0:3])
         angle, axis, _ = rotation_from_matrix(delta)
-        return self._JA[:3] - self._JB[:3], tA[0:3, 0:3].dot(angle * axis)
+        return self._JA[3:] - self._JB[3:], tA[0:3, 0:3].dot(angle * axis)
 
 
 class LissajousTask(RelativeTask, EqTask):

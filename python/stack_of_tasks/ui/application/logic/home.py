@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -34,7 +35,9 @@ class Logic_Main:
         self.ui.open_project.connect(self._open_recent)
         self.ui.new_project.connect(self.new_project)
 
-        if len(self.latest) == 0:
+        if sys.argv[1:]:
+            self._load_project(Path(sys.argv[1]))
+        elif len(self.latest) == 0:
             self.new_project()
 
     def _load_latest(self):

@@ -110,7 +110,6 @@ class SOT_Model(QStandardItemModel):
                 row = self.rowCount(dest_parent)
 
             if not dest_parent.isValid():
-                dest_parent = QModelIndex()
                 dest_parent_item = self.invisibleRootItem()
             else:
                 dest_parent_item = self.itemFromIndex(dest_parent)

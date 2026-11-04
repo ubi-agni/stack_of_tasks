@@ -59,6 +59,12 @@ class IAMarker(ABCSoTHasTraits):
     def _name_changed(self, evt: TraitChangeEvent):
         self.marker.name = evt.new
 
+    @ta.observe("frame_id", post_init=True)
+    def _frame_id_changed(self, evt: TraitChangeEvent):
+        if "frame_id" not in self.lg:
+            self.marker.header.frame_id = evt.new
+            self.sync = self.name
+
     @ta.observe("transform", post_init=True)
     def _transform_changed(self, evt: TraitChangeEvent):
         if "transform" not in self.lg:

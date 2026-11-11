@@ -45,12 +45,12 @@ def get_init_arg_trait_names(cls: type[ta.HasTraits]):
 
     injected_names = cls.class_trait_names(injected=lambda x: isinstance(x, str))
 
-    trait_names = set(injected_names)
+    trait_names = injected_names
     for name in visible_trait_names:
         if is_editable_trait(name, cls_trts[name]):
-            trait_names.add(name)
+            trait_names.append(name)
 
-    return sorted(trait_names)
+    return trait_names
 
 
 def is_valid_value(obj: ta.HasTraits | ta.MetaHasTraits, name: str, val: Any) -> bool:

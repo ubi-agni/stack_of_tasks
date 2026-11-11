@@ -35,6 +35,7 @@ class IAMarker(ABCSoTHasTraits):
     )
 
     scale = ta.Range(low=0.0, value=0.25, exclude_low=True)
+    saved_scale = 0.25  #Used to reset the scale when unhiding a marker.
 
     sync = ta.Event()
 
@@ -239,3 +240,11 @@ class IAMarker(ABCSoTHasTraits):
         m.pose.position = Point(*(p + T[:3, :3].dot(offset)))
         markers.append(m)
         return markers
+
+    def set_visibility(self, visible: bool):
+        #Save size before hiding, so it can be restored when unhiding.
+        if self.scale > 0.001:
+            self.saved_scale = self.scale
+        #Hide marker by setting scale to a very small value (0 does not work) and changing the alpha of the InteractiveMarker object.
+        self.trait_set(scale=self.saved_scale if visible else 0.00001)
+        self.marker.controls[0].markers[0].color.a = 1.0 if visible else 0.0

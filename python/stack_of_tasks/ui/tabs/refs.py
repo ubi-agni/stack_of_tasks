@@ -8,6 +8,7 @@ from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
 from stack_of_tasks.ui.widgets.button_dialog import NewInstanceDialog
 from stack_of_tasks.ui.widgets.has_trait_widgets import EditorGroupBox
+from stack_of_tasks.ref_frame import Offset
 
 from .base import Base
 
@@ -15,8 +16,12 @@ from .base import Base
 class RefFramesTabWidget(Base):
     new_ref_signal = pyqtSignal([type, dict])
 
-    def __init__(self) -> None:
+    marker_server = None
+
+    def __init__(self, marker_server) -> None:
         super().__init__()
+
+        self.marker_server = marker_server
 
         self.horizontalLayout = QHBoxLayout()
         self.ref_view = QListView(self)
@@ -44,5 +49,22 @@ class RefFramesTabWidget(Base):
         if len(sel := self.ref_view.selectedIndexes()) > 0:
             obj = sel[0].data(RawDataRole)
             self.edit_ref.set_trait_object(obj)
+            if isinstance(obj, Offset):
+                #If an Offset is selected, show the __offset_control__ marker and hide all others.
+                for marker in self.marker_server.marker.values():
+                    if marker.name == "__offset_control__":
+                        marker.set_visibility(True)
+                        marker.transform = obj.T    #Use actual position relative to world frame for now
+                    else:
+                        marker.set_visibility(False)
+                    marker.sync = marker.name
+            else:
+                #Else do the reverse.
+                for marker in self.marker_server.marker.values():
+                    if marker.name == "__offset_control__":
+                        marker.set_visibility(False)
+                    else:
+                        marker.set_visibility(True)
+                    marker.sync = marker.name
         else:
             obj = None

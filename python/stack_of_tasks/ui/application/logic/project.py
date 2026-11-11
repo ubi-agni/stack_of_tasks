@@ -13,6 +13,7 @@ import rospy
 from stack_of_tasks.config import Configuration
 from stack_of_tasks.controller import Controller
 from stack_of_tasks.marker import IAMarker, MarkerRegister, MarkerServer
+from stack_of_tasks.marker.trait_marker import FullMovementMarker       #Temp?
 from stack_of_tasks.plot import PlotCSV, PlotPublisher
 from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
@@ -91,6 +92,9 @@ class Logic_Project(BaseSoTHasTraits):
 
         self.marker_server = MarkerServer()
         IAMarker._default_frame_id = self.controller.robot_model.root_link
+        #Conveniently, this marker does not show up under the "Marker" tab.
+        self.marker_server.add_marker(marker := FullMovementMarker(name="__offset_control__", frame_id=IAMarker._default_frame_id))
+        marker.set_visibility(False)
 
         ##
         objects = config.objects
@@ -132,7 +136,7 @@ class Logic_Project(BaseSoTHasTraits):
         TraitObjectModelBinder(self, "ref_objects", self.refs_model, True)
         TraitObjectModelBinder(self, "marker_objects", self.marker_model, True)
 
-        self.ui = ProjectUI()
+        self.ui = ProjectUI(self.marker_server)
         # Keep window on top
         # self.ui.setWindowFlags(self.ui.windowFlags() | Qt.WindowStaysOnTopHint)
 

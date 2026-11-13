@@ -247,4 +247,4 @@ class IAMarker(ABCSoTHasTraits):
             self.saved_scale = self.scale
         #Hide marker by setting scale to a very small value (0 does not work) and changing the alpha of the InteractiveMarker object.
         self.trait_set(scale=self.saved_scale if visible else 0.00001)
-        self.marker.controls[0].markers[0].color.a = 1.0 if visible else 0.0
+        self.marker.controls[0].markers[0].color.a = 0.5 if visible else 0.0

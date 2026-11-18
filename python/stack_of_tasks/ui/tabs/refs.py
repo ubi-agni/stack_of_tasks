@@ -62,16 +62,13 @@ class RefFramesTabWidget(Base):
                 #If an Offset is selected hide all markers...
                 for marker in self.marker_server.marker.values():
                     marker.set_visibility(False)
-                    marker.sync = marker.name
                 #except the one that controls the selected Offset
                 obj.marker.set_visibility(True)
                 obj.marker.transform = obj.T
-                obj.marker.sync = marker.name
             else:
                 #Else show all normal markers, then hide the offset markers...
                 for marker in self.marker_server.marker.values():
                     marker.set_visibility(True)
-                    marker.sync = marker.name
                 #by looping over all references in this view...
                 model = self.ref_view.model()
                 for row in range(model.rowCount()):

@@ -23,6 +23,7 @@ from stack_of_tasks.ui.traits_mapping.bindings import (
     trait_widget_binding,
 )
 from stack_of_tasks.utils.traits import BaseSoTHasTraits
+from numpy import ndarray
 
 
 class NewInstanceWidget(QWidget):
@@ -48,6 +49,9 @@ class NewInstanceWidget(QWidget):
             if callable(f := getattr(cls, f"_{name}_default", None)):
                 # HACK: this assumes that the default method acts like a class method
                 return f()
+            if isinstance(trait.trait_type.default_value, ndarray):
+                #In the case of a matrix, create a copy to make it independent from the default value
+                return trait.trait_type.default_value.copy()
             return trait.trait_type.default_value
 
         cls_trs = self.cls.class_traits()

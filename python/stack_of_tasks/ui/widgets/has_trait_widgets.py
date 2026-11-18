@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 from typing import Any, Type
 
 import traits.api as ta
@@ -48,7 +50,7 @@ class NewInstanceWidget(QWidget):
             if callable(f := getattr(cls, f"_{name}_default", None)):
                 # HACK: this assumes that the default method acts like a class method
                 return f()
-            return trait.trait_type.default_value
+            return deepcopy(trait.trait_type.default_value)
 
         cls_trs = self.cls.class_traits()
         for name in get_init_arg_trait_names(self.cls):

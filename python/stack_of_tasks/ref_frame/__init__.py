@@ -85,11 +85,13 @@ class Offset(RefFrame):
 
     @ta.property_depends_on("frame.T, offset")
     def _get_T(self):
+        return self.frame.T @ self.offset
+
+    @ta.observe("offset")
+    def _offset_change(self, evt: TraitChangeEvent):
         #Update the stored marker's transform matrix, when updating the offset matrix
-        t = self.frame.T @ self.offset
         if self.marker is not None:
-            self.marker.transform = t
-        return t
+            self.marker.transform = self.frame.T @ self.offset
 
     def transform(self, T_matrix: Transform) -> Offset:
         with matrix_edit(self, "offset"):
@@ -99,7 +101,8 @@ class Offset(RefFrame):
     #Observe the stored marker changing its transform matrix, which happens when the marker is moved
     @ta.observe("marker.transform", post_init=True)
     def marker_feedback(self, evt: TraitChangeEvent):
-        self.trait_set(offset=inv(self.frame.T) @ evt.new)
+        if (evt.new != evt.old).any():
+            self.trait_set(offset=inv(self.frame.T) @ evt.new)
 
 
 from .frames import Origin, RobotRefFrame

@@ -6,6 +6,8 @@ import traits.api as ta
 import traits.trait_types as tt
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QValidator
 from traits.trait_numeric import Array
 
 from stack_of_tasks.ui.model.object_model import ObjectModel
@@ -56,6 +58,24 @@ class MappingEntry(Generic[MappingType]):
     def setup_function(cls, trait: ta.CTrait, widget: QWidget):
         pass
 
+
+class QTraitValidator(QValidator):
+    input_rejected = pyqtSignal(bool)
+    testing = pyqtSignal(str)
+    
+    def __init__(self, func):
+        super().__init__()
+        self.func = func
+
+    def validate(self, input, pos):
+        print(f"validate: {input} {pos}")
+        if not self.func(self.parent(), None, input):
+            #Defining extra signal to use the QValidator does not really make sense
+            #The States the QValidator gives back should be used. How?
+            self.input_rejected.emit(False)
+            return (QValidator.State.Intermediate, input, pos)
+        self.input_rejected.emit(True)
+        return (QValidator.State.Acceptable, input, pos)
 
 class String(MappingEntry):
     traits = [tt.String, tt.BaseStr, tt.BaseCStr]

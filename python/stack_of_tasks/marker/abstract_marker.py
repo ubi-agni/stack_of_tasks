@@ -22,6 +22,14 @@ from stack_of_tasks.utils.traits import ABCSoTHasTraits, Guard
 
 MarkerRegister = ClassRegister("MarkerRegister")
 
+def limited_name(self, object, name, value):
+    #The error message would have to be defined here?
+    #if input in marker_server.marker.values()
+    #   return False
+    if len(value) > 3:
+        print("Input too long")
+        return False    #Not accepted
+    return True     #Accepted
 
 @MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
@@ -39,6 +47,9 @@ class IAMarker(ABCSoTHasTraits):
     sync = ta.Event()
 
     def __init__(self, name: str, **kwargs) -> None:
+        #Overwrite the base validate function for the "name" trait
+        self.class_traits()["name"].validate = limited_name.__get__(self.class_traits()["name"], ta.Str)
+        
         super().__init__(name=name, **kwargs)
         self.lg = Guard()
         self.markers = []

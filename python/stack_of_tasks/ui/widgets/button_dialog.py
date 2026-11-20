@@ -15,6 +15,13 @@ class ButtonDialog(QtWidgets.QDialog):
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
         )
 
+        #If defining the Label here, the text needs to be changed from somewhere else,
+        #since the trait that may be invalid is not known here
+        self.testWidget = QtWidgets.QLabel("Input invalid")
+        self.testWidget.setStyleSheet("color: red;")
+        self.testWidget.setHidden(True)
+        self._vl.addWidget(self.testWidget)
+
         self._vl.addWidget(self.buttonBox)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -34,6 +41,12 @@ class NewInstanceDialog(ButtonDialog):
 
         self.cls_selection.current_object_changed.connect(self.cls_selection_changed)
         self.cls_selection.setModel(model)
+
+        #This enables/disables the OK button depending on if the input is valid.
+        #However, there is no reason given to the user -> add toggleable QLabel somewhere?
+        self.traits.input_change.connect(self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled)
+        self.traits.input_change.connect(self.testWidget.setHidden)
+        #self.traits.testing.connect(self.testWidget.text)
 
     def cls_selection_changed(self, cls):
         self.traits.cls = cls

@@ -90,7 +90,7 @@ class WidgetTraitBinding(Binder):
             signal: pyqtBoundSignal = getattr(
                 widget, str(self.widget_prop.notifySignal().name(), "utf-8")
             )
-            logging.debug(f"notify signal {signal} ")
+            # logging.debug(f"notify signal {signal} ")
             signal.connect(self)
 
             if set_post_init:

@@ -3,22 +3,18 @@ from __future__ import annotations
 from typing import Any, Optional
 
 import numpy as np
-from PyQt5.QtCore import QMargins, QModelIndex, QObject, QSize, Qt, QVariant, pyqtProperty, pyqtSignal
-from PyQt5.QtGui import QClipboard, QKeyEvent, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import (
-    QApplication,
-    QDoubleSpinBox,
-    QFrame,
-    QHeaderView,
-    QSizePolicy,
-    QStyle,
-    QStyledItemDelegate,
-    QStyleOptionViewItem,
-    QTableView,
-    QWidget,
+from PyQt5.QtCore import (
+    QAbstractTableModel,
+    QMargins,
+    QModelIndex,
+    QSize,
+    Qt,
+    QVariant,
+    pyqtProperty,
+    pyqtSignal,
 )
-
-from stack_of_tasks.ui.property_tree.base import RawDataRole
+from PyQt5.QtGui import QClipboard, QKeyEvent
+from PyQt5.QtWidgets import QApplication, QFrame, QHeaderView, QSizePolicy, QTableView
 
 FloatDataRole = Qt.UserRole + 1
 
@@ -33,65 +29,59 @@ if not hasattr(QSize, "grownBy"):
     setattr(QSize, "grownBy", grownBy)
 
 
-class MatrixItem(QStandardItem):
-    def __init__(self, i, j):
-        super().__init__()
-        self._i = i
-        self._j = j
-
-    def model(self) -> NumpyTableModel:
-        return super().model()
-
-    def element(self):
-        return self.model().matrix()[self._i, self._j]
-
-    def data(self, role: int = ...) -> Any:
-        if role == Qt.DisplayRole:
-            return f"{self.element():.2f}"
-        if role == Qt.EditRole:
-            return self.element()
-
-        return super().data(role)
-
-    def setData(self, value: Any, role: int = ...) -> bool:
-        if role == Qt.EditRole:
-            self.model().matrix()[self._i, self._j] = value
-        else:
-            return super().setData(value, role)
-
-
-class NumpyTableModel(QStandardItemModel):
+class NumpyTableModel(QAbstractTableModel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-        self._matrix: np.ndarray = None
-        self._is_1D: bool
+        self._matrix: Optional[np.ndarray] = None
 
-    def valuesChanged(self):
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), self.columnCount()))
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        return 0 if parent.isValid() or self._matrix is None else self._matrix.shape[0]
 
-    def _setup_items(self):
-        shape = self._matrix.shape
-        self._is_1D = len(shape) == 1
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if parent.isValid() or self._matrix is None:
+            return 0
+        return 1 if self._matrix.ndim == 1 else self._matrix.shape[1]
 
-        if self._is_1D:
-            for i in range(shape[0]):
-                self.setItem(i, 0, MatrixItem(i, 0))
-        else:
-            for i in range(shape[0]):
-                for j in range(shape[1]):
-                    self.setItem(i, j, MatrixItem(i, j))
+    def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
+        if not index.isValid() or self._matrix is None:
+            return None
+        if not (0 <= index.row() < self.rowCount() and 0 <= index.column() < self.columnCount()):
+            return None
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            if self._matrix.ndim == 1:
+                value = self._matrix[index.row()]
+            else:
+                value = self._matrix[index.row(), index.column()]
+            if role == Qt.DisplayRole:
+                return f"{value:.2f}"
+            return value.item() if isinstance(value, np.generic) else value
+        return None
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        flags = super().flags(index)
+        return flags | Qt.ItemIsEditable if index.isValid() else flags
+
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+        if (
+            role != Qt.EditRole
+            or self._matrix is None
+            or not index.isValid()
+            or not (0 <= index.row() < self.rowCount() and 0 <= index.column() < self.columnCount())
+        ):
+            return False
+        key = index.row() if self._matrix.ndim == 1 else (index.row(), index.column())
+        if self._matrix[key] != value:
+            self._matrix[key] = value
+            self.dataChanged.emit(index, index)
+        return True
 
     def setMatrix(self, matrix: np.ndarray):
-        if self._matrix is None or self._matrix.shape != matrix.shape:
-            self._matrix = matrix
-            self._setup_items()
+        self.beginResetModel()
+        self._matrix = matrix
+        self.endResetModel()
 
-        else:
-            self._matrix = matrix
-            self.valuesChanged()
-
-    def setMatrixData(self, data, startIndex: QModelIndex, endIndex: QModelIndex = None):
+    def setMatrixData(self, data, startIndex: QModelIndex, endIndex: Optional[QModelIndex] = None):
         if self._matrix is not None:
             if endIndex is None:
                 index = (
@@ -104,79 +94,50 @@ class NumpyTableModel(QStandardItemModel):
                     slice(startIndex.column(), endIndex.column() + 1),
                 )
 
-            self._matrix[index] = data
-            self._setup_items()
+            matrix = self._matrix[:, np.newaxis] if self._matrix.ndim == 1 else self._matrix
+            matrix[index] = data
+            row_start, row_stop, _ = index[0].indices(self.rowCount())
+            column_start, column_stop, _ = index[1].indices(self.columnCount())
+            if row_start < row_stop and column_start < column_stop:
+                self.dataChanged.emit(
+                    self.index(row_start, column_start), self.index(row_stop - 1, column_stop - 1)
+                )
 
     def matrix(self):
         return self._matrix
 
 
-class MatrixItemDelegate(QStyledItemDelegate):
-    def __init__(self, parent: Optional[QObject] = None) -> None:
-        super().__init__(parent)
-
-        self._editor_widget = QDoubleSpinBox()
-        self._editor_widget.setDecimals(10)
-        self._editor_widget.setRange(-1e10, 1e10)
-
-        self._editor_widget.setFocusPolicy(Qt.StrongFocus)
-        self._editor_widget.setAutoFillBackground(True)
-
-    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
-        self._editor_widget.setParent(parent)
-        return self._editor_widget
-
-    def setModelData(
-        self, editor: QDoubleSpinBox, model: QStandardItemModel, index: QModelIndex
-    ) -> None:
-        model.setData(index, editor.value(), Qt.EditRole)
-
-    def setEditorData(self, editor: QDoubleSpinBox, index: QModelIndex) -> None:
-        f = index.data(Qt.EditRole)
-        editor.setValue(f)
-
-    def updateEditorGeometry(
-        self, editor: QDoubleSpinBox, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> None:
-        editor.move(option.rect.topLeft())
-
-    def destroyEditor(self, editor: QDoubleSpinBox, index: QModelIndex) -> None:
-        editor.hide()
-
-    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        if option.state & QStyle.State_Editing:
-            return self._editor_widget.minimumSize()
-        else:
-            return super().sizeHint(option, index)
-
-
 class MatrixWidget(QTableView):
-    matrix_changed = pyqtSignal(object)
+    matrixChanged = pyqtSignal(object)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
-        self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self.setSizeAdjustPolicy(self.AdjustToContents)
 
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.verticalHeader().setMinimumSectionSize(0)
         self.verticalHeader().setVisible(False)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.horizontalHeader().setMinimumSectionSize(0)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.horizontalHeader().setVisible(False)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.setItemDelegate(MatrixItemDelegate())
-        self.viewport().setMinimumSize(0, 0)
-
         self.setFrameStyle(QFrame.NoFrame)
+        self.minimum_size = None
 
-        self.shape = None
         self.matrix_model = NumpyTableModel()
         self.setModel(self.matrix_model)
+        self.matrix_model.dataChanged.connect(lambda: self.matrixChanged.emit(self.get_matrix()))
+
+    def minimumSizeHint(self) -> QSize:
+        if self.minimum_size is None:
+            # compute minimum size
+            self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+            self.minimum_size = self.sizeHint()
+            self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        return self.minimum_size
 
     def model(self) -> NumpyTableModel:
         return super().model()
@@ -210,18 +171,11 @@ class MatrixWidget(QTableView):
         if not e.isAccepted():
             return super().keyPressEvent(e)
 
-    # def dataChanged(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles=None) -> None:
-    #    pass
-    #    # self.matrix_changed.emit(self.get_matrix())
-    #    # super().dataChanged(topLeft, bottomRight, roles)
-
     def get_matrix(self):
-        return self.matrix_model.matrix().reshape(self.shape)
+        return self.matrix_model.matrix()
 
     def set_matrix(self, val):
-        self.shape = val.shape
-        if len(val.shape) == 1:
-            val = val.reshape((1, -1))
         self.matrix_model.setMatrix(val)
+        self.minimum_size = None
 
-    matrix = pyqtProperty(QVariant, get_matrix, set_matrix, notify=matrix_changed, user=True)
+    matrix = pyqtProperty(QVariant, get_matrix, set_matrix, notify=matrixChanged, user=True)

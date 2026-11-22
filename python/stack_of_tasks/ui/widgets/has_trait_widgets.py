@@ -79,7 +79,7 @@ class NewInstanceWidget(QWidget):
 class HasTraitsFormLayout(QFormLayout):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
+        self.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
 
     def fill(self, inst: ta.HasTraits):
 

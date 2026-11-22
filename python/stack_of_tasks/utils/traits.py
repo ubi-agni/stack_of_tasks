@@ -8,9 +8,9 @@ from stack_of_tasks.utils import ClassRegister
 
 @contextmanager
 def matrix_edit(obj: ta.HasTraits, trait: str, capture_old=True):
-    old = obj.trait_get(trait) if capture_old else ta.Undefined
+    old = getattr(obj, trait) if capture_old else ta.Undefined
     yield
-    obj.trait_property_changed(trait, old, obj.trait_get(trait))
+    obj.trait_property_changed(trait, old, getattr(obj, trait))
 
 
 register_all = ClassRegister("all")

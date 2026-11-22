@@ -83,6 +83,12 @@ class Offset(RefFrame):
     def _get_T(self):
         return self.frame.T @ self.offset
 
+    def _set_T(self, transform):
+        Rt = self.frame.T[:3, :3].T
+        with matrix_edit(self, "offset"):
+            self.offset[:3, :3] = Rt @ transform[:3, :3]
+            self.offset[:3, 3] = Rt @ (transform[:3, 3] - self.frame.T[:3, 3])
+
     def transform(self, T_matrix: Transform) -> Offset:
         with matrix_edit(self, "offset"):
             self.offset[:] = self.offset @ T_matrix

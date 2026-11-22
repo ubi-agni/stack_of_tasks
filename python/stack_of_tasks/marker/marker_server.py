@@ -5,7 +5,7 @@ import types
 import weakref
 from threading import Lock
 
-from traits.api import Dict, observe
+from traits.api import Any, Dict, Instance, Tuple, observe
 from traits.observation.events import TraitChangeEvent
 
 import rospy
@@ -19,6 +19,7 @@ from visualization_msgs.msg import (
 )
 
 from stack_of_tasks.marker.abstract_marker import IAMarker
+from stack_of_tasks.marker.trait_marker import FullMovementMarker
 from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
@@ -141,10 +142,13 @@ class FixedInteractiveMarkerServer(InteractiveMarkerServer):
 class MarkerServer(BaseSoTHasTraits):
     marker: dict = Dict(str, IAMarker)
     _control: dict = Dict(str, IAMarker)
+    _offset_marker = Instance(FullMovementMarker)
 
     def __init__(self, namespace="controller") -> None:
         super().__init__()
         self._ims = FixedInteractiveMarkerServer(namespace)
+        self._offset_marker = None
+        self._offset_target: Tuple[Any, str] | None = None  # target trait
 
     def __del__(self):
         self._ims.sc.unregister()  # the subscriber needs to be unregistered explicitly here.
@@ -154,22 +158,82 @@ class MarkerServer(BaseSoTHasTraits):
 
         for m in marker.markers:
             self._control[m.name] = marker
-            self._ims.insert(m, self._server_cb)
+            if not self._offset_marker_visible:
+                self._ims.insert(m, self._server_cb)
         self._ims.applyChanges()
 
     def remove(self, marker: IAMarker):
         for control in marker.markers:
-            self._ims.erase(control.name)
+            if not self._offset_marker_visible:
+                self._ims.erase(control.name)
             self._control.pop(control.name)
 
         self._ims.applyChanges()
         self.marker.pop(marker.name)
 
-    @observe("marker.items:sync")
+    def show_offset_marker(self, obj, trait_name):
+        if self._offset_target is None:
+            # hide other markers
+            for marker in self.marker.values():
+                for control in marker.markers:
+                    self._ims.erase(control.name)
+        # create offset control marker if it doesn't exist yet
+        # (delayed because IAMarker._default_frame_id might be set late)
+        if self._offset_marker is None:
+            self._offset_marker = FullMovementMarker(
+                name="__offset_marker__", frame_id=IAMarker._default_frame_id
+            )
+        if self._offset_target == (obj, trait_name):
+            return  # already linked to this target
+        self._ims.insert(self._offset_marker.marker, self._offset_marker.feedback)
+        self._link_offset_marker_to(obj, trait_name)
+        # _ims.applyChanges() is called via _sync() when the transform is assigned above
+
+    def hide_offset_marker(self):
+        if self._offset_target is None:
+            return  # already hidden
+        self._ims.erase(self._offset_marker.marker.name)
+        self._unlink_offset_marker()
+        # show other markers again
+        for marker in self.marker.values():
+            for control in marker.markers:
+                self._ims.insert(control, self._server_cb)
+        self._ims.applyChanges()
+
+    def _link_offset_marker_to(self, obj, trait_name):
+        if self._offset_target is not None:
+            self._unlink_offset_marker()
+        self._offset_target = (obj, trait_name)
+        obj.observe(self._offset_target_changed, trait_name)
+        self._offset_marker.observe(self._offset_transform_changed, "transform")
+        # set marker's current transform to match target's one
+        with self._offset_marker.lg("offset_marker->"):
+            self._offset_marker.transform = getattr(obj, trait_name)
+
+    def _unlink_offset_marker(self):
+        if self._offset_target is not None:
+            obj, trait_name = self._offset_target
+            obj.observe(self._offset_target_changed, trait_name, remove=True)
+            self._offset_marker.observe(self._offset_transform_changed, "transform", remove=True)
+            self._offset_target = None
+
+    def _offset_target_changed(self, evt: TraitChangeEvent):
+        guard = "->offset_marker"
+        if guard not in self._offset_marker.lg:
+            with self._offset_marker.lg(guard):
+                self._offset_marker.transform = evt.new
+
+    def _offset_transform_changed(self, evt: TraitChangeEvent):
+        guard = "offset_marker->"
+        if guard not in self._offset_marker.lg:
+            with self._offset_marker.lg(guard):
+                obj, trait_name = self._offset_target
+                setattr(obj, trait_name, evt.new)
+
+    @observe("marker.items:sync,_offset_marker:sync")
     def _sync(self, evt: TraitChangeEvent):
-        for marker in self.marker[evt.new].markers:
+        for marker in evt.object.markers:
             self._ims.setPose(marker.name, marker.pose)
-            self._ims.insert(marker, self._server_cb)
         self._ims.applyChanges()
 
     def _server_cb(self, fb: InteractiveMarkerFeedback):
@@ -178,6 +242,9 @@ class MarkerServer(BaseSoTHasTraits):
     @observe("marker.items:name")
     def _marker_name_changed(self, evt: TraitChangeEvent):
         self.marker[evt.new] = (marker := self.marker.pop(evt.old))
-        self._ims.erase(evt.old)
-        self._ims.insert(marker.marker, self._server_cb)
-        self._ims.applyChanges()
+        self._control.pop(evt.old)
+        self._control[evt.new] = marker
+        if not self._offset_marker_visible:
+            self._ims.erase(evt.old)
+            self._ims.insert(marker.marker, self._server_cb)
+            self._ims.applyChanges()

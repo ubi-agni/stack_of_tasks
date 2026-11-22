@@ -17,7 +17,7 @@ class ProjectUI(QMainWindow):
     save_signal = pyqtSignal()
     save_as_signal = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, marker_server):
         super(ProjectUI, self).__init__()
 
         self.menu_bar = QMenuBar()
@@ -71,13 +71,16 @@ class ProjectUI(QMainWindow):
         self.hierarchy_tab = HierarchyTabWidget()
         self.tab_widget.addTab(self.hierarchy_tab, "Hierarchy")
 
-        self.refs_tab = RefFramesTabWidget()
+        self.refs_tab = RefFramesTabWidget(marker_server)
         self.tab_widget.addTab(self.refs_tab, "Refs")
 
         self.marker_tab = MarkerTabWidget()
         self.tab_widget.addTab(self.marker_tab, "Marker")
 
         self.tab_widget.setCurrentIndex(1)
+        self.tab_widget.currentChanged.connect(
+            lambda index: self.refs_tab.set_active(self.tab_widget.widget(index) is self.refs_tab)
+        )
 
         self.setCentralWidget(self.tab_widget)
         self.run_Button = QPushButton("Start")

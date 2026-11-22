@@ -3,7 +3,7 @@ from __future__ import annotations
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QHBoxLayout, QListView
 
-from stack_of_tasks.ref_frame import RefFrame
+from stack_of_tasks.ref_frame import Offset, RefFrame
 from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
 from stack_of_tasks.ui.widgets.button_dialog import NewInstanceDialog
@@ -15,8 +15,11 @@ from .base import Base
 class RefFramesTabWidget(Base):
     new_ref_signal = pyqtSignal([type, dict])
 
-    def __init__(self) -> None:
+    def __init__(self, marker_server) -> None:
         super().__init__()
+
+        self.marker_server = marker_server
+        self._active = False
 
         self.horizontalLayout = QHBoxLayout()
         self.ref_view = QListView(self)
@@ -41,8 +44,18 @@ class RefFramesTabWidget(Base):
             self.new_ref_signal.emit(cls, args)
 
     def ref_selected(self):
-        if len(sel := self.ref_view.selectedIndexes()) > 0:
-            obj = sel[0].data(RawDataRole)
-            self.edit_ref.set_trait_object(obj)
+        sel = self.ref_view.selectedIndexes()
+        obj = sel[0].data(RawDataRole) if sel else None
+        self.edit_ref.set_trait_object(obj)
+        self.offset_control(obj if self._active else None)
+
+    def set_active(self, active):
+        self._active = active
+        sel = self.ref_view.selectedIndexes()
+        self.offset_control(sel[0].data(RawDataRole) if active and sel else None)
+
+    def offset_control(self, obj):
+        if isinstance(obj, Offset):
+            self.marker_server.show_offset_marker(obj, "T")
         else:
-            obj = None
+            self.marker_server.hide_offset_marker()

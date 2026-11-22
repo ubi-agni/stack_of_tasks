@@ -132,7 +132,7 @@ class Logic_Project(BaseSoTHasTraits):
         TraitObjectModelBinder(self, "ref_objects", self.refs_model, True)
         TraitObjectModelBinder(self, "marker_objects", self.marker_model, True)
 
-        self.ui = ProjectUI()
+        self.ui = ProjectUI(self.marker_server)
         # Keep window on top
         # self.ui.setWindowFlags(self.ui.windowFlags() | Qt.WindowStaysOnTopHint)
 

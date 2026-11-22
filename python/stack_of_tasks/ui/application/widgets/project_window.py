@@ -78,6 +78,9 @@ class ProjectUI(QMainWindow):
         self.tab_widget.addTab(self.marker_tab, "Marker")
 
         self.tab_widget.setCurrentIndex(1)
+        self.tab_widget.currentChanged.connect(
+            lambda index: self.refs_tab.set_active(self.tab_widget.widget(index) is self.refs_tab)
+        )
 
         self.setCentralWidget(self.tab_widget)
         self.run_Button = QPushButton("Start")

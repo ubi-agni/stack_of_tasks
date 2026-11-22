@@ -61,9 +61,10 @@ class Offset(RefFrame):
     """Defines an offset to the given frame."""
 
     offset: Transform = ta.Array(
+        shape=(4, 4),
         dtype="float",
         value=np.identity(4),
-        comparison_mode=ta.ComparisonMode.identity,
+        comparison_mode=ta.ComparisonMode.none,
     )
     frame: RefFrame = ta.Instance(RefFrame)
     T: Transform = ta.Property(ta.Array, visible=False)

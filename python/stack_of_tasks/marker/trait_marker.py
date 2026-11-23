@@ -18,7 +18,6 @@ class PositionMarker(IAMarker):
         super().__init__(name, **kwargs)
 
         self._add_movement_marker(self.marker, "", InteractiveMarkerControl.MOVE_3D, self.sphere())
-
         self._add_movement_control(self.marker, "_move", InteractiveMarkerControl.MOVE_AXIS)
 
 

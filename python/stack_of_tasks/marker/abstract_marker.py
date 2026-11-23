@@ -123,7 +123,6 @@ class IAMarker(ABCSoTHasTraits):
         mode: int,
         directions="xyz",
         or_mode=None,
-        *markers,
     ):
         for d in directions:
             control = InteractiveMarkerControl(
@@ -134,13 +133,10 @@ class IAMarker(ABCSoTHasTraits):
             if or_mode:
                 control.orientation_mode = or_mode
 
-            # todo unnormalized quaternion
             control.orientation.x = 0.7071068 if d == "x" else 0
             control.orientation.z = 0.7071068 if d == "y" else 0
             control.orientation.y = 0.7071068 if d == "z" else 0
             control.orientation.w = 0.7071068
-
-            control.markers.extend(markers)
 
             im.controls.append(control)
 
@@ -239,3 +235,10 @@ class IAMarker(ABCSoTHasTraits):
         m.pose.position = Point(*(p + T[:3, :3].dot(offset)))
         markers.append(m)
         return markers
+
+    @staticmethod
+    def text(text, scale=0.1, color=ColorRGBA(1, 1, 1, 1), **kwargs):
+        """Create a text marker"""
+        m = Marker(type=Marker.TEXT_VIEW_FACING, text=text, color=color, **kwargs)
+        m.scale.z = scale
+        return m

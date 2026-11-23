@@ -5,6 +5,8 @@ from typing import Generic, List, Type, TypeVar
 import traits.api as ta
 import traits.trait_types as tt
 from PyQt5 import QtWidgets
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QValidator
 from PyQt5.QtWidgets import QWidget
 from traits.trait_numeric import Array
 
@@ -35,6 +37,24 @@ class Mapping:
             return e.widget, e.setup_function
 
 
+class QTraitValidator(QValidator):
+    validationChanged = pyqtSignal(QValidator.State, str)
+
+    def __init__(self, name, func):
+        super().__init__()
+        self.name = name or ""
+        self.func = func
+
+    def validate(self, input, pos):
+        try:
+            modified = self.func(None, self.name, input)
+            self.validationChanged.emit(QValidator.State.Acceptable, None)
+            return (QValidator.State.Acceptable, input, pos)
+        except ta.TraitError as e:
+            self.validationChanged.emit(QValidator.State.Intermediate, f"{e.name}: {e.info}")
+            return (QValidator.State.Intermediate, input, pos)
+
+
 MappingType = TypeVar("MappingType")
 
 
@@ -53,8 +73,12 @@ class MappingEntry(Generic[MappingType]):
         return any(isinstance(trait.trait_type, x) for x in cls.traits)
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: QWidget):
-        pass
+    def setup_function(cls, trait: ta.CTrait, widget: QWidget, name: str = None):
+        try:
+            validator = QTraitValidator(name, trait.trait_type.validate)
+            widget.setValidator(validator)
+        except AttributeError:
+            pass
 
 
 class String(MappingEntry):
@@ -64,7 +88,6 @@ class String(MappingEntry):
 
 class Float(MappingEntry):
     traits = [tt.BaseFloat, tt.BaseCFloat]
-
     widget = QtWidgets.QDoubleSpinBox
 
 
@@ -73,7 +96,7 @@ class RangeEntry(MappingEntry):
     widget = Range
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: Range):
+    def setup_function(cls, trait: ta.CTrait, widget: Range, name):
         rng: ta.Range = trait.trait_type
 
         widget.setMinimum(rng._low)
@@ -88,7 +111,7 @@ class Selection(MappingEntry):
     widget = AddableObjectDropdown
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: AddableObjectDropdown):
+    def setup_function(cls, trait: ta.CTrait, widget: AddableObjectDropdown, name):
         t: tt.Instance = trait.trait_type
         key = t.model_key if t.model_key is not None else t.klass
 
@@ -105,7 +128,7 @@ class Enum(MappingEntry):
     widget = ObjectDropdown
 
     @classmethod
-    def setup_function(cls, trait: ta.CTrait, widget: ObjectDropdown):
+    def setup_function(cls, trait: ta.CTrait, widget: ObjectDropdown, name):
         if getattr(trait, "enum_selection") is not None:
             widget.setModel(getattr(trait, "enum_selection"))
 

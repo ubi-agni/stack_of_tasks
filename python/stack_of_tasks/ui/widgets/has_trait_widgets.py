@@ -5,8 +5,8 @@ from copy import deepcopy
 from typing import Any, Type
 
 import traits.api as ta
-from PyQt5.QtCore import pyqtProperty
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import pyqtProperty, pyqtSignal
+from PyQt5.QtGui import QIcon, QValidator
 from PyQt5.QtWidgets import (
     QFormLayout,
     QGroupBox,
@@ -28,6 +28,8 @@ from stack_of_tasks.utils.traits import BaseSoTHasTraits
 
 
 class NewInstanceWidget(QWidget):
+    validationChanged = pyqtSignal(QValidator.State, str)
+
     def __init__(self, parent=None, cls=None) -> None:
         super().__init__(parent)
 
@@ -60,11 +62,18 @@ class NewInstanceWidget(QWidget):
             if me is not None:
                 widget = me.widget()
 
-                me.setup_function(trait, widget)
+                me.setup_function(trait, widget, name)
                 value = old_args.get(name, get_default(self.cls, trait, name))
                 set_user_property(widget, value)
                 self.fl.addRow(name, widget)
                 self.args[name] = widget
+
+                try:
+                    # forward validator's signal if applicable
+                    validator = widget.validator()
+                    validator.validationChanged.connect(self.validationChanged)
+                except AttributeError:
+                    pass
 
     def get_arguments(self) -> dict["str", Any]:
         r = {}
@@ -93,7 +102,7 @@ class HasTraitsFormLayout(QFormLayout):
             if me is not None:
                 widget = me.widget()
 
-                me.setup_function(trait, widget)
+                me.setup_function(trait, widget, name)
                 set_user_property(widget, getattr(inst, name))
                 trait_widget_binding(inst, name, widget, set_widget_post=True)
 

@@ -23,9 +23,18 @@ from stack_of_tasks.utils.traits import ABCSoTHasTraits, Guard
 MarkerRegister = ClassRegister("MarkerRegister")
 
 
+class MarkerName(ta.Str):
+    # https://docs.enthought.com/traits/traits_user_manual/custom.html#defining-a-trait-type
+    def validate(self, object, name, value):
+        super().validate(object, name, value)
+        if len(value) > 3:
+            raise ta.TraitError(object, name, "Input too long", value)
+        return value
+
+
 @MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
-    name = ta.Str()
+    name = MarkerName()
 
     _default_frame_id = ""
     frame_id = ta.Str()

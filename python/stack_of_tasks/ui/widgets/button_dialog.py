@@ -1,6 +1,7 @@
 import typing
 
 from PyQt5 import QtWidgets
+from PyQt5.QtGui import QValidator
 
 from stack_of_tasks.ui.model.object_model import ObjectModel
 
@@ -32,8 +33,21 @@ class NewInstanceDialog(ButtonDialog):
         self.traits = NewInstanceWidget()
         self._vl.insertWidget(1, self.traits)
 
+        self.error_label = QtWidgets.QLabel("Input invalid")
+        self.error_label.setStyleSheet("color: red;")
+        self.error_label.setHidden(True)
+        self._vl.insertWidget(2, self.error_label)
+
         self.cls_selection.current_object_changed.connect(self.cls_selection_changed)
         self.cls_selection.setModel(model)
+
+        self.traits.validationChanged.connect(self.validation_changed)
+
+    def validation_changed(self, state: QValidator.State, msg):
+        accepted = state == QValidator.State.Acceptable
+        self.error_label.setText(msg)
+        self.error_label.setHidden(accepted)
+        self.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(accepted)
 
     def cls_selection_changed(self, cls):
         self.traits.cls = cls

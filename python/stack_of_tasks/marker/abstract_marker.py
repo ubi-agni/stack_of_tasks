@@ -25,6 +25,10 @@ MarkerRegister = ClassRegister("MarkerRegister")
 
 @MarkerRegister.base
 class IAMarker(ABCSoTHasTraits):
+    """Interactive Marker base class
+    In contrast to ROS' InteractiveMarker, this class can combine multiple markers, e.g. for an interactive cone marker
+    """
+
     name = ta.Str()
 
     _default_frame_id = ""
@@ -43,46 +47,52 @@ class IAMarker(ABCSoTHasTraits):
         self.lg = Guard()
         self.markers = []
 
-        self.marker = self._create_interactive_marker(
+        # main marker == shortcut for self.markers[0]
+        self.main = self._create_interactive_marker(
             name=self.name,
             scale=self.scale,
             frame_id=self.frame_id,
             pose=matrix_to_pose(self.transform),
         )
-
-        self.markers.append(self.marker)
+        # add main marker to the list of markers
+        self.markers.append(self.main)
 
     # trait method for dynamic default
     @classmethod
     def _frame_id_default(cls):
         return cls._default_frame_id
 
-    @ta.observe("name", post_init=True)
-    def _name_changed(self, evt: TraitChangeEvent):
-        self.marker.name = evt.new
+    def _adapt_marker_names(self):
+        # update names of all (sub) markers to match self.name
+        for m in self.markers:
+            # name of sub marker is name.subname
+            dot = m.name.find(".")
+            if dot == -1:
+                dot = len(m.name)
+            m.name = f"{self.name}{m.name[dot:]}"
 
     @ta.observe("frame_id", post_init=True)
     def _frame_id_changed(self, evt: TraitChangeEvent):
         if "frame_id" not in self.lg:
-            self.marker.header.frame_id = evt.new
+            self.main.header.frame_id = evt.new
             self.sync = self.name
 
     @ta.observe("transform", post_init=True)
     def _transform_changed(self, evt: TraitChangeEvent):
         if "transform" not in self.lg:
-            self.marker.pose = matrix_to_pose(self.transform)
+            self.main.pose = matrix_to_pose(self.transform)
             self.sync = self.name
 
     @ta.observe("scale", post_init=True)
     def _scale_changed(self, evt: TraitChangeEvent):
         if "scale" not in self.lg:
-            self.marker.scale = self.scale
+            self.main.scale = self.scale
             self.sync = self.name
 
     def feedback(self, fb: InteractiveMarkerFeedback):
         with self.lg("transform"):
             self.trait_set(transform=pose_to_matrix(fb.pose))
-            self.marker.pose = fb.pose
+            self.main.pose = fb.pose
             self.sync = self.name
 
     @staticmethod

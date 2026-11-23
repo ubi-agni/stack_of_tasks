@@ -157,19 +157,19 @@ class MarkerServer(BaseSoTHasTraits):
             self._ims.insert(m, self._server_cb)
         self._ims.applyChanges()
 
-    def remove(self, marker: IAMarker):
-        for control in marker.markers:
-            self._ims.erase(control.name)
-            self._control.pop(control.name)
-
+    def remove(self, marker: str):
+        marker = self.marker.pop(marker)
+        for m in marker.markers:
+            self._ims.erase(m.name)
+            self._control.pop(m.name)
         self._ims.applyChanges()
-        self.marker.pop(marker.name)
+        return marker
 
     @observe("marker.items:sync")
     def _sync(self, evt: TraitChangeEvent):
-        for marker in self.marker[evt.new].markers:
-            self._ims.setPose(marker.name, marker.pose)
-            self._ims.insert(marker, self._server_cb)
+        for m in self.marker[evt.new].markers:
+            self._ims.setPose(m.name, m.pose)
+            self._ims.insert(m, self._server_cb)
         self._ims.applyChanges()
 
     def _server_cb(self, fb: InteractiveMarkerFeedback):
@@ -177,7 +177,6 @@ class MarkerServer(BaseSoTHasTraits):
 
     @observe("marker.items:name")
     def _marker_name_changed(self, evt: TraitChangeEvent):
-        self.marker[evt.new] = (marker := self.marker.pop(evt.old))
-        self._ims.erase(evt.old)
-        self._ims.insert(marker.marker, self._server_cb)
-        self._ims.applyChanges()
+        marker = self.remove(evt.old)
+        marker._adapt_marker_names()
+        self.add_marker(marker)

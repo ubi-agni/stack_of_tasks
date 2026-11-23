@@ -212,7 +212,7 @@ class Logic_Project(BaseSoTHasTraits):
         for x in evt.added:
             self.marker_server.add_marker(x)
         for x in evt.removed:
-            self.marker_server.remove(x)
+            self.marker_server.remove(x.name)
 
     def toggle_start_stop(self):
         if WorkerThread.toggle_running(self.controller):

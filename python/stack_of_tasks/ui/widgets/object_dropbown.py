@@ -5,7 +5,7 @@ from logging import Logger
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QVariant, pyqtProperty, pyqtSignal
 from PyQt5.QtGui import QPainter, QPaintEvent
-from PyQt5.QtWidgets import QComboBox, QStyle, QStyleOptionButton, QStyleOptionComboBox
+from PyQt5.QtWidgets import QComboBox, QSizePolicy, QStyle, QStyleOptionButton, QStyleOptionComboBox
 
 from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.model.object_model import ObjectModel
@@ -18,7 +18,7 @@ class ObjectDropdown(QComboBox):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.currentIndexChanged.connect(lambda: self.current_object_changed.emit(self.current_object))
 
         self._button_state = QStyle.State_Raised

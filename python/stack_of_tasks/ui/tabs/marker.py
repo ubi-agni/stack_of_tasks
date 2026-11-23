@@ -17,6 +17,7 @@ class MarkerTabWidget(Base):
 
     def __init__(self) -> None:
         super().__init__()
+        self.remove_action.setEnabled(True)
 
         self.horizontalLayout = QHBoxLayout()
         self.marker_view = QListView()
@@ -33,13 +34,18 @@ class MarkerTabWidget(Base):
         self.verticalLayout.addLayout(self.horizontalLayout)
 
     def add_action_callback(self):
-        if (
-            t := NewInstanceDialog(ModelMapping.get_mapping(ClassKey(IAMarker)), self)
-        ).exec() == NewInstanceDialog.Accepted:
+        t = NewInstanceDialog(ModelMapping.get_mapping(ClassKey(IAMarker)), self)
+        if t.exec() == NewInstanceDialog.Accepted:
             cls = t.cls_selection.current_object
             args = t.traits.get_arguments()
-
             self.new_marker_signal.emit(cls, args)
+
+    def remove_action_callback(self):
+        # delete all selected markers
+        model = self.marker_view.model()
+        for index in self.marker_view.selectedIndexes():
+            obj = index.data(RawDataRole)
+            model.removeRow(index.row())
 
     def marker_selected(self):
         if len(sel := self.marker_view.selectedIndexes()) > 0:

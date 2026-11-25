@@ -14,6 +14,7 @@ from .base import Base
 
 class MarkerTabWidget(Base):
     new_marker_signal = pyqtSignal([type, dict])
+    remove_marker_signal = pyqtSignal(IAMarker)
 
     def __init__(self) -> None:
         super().__init__()
@@ -42,10 +43,13 @@ class MarkerTabWidget(Base):
 
     def remove_action_callback(self):
         # delete all selected markers
-        model = self.marker_view.model()
         for index in self.marker_view.selectedIndexes():
             obj = index.data(RawDataRole)
-            model.removeRow(index.row())
+            self.remove_marker_signal.emit(obj)
+        #If there are no listed markers left, the deleted marker stays selected,
+        #so check and then deselect it manually.
+        if self.marker_view.model().rowCount() < 1:
+            self.edit_marker.set_trait_object(None)
 
     def marker_selected(self):
         if len(sel := self.marker_view.selectedIndexes()) > 0:

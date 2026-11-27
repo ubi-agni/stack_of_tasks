@@ -14,7 +14,7 @@ from stack_of_tasks.config import Configuration
 from stack_of_tasks.controller import Controller
 from stack_of_tasks.marker import IAMarker, MarkerRegister, MarkerServer
 from stack_of_tasks.plot import PlotCSV, PlotPublisher
-from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister
+from stack_of_tasks.ref_frame import RefFrame, RefFrameRegister, MarkerFrame
 from stack_of_tasks.ref_frame.frames import RobotRefFrame
 from stack_of_tasks.robot_model.actuators import Actuator, ActuatorRegister, DummyActuator
 from stack_of_tasks.solver import AbstractSolver, SolverRegister
@@ -158,7 +158,10 @@ class Logic_Project(BaseSoTHasTraits):
 
         self.ui.refs_tab.new_ref_signal.connect(self.new_ref)
         self.ui.marker_tab.new_marker_signal.connect(self.new_marker)
+        self.ui.marker_tab.remove_marker_signal.connect(self.remove_marker)
         self.ui.run_Button.clicked.connect(self.toggle_start_stop)
+
+        self.ui.marker_tab.ref_objects = self.ref_objects
 
         self.url = None
 
@@ -206,6 +209,17 @@ class Logic_Project(BaseSoTHasTraits):
     def new_marker(self, cls, args):
         new_marker = DependencyInjection.create_instance(cls, args)
         self.marker_objects.append(new_marker)
+
+    def remove_marker(self, marker):
+        #Check all MarkerFrames as to not remove markers which they depend on.
+        for ref in self.ref_objects:
+            if isinstance(ref, MarkerFrame):
+                if (ref.marker == marker):
+                    return
+        self.marker_objects.remove(marker)
+        #When removing the last marker, marker_selected() is not called
+        #and its properties remain displayed. So do so manually
+        self.ui.marker_tab.marker_selected()
 
     @ta.observe("marker_objects:items")
     def _marker_list_changed(self, evt):

@@ -161,6 +161,8 @@ class Logic_Project(BaseSoTHasTraits):
         self.ui.marker_tab.remove_marker_signal.connect(self.remove_marker)
         self.ui.run_Button.clicked.connect(self.toggle_start_stop)
 
+        self.ui.marker_tab.ref_objects = self.ref_objects
+
         self.url = None
 
     def _set_url(self, url: Path):
@@ -213,7 +215,6 @@ class Logic_Project(BaseSoTHasTraits):
         for ref in self.ref_objects:
             if isinstance(ref, MarkerFrame):
                 if (ref.marker == marker):
-                    self.ui.marker_tab.error_label.setHidden(False)
                     return
         self.marker_objects.remove(marker)
         #When removing the last marker, marker_selected() is not called

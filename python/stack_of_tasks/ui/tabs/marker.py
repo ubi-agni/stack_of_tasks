@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QHBoxLayout, QListView, QLabel
+from PyQt5.QtWidgets import QHBoxLayout, QListView
 
 from stack_of_tasks.marker import IAMarker
 from stack_of_tasks.ui import RawDataRole
 from stack_of_tasks.ui.model_mapping import ClassKey, ModelMapping
 from stack_of_tasks.ui.widgets.button_dialog import NewInstanceDialog
 from stack_of_tasks.ui.widgets.has_trait_widgets import EditorGroupBox
+
+from stack_of_tasks.ref_frame import MarkerFrame
 
 from .base import Base
 
@@ -18,10 +20,6 @@ class MarkerTabWidget(Base):
 
     def __init__(self) -> None:
         super().__init__()
-        self.error_label = QLabel("Marker is in use by a MarkerFrame")
-        self.error_label.setStyleSheet("color: red;")
-        self.error_label.setHidden(True)
-        self.verticalLayout.insertWidget(1, self.error_label)
 
         self.horizontalLayout = QHBoxLayout()
         self.marker_view = QListView()
@@ -56,9 +54,19 @@ class MarkerTabWidget(Base):
     def marker_selected(self):
         if len(sel := self.marker_view.selectedIndexes()) > 0:
             obj = sel[0].data(RawDataRole)
+            #Check if the selected object is allowed to be removed.
+            #If not, disable the button and show the error label
+            for ref in self.ref_objects:
+                if isinstance(ref, MarkerFrame):
+                    if (ref.marker == obj):
+                        self.edit_marker.set_trait_object(obj)
+
+                        self.remove_action.setEnabled(False)
+                        self.remove_action.setToolTip("Marker is in use by MarkerFrame " + ref.name)
+                        return
         else:
             obj = None
-        self.error_label.setHidden(True)
-
         self.edit_marker.set_trait_object(obj)
+
         self.remove_action.setEnabled(obj != None)
+        self.remove_action.setToolTip("remove")

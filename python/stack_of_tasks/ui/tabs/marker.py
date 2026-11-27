@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QHBoxLayout, QListView
+from PyQt5.QtWidgets import QHBoxLayout, QListView, QLabel
 
 from stack_of_tasks.marker import IAMarker
 from stack_of_tasks.ui import RawDataRole
@@ -18,7 +18,10 @@ class MarkerTabWidget(Base):
 
     def __init__(self) -> None:
         super().__init__()
-        self.remove_action.setEnabled(True)
+        self.error_label = QLabel("Marker is in use by a MarkerFrame")
+        self.error_label.setStyleSheet("color: red;")
+        self.error_label.setHidden(True)
+        self.verticalLayout.insertWidget(1, self.error_label)
 
         self.horizontalLayout = QHBoxLayout()
         self.marker_view = QListView()
@@ -27,6 +30,9 @@ class MarkerTabWidget(Base):
         self.edit_marker = EditorGroupBox()
         self.edit_marker.setTitle("properties:")
         self.horizontalLayout.addWidget(self.edit_marker)
+
+        self.marker_view.setSelectionBehavior(QListView.SelectRows)
+        self.marker_view.setSelectionMode(QListView.ExtendedSelection)
 
         model = ModelMapping.get_mapping(IAMarker)
         self.marker_view.setModel(model)
@@ -46,15 +52,13 @@ class MarkerTabWidget(Base):
         for index in self.marker_view.selectedIndexes():
             obj = index.data(RawDataRole)
             self.remove_marker_signal.emit(obj)
-        #If there are no listed markers left, the deleted marker stays selected,
-        #so check and then deselect it manually.
-        if self.marker_view.model().rowCount() < 1:
-            self.edit_marker.set_trait_object(None)
 
     def marker_selected(self):
         if len(sel := self.marker_view.selectedIndexes()) > 0:
             obj = sel[0].data(RawDataRole)
         else:
             obj = None
+        self.error_label.setHidden(True)
 
         self.edit_marker.set_trait_object(obj)
+        self.remove_action.setEnabled(obj != None)

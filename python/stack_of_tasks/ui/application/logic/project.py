@@ -213,9 +213,12 @@ class Logic_Project(BaseSoTHasTraits):
         for ref in self.ref_objects:
             if isinstance(ref, MarkerFrame):
                 if (ref.marker == marker):
-                    #Should give a message somehow
+                    self.ui.marker_tab.error_label.setHidden(False)
                     return
         self.marker_objects.remove(marker)
+        #When removing the last marker, marker_selected() is not called
+        #and its properties remain displayed. So do so manually
+        self.ui.marker_tab.marker_selected()
 
     @ta.observe("marker_objects:items")
     def _marker_list_changed(self, evt):
